@@ -109,3 +109,14 @@ This project uses **Next.js 16.2.1**. This version has breaking changes — APIs
 - Prefer structured logging over ad-hoc plain text logs for business and system events.
 - Node.js/Next.js code should use `pino` (or a compatible structured logger built on it).
 - CLI and operator-facing logs should enable ANSI color by default; allow opt-out with documented flags or environment variables.
+
+### Package Manager
+
+- Use pnpm only.
+
+### Scripts & Validation
+
+- Available scripts are defined in `package.json`.
+- Run `pnpm lint` before committing to catch ESLint errors.
+- Run `pnpm format:check` in CI or before pushing to ensure consistent formatting.
+- Use `pnpm format` to auto-fix formatting issues locally.
