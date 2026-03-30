@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Attendance ERP Assignment
 
-## Getting Started
+This repository contains a single-project Next.js 16 App Router application for the beacon-based attendance management assignment.
+The current repository focus is the frontend experience plus the mock REST API required by the assignment.
 
-First, run the development server:
+## Scope
+
+- Employee attendance overview at `/attendance`
+- Leave request workflow at `/attendance/leave`
+- Admin attendance dashboard at `/admin/attendance`
+- Admin request review at `/admin/attendance/requests`
+- Mock API endpoints implemented with Next.js Route Handlers under `app/api/**`
+
+## Development
+
+Install dependencies and start the development server:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Useful commands:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+pnpm lint
+pnpm build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Documentation
 
-## Learn More
+The repository uses a lightweight documentation model for a single Next.js application.
 
-To learn more about Next.js, take a look at the following resources:
+- `AGENTS.md`: repository rules, project overview, and documentation workflow
+- `DESIGN.md`: design-agent-readable visual system document
+- `docs/AGENTS.md`: documentation catalog and ownership matrix
+- `docs/feature-requirements.md`: screen scope and product-facing requirements
+- `docs/ui-guidelines.md`: ERP-aligned UI guidance for implementation
+- `docs/app-architecture.md`: route, layout, rendering, and code organization rules
+- `docs/api-spec.md`: mock API contract
+- `docs/database-schema.md`: conceptual data model and shared vocabulary
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- This repository intentionally does not use the older monorepo `project-*` or domain-prefixed contract document structure.
+- Documents are intentionally lightweight. Detailed execution planning should happen in GitHub issues, not in the contract documents.
+- Before changing Next.js behavior, read the matching guide under `node_modules/next/dist/docs/`.
