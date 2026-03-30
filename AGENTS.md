@@ -23,6 +23,14 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - **Screen 4 — Request Management** (`app/admin/attendance/requests`): pending/approved/rejected request table, approve/reject buttons with confirmation modal, rejection reason input.
 - **Mock API**: 9 endpoints (5 employee, 4 admin) implemented as Next.js Route Handlers under `app/api/**`. See `docs/api-spec.md` for the full contract.
 
+### Stack
+
+- Next.js 16 App Router (`next.config.ts`)
+- React 19
+- Tailwind CSS v4 (`postcss.config.mjs`)
+- ESLint for formatting and linting (`eslint.config.json`)
+- pnpm for package manager. Use pnpm only.
+
 ### Working Rules
 
 - Treat `AGENTS.md`, `DESIGN.md`, and the files in `docs/` as the source of truth for this project.
@@ -109,10 +117,6 @@ This project uses **Next.js 16.2.1**. This version has breaking changes — APIs
 - Prefer structured logging over ad-hoc plain text logs for business and system events.
 - Node.js/Next.js code should use `pino` (or a compatible structured logger built on it).
 - CLI and operator-facing logs should enable ANSI color by default; allow opt-out with documented flags or environment variables.
-
-### Package Manager
-
-- Use pnpm only.
 
 ### Scripts & Validation
 
