@@ -19,6 +19,12 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - If a form has a single critical input, that input must receive focus when the form is shown.
 - Dialog UIs must support closing with the `Esc` key.
 
+## Shared Primitives
+
+- Reusable UI primitives live in `components/ui` and should be added through the official `shadcn/ui` CLI workflow when possible.
+- Prefer shared `shadcn/ui` primitives for cards, forms, badges, tables, tabs, and dialogs before introducing custom styled markup.
+- Keep application-level theme tokens and typography variables in `app/globals.css`.
+
 ## Relationship To `DESIGN.md`
 
 - `DESIGN.md` should carry tokens, typography choices, and visual guardrails for design agents.

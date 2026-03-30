@@ -57,74 +57,74 @@ It is not a physical database schema. Its job is to keep mock data, API contract
 
 ### Employee
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | string | stable employee identifier |
-| `name` | string | display name used in employee and admin views |
-| `department` | string | team grouping shown in admin tables |
-| `role` | string | minimal role label such as `employee` or `admin` |
+| Field        | Type   | Notes                                            |
+| ------------ | ------ | ------------------------------------------------ |
+| `id`         | string | stable employee identifier                       |
+| `name`       | string | display name used in employee and admin views    |
+| `department` | string | team grouping shown in admin tables              |
+| `role`       | string | minimal role label such as `employee` or `admin` |
 
 ### Attendance Record
 
 Represents one employee's attendance state for one calendar date.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | string | stable record identifier |
-| `employeeId` | string | relation to `Employee.id` |
-| `date` | string | target workday |
-| `clockInAt` | string or null | null when the employee has not checked in |
-| `clockOutAt` | string or null | null when the workday is still open or missing |
-| `workMinutes` | number or null | derived from in and out times when complete |
-| `status` | enum | `Attendance Status` |
-| `beaconVerified` | boolean | whether beacon verification succeeded |
-| `verificationMethod` | enum | `Verification Method` |
-| `manualRequestId` | string or null | link to a manual correction request if one exists |
+| Field                | Type           | Notes                                             |
+| -------------------- | -------------- | ------------------------------------------------- |
+| `id`                 | string         | stable record identifier                          |
+| `employeeId`         | string         | relation to `Employee.id`                         |
+| `date`               | string         | target workday                                    |
+| `clockInAt`          | string or null | null when the employee has not checked in         |
+| `clockOutAt`         | string or null | null when the workday is still open or missing    |
+| `workMinutes`        | number or null | derived from in and out times when complete       |
+| `status`             | enum           | `Attendance Status`                               |
+| `beaconVerified`     | boolean        | whether beacon verification succeeded             |
+| `verificationMethod` | enum           | `Verification Method`                             |
+| `manualRequestId`    | string or null | link to a manual correction request if one exists |
 
 ### Leave Balance
 
 Represents the employee-level leave summary used by the leave page.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `employeeId` | string | relation to `Employee.id` |
-| `totalDays` | number | available yearly allowance |
-| `usedDays` | number | already consumed allowance |
-| `remainingDays` | number | derived remaining balance |
+| Field           | Type   | Notes                      |
+| --------------- | ------ | -------------------------- |
+| `employeeId`    | string | relation to `Employee.id`  |
+| `totalDays`     | number | available yearly allowance |
+| `usedDays`      | number | already consumed allowance |
+| `remainingDays` | number | derived remaining balance  |
 
 ### Leave Request
 
 Represents a submitted leave application.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | string | stable request identifier |
-| `employeeId` | string | relation to `Employee.id` |
-| `requestType` | enum | always `leave` |
-| `leaveType` | enum | `Leave Type` |
-| `date` | string | target leave date |
-| `hours` | number or null | required only when `leaveType` is `hourly` |
-| `reason` | string | employee-provided note |
-| `status` | enum | `Approval Status` |
-| `requestedAt` | string | submission time |
-| `reviewedAt` | string or null | admin decision time |
-| `rejectionReason` | string or null | populated only when rejected |
+| Field             | Type           | Notes                                      |
+| ----------------- | -------------- | ------------------------------------------ |
+| `id`              | string         | stable request identifier                  |
+| `employeeId`      | string         | relation to `Employee.id`                  |
+| `requestType`     | enum           | always `leave`                             |
+| `leaveType`       | enum           | `Leave Type`                               |
+| `date`            | string         | target leave date                          |
+| `hours`           | number or null | required only when `leaveType` is `hourly` |
+| `reason`          | string         | employee-provided note                     |
+| `status`          | enum           | `Approval Status`                          |
+| `requestedAt`     | string         | submission time                            |
+| `reviewedAt`      | string or null | admin decision time                        |
+| `rejectionReason` | string or null | populated only when rejected               |
 
 ### Manual Attendance Request
 
 Represents a manual correction request when beacon-based verification is missing or incomplete.
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `id` | string | stable request identifier |
-| `employeeId` | string | relation to `Employee.id` |
-| `requestType` | enum | always `manual_attendance` |
-| `action` | enum | `Manual Attendance Action` |
-| `date` | string | target workday |
-| `requestedAt` | string | requested correction time |
-| `reason` | string | employee-provided note |
-| `status` | enum | `Approval Status` |
-| `reviewedAt` | string or null | admin decision time |
+| Field             | Type           | Notes                        |
+| ----------------- | -------------- | ---------------------------- |
+| `id`              | string         | stable request identifier    |
+| `employeeId`      | string         | relation to `Employee.id`    |
+| `requestType`     | enum           | always `manual_attendance`   |
+| `action`          | enum           | `Manual Attendance Action`   |
+| `date`            | string         | target workday               |
+| `requestedAt`     | string         | requested correction time    |
+| `reason`          | string         | employee-provided note       |
+| `status`          | enum           | `Approval Status`            |
+| `reviewedAt`      | string or null | admin decision time          |
 | `rejectionReason` | string or null | populated only when rejected |
 
 ## Derived Views
