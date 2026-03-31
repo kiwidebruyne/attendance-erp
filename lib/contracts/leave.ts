@@ -17,7 +17,7 @@ const hourlyLeaveRequestBodySchema = z.object({
 const nonHourlyLeaveRequestBodySchema = z.object({
   leaveType: leaveTypeSchema.exclude(["hourly"]),
   date: apiDateSchema,
-  hours: z.number().nullable().optional(),
+  hours: z.null().optional(),
   reason: z.string().min(1),
 });
 

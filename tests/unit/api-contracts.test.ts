@@ -225,6 +225,17 @@ describe("leave contracts", () => {
     ).toThrow();
   });
 
+  it("rejects numeric hours for non-hourly leave requests", () => {
+    expect(() =>
+      leaveRequestBodySchema.parse({
+        leaveType: "annual",
+        date: "2026-04-03",
+        hours: 3,
+        reason: "Medical appointment",
+      }),
+    ).toThrow();
+  });
+
   it("parses the documented leave request response", () => {
     expect(
       leaveRequestResponseSchema.parse({
