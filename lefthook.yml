@@ -1,0 +1,23 @@
+pre-commit:
+  jobs:
+    - run: pnpm exec prettier --write {staged_files}
+      glob:
+        - "*.{css,js,jsx,json,md,mjs,mts,cts,ts,tsx,yaml,yml}"
+        - "**/*.{css,js,jsx,json,md,mjs,mts,cts,ts,tsx,yaml,yml}"
+      stage_fixed: true
+    - run: pnpm exec eslint --fix {staged_files}
+      glob:
+        - "*.{js,jsx,mjs,mts,cjs,cts,ts,tsx}"
+        - "**/*.{js,jsx,mjs,mts,cjs,cts,ts,tsx}"
+      stage_fixed: true
+
+pre-push:
+  commands:
+    lint:
+      run: pnpm lint
+    format:
+      run: pnpm format:check
+    test:
+      run: pnpm test
+    build:
+      run: pnpm build

@@ -20,6 +20,8 @@ pnpm install
 pnpm dev
 ```
 
+`pnpm install` also installs the committed local Git hooks via Lefthook.
+
 Useful commands:
 
 ```bash
@@ -30,6 +32,14 @@ pnpm test:coverage
 pnpm lint
 pnpm build
 ```
+
+## Local Git Hooks
+
+This repository uses Lefthook for local Git hooks and does not use Husky.
+
+- `pre-commit` formats and lints staged files only, then restages safe fixes.
+- `pre-push` runs `pnpm lint`, `pnpm format:check`, `pnpm test`, and
+  `pnpm build`.
 
 ## Documentation
 

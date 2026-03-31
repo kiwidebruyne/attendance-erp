@@ -1,3 +1,6 @@
+onlyBuiltDependencies:
+  - lefthook
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
