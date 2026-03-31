@@ -30,6 +30,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - Tailwind CSS v4 (`postcss.config.mjs`)
 - ESLint for formatting and linting (`eslint.config.json`)
 - pnpm for package manager. Use pnpm only.
+- shadcn UI plus Radix-based primitives for reusable UI (`components.json`)
 
 ### Working Rules
 
@@ -90,6 +91,10 @@ This project uses **Next.js 16.2.1**. This version has breaking changes — APIs
 - If you notice unrelated dead code, mention it - don't delete it.
 - Remove imports/variables/functions that YOUR changes made unused.
 - Don't remove pre-existing dead code unless asked.
+
+#### When Creating Or Updating Components OR UI
+
+Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and skill's CLI and registry workflow, prefer shadcn components over hand-rolled UI, and only build custom UI after checking the existing shadcn options.
 
 ### Source Of Truth Map
 
