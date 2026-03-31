@@ -148,6 +148,7 @@ Expected fields:
 - target date
 - reason
 - approval status
+- `rejectionReason`, which is `null` unless approval status is `rejected`, where it must be a non-empty string
 - submission and review timestamps
 
 ## Relationships

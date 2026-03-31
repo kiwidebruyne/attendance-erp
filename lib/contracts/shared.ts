@@ -74,26 +74,49 @@ export const leaveBalanceSchema = z.object({
   remainingDays: z.number(),
 });
 
+export const pendingApprovalStateSchema = z.object({
+  status: z.literal("pending"),
+  reviewedAt: apiDateTimeSchema.nullable(),
+  rejectionReason: z.null(),
+});
+
+export const approvedApprovalStateSchema = z.object({
+  status: z.literal("approved"),
+  reviewedAt: apiDateTimeSchema.nullable(),
+  rejectionReason: z.null(),
+});
+
+export const rejectedApprovalStateSchema = z.object({
+  status: z.literal("rejected"),
+  reviewedAt: apiDateTimeSchema.nullable(),
+  rejectionReason: z.string().trim().min(1),
+});
+
 const leaveRequestBaseSchema = z.object({
   id: z.string().min(1),
   requestType: z.literal("leave"),
   date: apiDateSchema,
   reason: z.string().min(1),
-  status: approvalStatusSchema,
   requestedAt: apiDateTimeSchema,
-  reviewedAt: apiDateTimeSchema.nullable(),
-  rejectionReason: z.string().nullable(),
 });
 
-export const leaveRequestSchema = z.discriminatedUnion("leaveType", [
-  leaveRequestBaseSchema.extend({
-    leaveType: z.literal("hourly"),
-    hours: z.number(),
-  }),
-  leaveRequestBaseSchema.extend({
-    leaveType: leaveTypeSchema.exclude(["hourly"]),
-    hours: z.null(),
-  }),
+const hourlyLeaveRequestBaseSchema = leaveRequestBaseSchema.extend({
+  leaveType: z.literal("hourly"),
+  hours: z.number(),
+});
+
+const nonHourlyLeaveRequestBaseSchema = leaveRequestBaseSchema.extend({
+  leaveType: leaveTypeSchema.exclude(["hourly"]),
+  hours: z.null(),
+});
+
+export const leaveRequestSchema = z.union([
+  hourlyLeaveRequestBaseSchema.merge(pendingApprovalStateSchema),
+  hourlyLeaveRequestBaseSchema.merge(approvedApprovalStateSchema),
+  hourlyLeaveRequestBaseSchema.merge(rejectedApprovalStateSchema),
+  nonHourlyLeaveRequestBaseSchema.merge(pendingApprovalStateSchema),
+  nonHourlyLeaveRequestBaseSchema.merge(approvedApprovalStateSchema),
+  nonHourlyLeaveRequestBaseSchema.merge(rejectedApprovalStateSchema),
 ]);
 
 export const manualAttendanceRequestResourceSchema = z.object({

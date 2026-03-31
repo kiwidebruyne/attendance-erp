@@ -4,37 +4,57 @@ import {
   apiDateSchema,
   apiDateTimeSchema,
   approvalStatusSchema,
+  approvedApprovalStateSchema,
   employeeSummarySchema,
   leaveTypeSchema,
   manualAttendanceActionSchema,
+  pendingApprovalStateSchema,
+  rejectedApprovalStateSchema,
   requestTypeSchema,
 } from "@/lib/contracts/shared";
 
-const adminManualAttendanceRequestQueueItemSchema = z.object({
+const adminRequestQueueItemBaseSchema = z.object({
   id: z.string().min(1),
   employee: employeeSummarySchema,
-  requestType: z.literal("manual_attendance"),
-  subtype: manualAttendanceActionSchema,
   targetDate: apiDateSchema,
   reason: z.string().min(1),
-  status: approvalStatusSchema,
   requestedAt: apiDateTimeSchema,
-  reviewedAt: apiDateTimeSchema.nullable(),
-  rejectionReason: z.string().nullable(),
 });
 
-const adminLeaveRequestQueueItemSchema = z.object({
-  id: z.string().min(1),
-  employee: employeeSummarySchema,
-  requestType: z.literal("leave"),
-  subtype: leaveTypeSchema,
-  targetDate: apiDateSchema,
-  reason: z.string().min(1),
-  status: approvalStatusSchema,
-  requestedAt: apiDateTimeSchema,
-  reviewedAt: apiDateTimeSchema.nullable(),
-  rejectionReason: z.string().nullable(),
-});
+const adminManualAttendanceRequestQueueItemBaseSchema =
+  adminRequestQueueItemBaseSchema.extend({
+    requestType: z.literal("manual_attendance"),
+    subtype: manualAttendanceActionSchema,
+  });
+
+const adminLeaveRequestQueueItemBaseSchema =
+  adminRequestQueueItemBaseSchema.extend({
+    requestType: z.literal("leave"),
+    subtype: leaveTypeSchema,
+  });
+
+const adminManualAttendanceRequestQueueItemSchemas = [
+  adminManualAttendanceRequestQueueItemBaseSchema.merge(
+    pendingApprovalStateSchema,
+  ),
+  adminManualAttendanceRequestQueueItemBaseSchema.merge(
+    approvedApprovalStateSchema,
+  ),
+  adminManualAttendanceRequestQueueItemBaseSchema.merge(
+    rejectedApprovalStateSchema,
+  ),
+];
+
+const adminLeaveRequestQueueItemSchemas = [
+  adminLeaveRequestQueueItemBaseSchema.merge(pendingApprovalStateSchema),
+  adminLeaveRequestQueueItemBaseSchema.merge(approvedApprovalStateSchema),
+  adminLeaveRequestQueueItemBaseSchema.merge(rejectedApprovalStateSchema),
+];
+
+const adminRequestQueueItemSchema = z.union([
+  ...adminManualAttendanceRequestQueueItemSchemas,
+  ...adminLeaveRequestQueueItemSchemas,
+]);
 
 export const adminRequestsQuerySchema = z.object({
   status: approvalStatusSchema.optional(),
@@ -42,12 +62,7 @@ export const adminRequestsQuerySchema = z.object({
 
 export const adminRequestsResponseSchema = z.object({
   statusFilter: approvalStatusSchema.optional(),
-  items: z.array(
-    z.discriminatedUnion("requestType", [
-      adminManualAttendanceRequestQueueItemSchema,
-      adminLeaveRequestQueueItemSchema,
-    ]),
-  ),
+  items: z.array(adminRequestQueueItemSchema),
 });
 
 export const adminRequestDecisionBodySchema = z.discriminatedUnion("decision", [

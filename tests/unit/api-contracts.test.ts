@@ -289,6 +289,40 @@ describe("leave contracts", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects rejected leave responses without a rejection reason", () => {
+    expect(() =>
+      leaveRequestResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        leaveType: "annual",
+        date: "2026-04-03",
+        hours: null,
+        reason: "Medical appointment",
+        status: "rejected",
+        requestedAt: "2026-03-30T11:25:00+09:00",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        rejectionReason: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects approved leave responses with a rejection reason", () => {
+    expect(() =>
+      leaveRequestResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        leaveType: "annual",
+        date: "2026-04-03",
+        hours: null,
+        reason: "Medical appointment",
+        status: "approved",
+        requestedAt: "2026-03-30T11:25:00+09:00",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        rejectionReason: "Should not be present",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("admin attendance contracts", () => {
@@ -420,6 +454,58 @@ describe("admin request-review contracts", () => {
             requestedAt: "2026-03-30T09:10:00+09:00",
             reviewedAt: null,
             rejectionReason: null,
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects rejected queue items without a rejection reason", () => {
+    expect(() =>
+      adminRequestsResponseSchema.parse({
+        statusFilter: "rejected",
+        items: [
+          {
+            id: "req_manual_001",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            requestType: "manual_attendance",
+            subtype: "clock_in",
+            targetDate: "2026-03-30",
+            reason: "Beacon was not detected at the office entrance.",
+            status: "rejected",
+            requestedAt: "2026-03-30T09:10:00+09:00",
+            reviewedAt: "2026-03-30T13:15:00+09:00",
+            rejectionReason: null,
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects approved queue items with a rejection reason", () => {
+    expect(() =>
+      adminRequestsResponseSchema.parse({
+        statusFilter: "approved",
+        items: [
+          {
+            id: "req_leave_001",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            requestType: "leave",
+            subtype: "annual",
+            targetDate: "2026-03-30",
+            reason: "Medical appointment",
+            status: "approved",
+            requestedAt: "2026-03-30T09:10:00+09:00",
+            reviewedAt: "2026-03-30T13:15:00+09:00",
+            rejectionReason: "Should not be present",
           },
         ],
       }),

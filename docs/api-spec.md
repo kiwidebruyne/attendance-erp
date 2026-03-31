@@ -159,6 +159,10 @@ Typical error cases:
 
 Returns leave balance plus the current employee's leave request history.
 
+Response notes:
+
+- `rejectionReason`: `null` unless `status` is `rejected`; required non-empty string when `status` is `rejected`
+
 Response:
 
 ```json
@@ -296,6 +300,10 @@ Returns the request-review queue for admins.
 Query parameters:
 
 - `status`: optional `pending`, `approved`, or `rejected`
+
+Response notes:
+
+- `rejectionReason`: `null` unless an item `status` is `rejected`; required non-empty string when an item `status` is `rejected`
 
 Response:
 
