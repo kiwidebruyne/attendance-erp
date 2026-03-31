@@ -329,6 +329,9 @@ Approves or rejects a request.
 
 Request body:
 
+- `decision`: required `approve` or `reject`
+- `rejectionReason`: required non-empty string when `decision` is `reject`; omit it when `decision` is `approve`
+
 ```json
 {
   "decision": "reject",

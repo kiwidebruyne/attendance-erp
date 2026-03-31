@@ -134,6 +134,11 @@ Represents a manual correction request when beacon-based verification is missing
 The admin review screen combines `Leave Request` and `Manual Attendance Request` into one derived list.
 This should be treated as a query or view model rather than a separate persisted entity.
 
+The admin review action itself is an API command rather than a persisted entity field:
+
+- `approve` moves a request into the `approved` status
+- `reject` moves a request into the `rejected` status and stores a non-empty `rejectionReason`
+
 Expected fields:
 
 - request id
