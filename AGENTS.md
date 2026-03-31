@@ -28,8 +28,17 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - Next.js 16 App Router (`next.config.ts`)
 - React 19
 - Tailwind CSS v4 (`postcss.config.mjs`)
-- ESLint for formatting and linting (`eslint.config.json`)
+- Vitest + React Testing Library (Node unit tests and JSDOM integration tests)
+- ESLint for formatting and linting (`eslint.config.mjs`)
 - pnpm for package manager. Use pnpm only.
+
+### Testing Setup
+
+- `pnpm test` runs all configured Vitest projects once.
+- `pnpm test:unit` targets pure helpers and other non-DOM logic in the Node environment.
+- `pnpm test:integration` targets interactive client behavior in JSDOM with React Testing Library and shared setup from `vitest.setup.ts`.
+- Current sample tests live under `tests/unit` and `tests/integration`, with simple fixture targets under `tests/fixtures`.
+- `async` Server Components are not a Vitest target in this repository and should be covered by E2E tests.
 
 ### Working Rules
 
