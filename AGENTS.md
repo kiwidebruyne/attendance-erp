@@ -113,6 +113,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - `DESIGN.md`: design-agent-readable visual system and component styling rules.
 - `docs/AGENTS.md`: documentation catalog, ownership matrix, and update triggers.
 - `docs/raw-assignment.md`: raw assignment input and local ERP reference image for documentation use.
+- `docs/product-spec-context.md`: living raw product-spec discussion log and cross-screen decision context.
 - `docs/feature-requirements.md`: user-visible scope, roles, screens, and edge cases.
 - `docs/ui-guidelines.md`: implementation-oriented UI guidance that bridges the ERP reference and `DESIGN.md`.
 - `docs/app-architecture.md`: route map, layout boundaries, rendering boundaries, and code organization rules.
