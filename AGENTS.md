@@ -37,7 +37,6 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - `pnpm test` runs all configured Vitest projects once.
 - `pnpm test:unit` targets pure helpers and other non-DOM logic in the Node environment.
 - `pnpm test:integration` targets interactive client behavior in JSDOM with React Testing Library and shared setup from `vitest.setup.ts`.
-- Current sample tests live under `tests/unit` and `tests/integration`, with simple fixture targets under `tests/fixtures`.
 - `async` Server Components are not a Vitest target in this repository and should be covered by E2E tests.
 
 ### Working Rules
