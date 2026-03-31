@@ -6,6 +6,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 
 - Keep this file readable by both humans and models before any follow-up product decision.
 - This file does not replace narrower contract documents. Once a policy is finalized, promote it into `docs/feature-requirements.md`, `docs/ui-guidelines.md`, `docs/api-spec.md`, `docs/database-schema.md`, or another primary contract document as appropriate.
+- Pre-contract defaults recorded here guide ongoing product discussion, but they must not be implemented as contract changes until the corresponding primary documents are updated in a synchronized follow-up change.
 - This file is a living log, not a dated session snapshot. Append future discussion of the same kind here.
 - The archive section keeps the original Korean discussion as intact as possible, while machine-specific local paths should be sanitized into repository-relative references.
 - Anyone changing screen structure, workflow rules, state policy, notification UX, or approval and correction behavior should read this file first to recover the current discussion context and open questions.
@@ -24,7 +25,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 ## Locked Workflow Defaults
 
 - When an already reviewed request must change, use a follow-up request model rather than silently overwriting the original request.
-- Admin decision states include `보완 요청`.
+- At the product-workflow level, plan for a remediation outcome labeled `보완 요청`; do not treat it as current API or schema vocabulary until the contract documents are updated in a synchronized follow-up change.
 - Re-submission after rejection should start from a prefilled version of the previous input rather than an empty form.
 - Notification scope is in-app first: warnings, badges, and status surfaces come before external push channels.
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
@@ -115,7 +116,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - `보장:` 연차/반차도 이 화면에서 요약 노출되어야 한다. 승인된 휴가가 있는 날은 출결 오류 경고보다 휴가 상태가 우선해서 보여야 한다.
 - `추가로 중요:` 전날 퇴근 누락이 오늘 아침까지 끌고 와서 첫 화면에 떠야 한다. 이런 건 사용자가 제일 놓치기 쉽다.
 - `추가로 중요:` 수동 신청이 `대기중`인지 `반려됨`인지, 반려 사유가 뭔지 이 화면에서 바로 보여야 한다. leave 페이지까지 가서 확인하게 하면 늦다.
-- `추가로 중요:` “비콘 범위 밖에서 앱을 열면?”이라는 [raw-assignment.md](docs/raw-assignment.md) 질문의 본질은, 앱이 **잘못된 확신**을 주지 않게 하라는 뜻이다. 밖에서 앱을 열었다고 출근 실패가 확정되는 것도 아니고, 반대로 정상 출근 가능 상태처럼 보여도 안 된다. 즉 이 경우는 `지금 비콘을 감지하지 못해 출근/퇴근 처리가 불가함`을 명확히 보여주고, 기록 조회와 보정 경로는 계속 열어둬야 한다.
+- `추가로 중요:` “비콘 범위 밖에서 앱을 열면?”이라는 [raw-assignment.md](raw-assignment.md) 질문의 본질은, 앱이 **잘못된 확신**을 주지 않게 하라는 뜻이다. 밖에서 앱을 열었다고 출근 실패가 확정되는 것도 아니고, 반대로 정상 출근 가능 상태처럼 보여도 안 된다. 즉 이 경우는 `지금 비콘을 감지하지 못해 출근/퇴근 처리가 불가함`을 명확히 보여주고, 기록 조회와 보정 경로는 계속 열어둬야 한다.
 - `금지:` 출퇴근 누락이 주간/월간 기록표 안에만 숨어 있는 것.
 - `금지:` 승인된 휴가일에 “미출근” 경고가 뜨는 것.
 - `금지:` 중복 수동 신청을 해도 왜 안 되는지 설명이 없는 것.
