@@ -21,9 +21,6 @@ pnpm dev
 ```
 
 `pnpm install` also installs the committed local Git hooks via Lefthook.
-The repository-owned installer normalizes this repo's local hook path, reinstalls
-Lefthook into the real Git hooks directory, and removes stale generated
-`.husky/_` leftovers when safe.
 
 Useful commands:
 
@@ -32,7 +29,6 @@ pnpm test
 pnpm test:unit
 pnpm test:integration
 pnpm test:coverage
-pnpm hooks:install
 pnpm lint
 pnpm build
 ```
@@ -40,16 +36,10 @@ pnpm build
 ## Local Git Hooks
 
 This repository uses Lefthook for local Git hooks and does not use Husky.
-The repository-owned installer is the authoritative setup path; the dependency
-package's own `postinstall` is only an upstream package behavior.
 
 - `pre-commit` formats and lints staged files only, then restages safe fixes.
 - `pre-push` runs `pnpm lint`, `pnpm format:check`, `pnpm test`, and
   `pnpm build`.
-- `pnpm hooks:install` re-runs hook normalization and Lefthook installation
-  without reinstalling dependencies.
-- Hook normalization only mutates this repository's local and worktree Git
-  config. It never changes global or system Git config.
 
 ## Documentation
 

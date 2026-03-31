@@ -29,7 +29,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - React 19
 - Tailwind CSS v4 (`postcss.config.mjs`)
 - Vitest + React Testing Library (Node unit tests and JSDOM integration tests)
-- Lefthook for local Git hooks, with a repo-owned installer that normalizes local hook state through the repository's pnpm workflow
+- Lefthook for local Git hooks (`lefthook.yml` is the source of truth)
 - ESLint for formatting and linting (`eslint.config.mjs`)
 - pnpm for package manager. Use pnpm only.
 
@@ -56,8 +56,6 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - Run `git commit` only after `git add`; once files are staged, commit without unnecessary delay so staged changes are preserved in history.
 - Committing may require workspace binaries (for example, git hooks). If required binaries are missing, run `pnpm install` at the repository root and retry the commit.
 - Use the committed `lefthook.yml` as the source of truth for local Git hooks. This repository uses Lefthook and does not use Husky.
-- Treat `pnpm install` and `pnpm hooks:install` as the authoritative hook installer. They may normalize this repository's local/worktree `core.hooksPath`, reinstall Lefthook into the real Git hooks directory, and clean stale generated `.husky/_` artifacts.
-- Never mutate global or system Git config as part of local hook setup or recovery.
 - After addressing pull request review comments and pushing updates, mark the corresponding review threads as resolved.
 - When no explicit scope is specified and you are currently working within a pull request scope, interpret instructions within the current pull request scope.
 - Do not guess; rather search for the web.
