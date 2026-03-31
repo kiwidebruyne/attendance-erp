@@ -12,11 +12,12 @@ pre-commit:
       stage_fixed: true
 
 pre-push:
-  jobs:
-    # Lefthook skips pre-push jobs that do not consume a file template.
-    # Keep the no-op {all_files} expansion until Lefthook supports an
-    # always-run repo-wide pre-push command without this workaround.
-    - run: ": {all_files} >/dev/null && pnpm lint"
-    - run: ": {all_files} >/dev/null && pnpm format:check"
-    - run: ": {all_files} >/dev/null && pnpm test"
-    - run: ": {all_files} >/dev/null && pnpm build"
+  commands:
+    lint:
+      run: pnpm lint
+    format:
+      run: pnpm format:check
+    test:
+      run: pnpm test
+    build:
+      run: pnpm build
