@@ -89,6 +89,12 @@ Recommended conventions inside `lib/`:
 - centralize enum and label mapping used by both UI and API layers
 - use small repository-like helpers for mock queries instead of embedding filtering logic in pages and handlers
 
+## Testing Boundaries
+
+- Use the Vitest `unit` project with the Node environment for pure helpers, schema logic, and other non-DOM utilities.
+- Use the Vitest `integration` project with the JSDOM environment for interactive client components and browser-facing UI behavior.
+- Do not target `async` Server Components with Vitest in this project. Cover those flows with E2E tests instead.
+
 ## Mock API Boundary
 
 - Route Handlers are the public contract for the assignment's REST API.
