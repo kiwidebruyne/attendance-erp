@@ -29,6 +29,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - React 19
 - Tailwind CSS v4 (`postcss.config.mjs`)
 - Vitest + React Testing Library (Node unit tests and JSDOM integration tests)
+- Lefthook for local Git hooks installed through the repository's pnpm workflow
 - ESLint for formatting and linting (`eslint.config.mjs`)
 - pnpm for package manager. Use pnpm only.
 
@@ -54,6 +55,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - Commit your work as frequent as possible using git. Do NOT use `--no-verify` flag.
 - Run `git commit` only after `git add`; once files are staged, commit without unnecessary delay so staged changes are preserved in history.
 - Committing may require workspace binaries (for example, git hooks). If required binaries are missing, run `pnpm install` at the repository root and retry the commit.
+- Use the committed `lefthook.yml` as the source of truth for local Git hooks. This repository chose Lefthook over Husky to preserve future workspace and multi-root flexibility.
 - After addressing pull request review comments and pushing updates, mark the corresponding review threads as resolved.
 - When no explicit scope is specified and you are currently working within a pull request scope, interpret instructions within the current pull request scope.
 - Do not guess; rather search for the web.

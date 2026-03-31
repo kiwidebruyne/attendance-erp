@@ -1,0 +1,23 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - run: pnpm exec prettier --write {staged_files}
+      glob:
+        - "*.{css,js,jsx,json,md,mjs,mts,cts,ts,tsx,yaml,yml}"
+        - "**/*.{css,js,jsx,json,md,mjs,mts,cts,ts,tsx,yaml,yml}"
+      stage_fixed: true
+    - run: pnpm exec eslint --fix {staged_files}
+      glob:
+        - "*.{js,jsx,mjs,mts,cjs,cts,ts,tsx}"
+        - "**/*.{js,jsx,mjs,mts,cjs,cts,ts,tsx}"
+      stage_fixed: true
+
+pre-push:
+  jobs:
+    # Lefthook skips pre-push jobs that do not consume a file template.
+    # Keep the no-op {all_files} expansion until Lefthook supports an
+    # always-run repo-wide pre-push command without this workaround.
+    - run: ": {all_files} >/dev/null && pnpm lint"
+    - run: ": {all_files} >/dev/null && pnpm format:check"
+    - run: ": {all_files} >/dev/null && pnpm test"
+    - run: ": {all_files} >/dev/null && pnpm build"
