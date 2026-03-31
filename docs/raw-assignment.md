@@ -15,13 +15,13 @@ Use it as the raw source for interpretation. Structured contracts live in `docs/
 
 ## 기술 스택
 
-| 항목 | 사양 |
-| --- | --- |
-| 프레임워크 | Next.js (App Router) — 필수 |
-| 언어 | TypeScript — 필수 |
-| 스타일링 | 자유 (Tailwind, CSS Modules, styled-components 등) |
-| 상태관리 | 자유 (React state, Zustand, Jotai 등) |
-| API | 아래 Mock API 명세에 맞춰 구현 |
+| 항목       | 사양                                               |
+| ---------- | -------------------------------------------------- |
+| 프레임워크 | Next.js (App Router) — 필수                        |
+| 언어       | TypeScript — 필수                                  |
+| 스타일링   | 자유 (Tailwind, CSS Modules, styled-components 등) |
+| 상태관리   | 자유 (React state, Zustand, Jotai 등)              |
+| API        | 아래 Mock API 명세에 맞춰 구현                     |
 
 ---
 

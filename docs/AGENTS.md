@@ -9,18 +9,18 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 
 ### Document Inventory
 
-| File | Primary concern | Update when |
-| --- | --- | --- |
-| `AGENTS.md` | human-readable repository overview and setup | onboarding or project framing changes |
-| `AGENTS.md` | repository rules and documentation workflow | working rules or documentation policy changes |
-| `DESIGN.md` | design-agent visual system | design tokens, component style, or visual guardrails change |
-| `docs/raw-assignment.md` | raw assignment input and original reference material | the provided assignment text or local visual reference asset changes |
-| `docs/feature-requirements.md` | user-visible features, roles, and edge cases | screen scope or product behavior changes |
-| `docs/ui-guidelines.md` | ERP-aligned implementation UI guidance | layout patterns, table rules, badge rules, or responsive behavior changes |
-| `docs/app-architecture.md` | routing, layout, rendering, and code organization | route map, layout boundaries, or state-placement rules change |
-| `docs/api-spec.md` | mock API contract | endpoint, payload, query parameter, or error contract changes |
-| `docs/database-schema.md` | conceptual data model and shared enums | entities, relationships, or shared vocabulary change |
-| `docs/assets/` | documentation image assets | a referenced local docs image is added, renamed, or replaced |
+| File                           | Primary concern                                      | Update when                                                               |
+| ------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| `AGENTS.md`                    | human-readable repository overview and setup         | onboarding or project framing changes                                     |
+| `AGENTS.md`                    | repository rules and documentation workflow          | working rules or documentation policy changes                             |
+| `DESIGN.md`                    | design-agent visual system                           | design tokens, component style, or visual guardrails change               |
+| `docs/raw-assignment.md`       | raw assignment input and original reference material | the provided assignment text or local visual reference asset changes      |
+| `docs/feature-requirements.md` | user-visible features, roles, and edge cases         | screen scope or product behavior changes                                  |
+| `docs/ui-guidelines.md`        | ERP-aligned implementation UI guidance               | layout patterns, table rules, badge rules, or responsive behavior changes |
+| `docs/app-architecture.md`     | routing, layout, rendering, and code organization    | route map, layout boundaries, or state-placement rules change             |
+| `docs/api-spec.md`             | mock API contract                                    | endpoint, payload, query parameter, or error contract changes             |
+| `docs/database-schema.md`      | conceptual data model and shared enums               | entities, relationships, or shared vocabulary change                      |
+| `docs/assets/`                 | documentation image assets                           | a referenced local docs image is added, renamed, or replaced              |
 
 ### Ownership Matrix
 
