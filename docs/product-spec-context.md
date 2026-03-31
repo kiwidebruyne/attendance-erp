@@ -2,45 +2,45 @@
 
 ## Purpose and Usage Rules
 
-이 문서는 출퇴근/휴가/신청 관리 제품 스펙 논의의 raw한 맥락을 누락 없이 보존하기 위한 누적형 source-of-truth 문서다.
+This document is a cumulative source-of-truth log for preserving raw product-spec discussion context around attendance, leave, and request management without dropping details.
 
-- 이 문서는 사람과 모델이 이후 의사결정 전에 전체 맥락을 다시 읽을 수 있도록 유지한다.
-- 이 문서는 해석된 계약 문서를 대체하지 않는다. 확정된 정책은 후속 논의를 거쳐 `docs/feature-requirements.md`, `docs/ui-guidelines.md`, `docs/api-spec.md`, `docs/database-schema.md` 등으로 승격한다.
-- 이 문서는 세션 스냅샷이 아니라 누적 로그다. 이후에도 같은 성격의 제품 스펙 논의가 나오면 같은 문서에 이어서 기록한다.
-- raw 대화 보존이 핵심 목적이므로, 이 문서의 archive 섹션에는 한국어 원문을 가능한 한 그대로 유지한다.
-- 이후 작업자가 화면 구조, 워크플로우, 상태 정책, 알림 UX, 승인/반려/수정 경험을 바꾸려면 먼저 이 문서를 읽고 현재 논의 맥락과 열린 질문을 확인해야 한다.
+- Keep this file readable by both humans and models before any follow-up product decision.
+- This file does not replace narrower contract documents. Once a policy is finalized, promote it into `docs/feature-requirements.md`, `docs/ui-guidelines.md`, `docs/api-spec.md`, `docs/database-schema.md`, or another primary contract document as appropriate.
+- This file is a living log, not a dated session snapshot. Append future discussion of the same kind here.
+- The archive section keeps the original Korean discussion as intact as possible, while machine-specific local paths should be sanitized into repository-relative references.
+- Anyone changing screen structure, workflow rules, state policy, notification UX, or approval and correction behavior should read this file first to recover the current discussion context and open questions.
 
 ## Locked Product Principles
 
-- 이 제품은 단순한 출결 기록기가 아니라 오류를 빠르게 발견하고 협업적으로 정렬하는 신뢰 제품으로 설계한다.
-- 직원과 관리자는 서로를 감시하는 관계가 아니라 같은 사실을 보고 같은 기록을 맞추는 관계로 느껴져야 한다.
-- 모든 화면은 현재 상태만 보여주는 데서 끝나면 안 되고, 왜 그렇게 판단했는지와 다음에 무엇을 해야 하는지도 같이 보여줘야 한다.
-- 문제는 히스토리 테이블 안에 숨어 있으면 안 된다. 오늘의 상태, 위험, 다음 액션은 화면 상단에서 즉시 보이도록 설계한다.
-- 같은 요청이나 같은 날짜에 대해 직원 화면과 관리자 화면이 다르게 보이는 silent inconsistency는 절대 허용하지 않는다.
-- 모든 중요한 상태 변화에는 `히스토리 + 사유 + 다음 액션`이 남아야 한다.
-- 문구 톤은 감시/비난이 아니라 협업/정렬의 톤을 기본값으로 한다.
-- hover에만 의존하는 정보 구조는 사용하지 않는다. 모바일과 접근성에서도 핵심 정보와 액션이 유지되어야 한다.
+- Treat the product as a trust product, not only a record-keeping tool.
+- Employees and admins should feel like they are aligning on shared facts, not supervising one another.
+- Every screen should show not only the current state, but also why that state exists and what action comes next.
+- Problems must not stay buried inside tables. Today’s state, risk, and next action should be visible near the top of the screen.
+- Silent inconsistency between employee and admin views for the same date or request is not acceptable.
+- Every important state transition should retain `history + reason + next action`.
+- Default copy tone should be collaborative and orient toward alignment rather than blame.
+- Do not rely on hover-only information structures. Core information and actions must stay available on mobile and through accessible interaction patterns.
 
 ## Locked Workflow Defaults
 
-- 이미 승인되거나 반려된 신청을 바꿀 때는 silent overwrite가 아니라 follow-up request 모델을 사용한다.
-- 관리자 결정 상태에는 `보완 요청`을 포함한다.
-- 반려 후 재신청은 새 빈 폼이 아니라 기존 입력을 선입력한 상태에서 수정 후 재제출하는 흐름을 기본값으로 삼는다.
-- 알림 범위는 외부 푸시보다 인앱 알림/경고/배지/상태 노출을 우선한다.
-- 관리자와 직원의 화면은 동일한 사실과 상태를 보여줘야 하며, stale 상태가 남지 않도록 동기화 신뢰를 보장해야 한다.
-- 직원/관리자 양쪽 모두에서 문제 사실과 해결 행동이 한 번에 보이는 action-first UX를 기본값으로 삼는다.
+- When an already reviewed request must change, use a follow-up request model rather than silently overwriting the original request.
+- Admin decision states include `보완 요청`.
+- Re-submission after rejection should start from a prefilled version of the previous input rather than an empty form.
+- Notification scope is in-app first: warnings, badges, and status surfaces come before external push channels.
+- Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
+- Use action-first UX so both employees and admins can see the problem and the resolution path together.
 
 ## Open Questions for Future Interviews
 
-- `보완 요청`의 정확한 상태 전이와 API vocabulary를 기존 `pending/approved/rejected` 계약에 어떻게 반영할지
-- 승인 전 취소, 승인 후 취소 요청, 승인 후 변경 요청을 요청 유형/상태/이력 중 어디에 표현할지
-- 회사 주요 일정 캘린더를 어느 화면까지 1차 범위에 넣을지와 누가 관리하는지
-- 날짜별 휴가 인원 제한 정책을 자동 차단으로 둘지, 경고 후 수동 승인으로 둘지
-- 인앱 알림의 정확한 trigger, 우선순위, 정리 기준, unread 모델을 어떻게 둘지
-- 직원 화면에서 연차/반차 요약을 `/attendance`에 어느 정도까지 노출할지
-- 전날 퇴근 누락, 같은 날 미출근, 지각, 보완 요청 대기 같은 예외를 어떤 우선순위로 노출할지
-- 세부 마이크로카피와 Toss식 협업 톤을 어떤 문장 규칙으로 문서화할지
-- SLA, 주요 일정 충돌 경고, 팀 인원 제한, 외부 알림 채널은 어느 시점에 정식 계약 문서로 승격할지
+- How should `보완 요청` map onto the current `pending/approved/rejected` contract vocabulary and state transitions?
+- Where should approve-time cancel, post-approval cancel request, and post-approval change request live: request type, status, history model, or a combination?
+- How far should company-event calendars go in the first product scope, and who owns them?
+- Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
+- What are the exact triggers, priority rules, cleanup rules, and unread model for in-app notifications?
+- How much leave summary should appear directly on `/attendance`?
+- What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and `보완 요청` waiting states?
+- What concrete writing rules should encode the desired collaborative tone and Toss-like microcopy style?
+- When should SLA, company-event conflict warnings, staffing caps, and external notification channels graduate into formal contract documents?
 
 ## Raw Conversation Archive
 
@@ -115,7 +115,7 @@
 - `보장:` 연차/반차도 이 화면에서 요약 노출되어야 한다. 승인된 휴가가 있는 날은 출결 오류 경고보다 휴가 상태가 우선해서 보여야 한다.
 - `추가로 중요:` 전날 퇴근 누락이 오늘 아침까지 끌고 와서 첫 화면에 떠야 한다. 이런 건 사용자가 제일 놓치기 쉽다.
 - `추가로 중요:` 수동 신청이 `대기중`인지 `반려됨`인지, 반려 사유가 뭔지 이 화면에서 바로 보여야 한다. leave 페이지까지 가서 확인하게 하면 늦다.
-- `추가로 중요:` “비콘 범위 밖에서 앱을 열면?”이라는 [raw-assignment.md](C:/Users/kiwidb/dev/attendance-erp/docs/raw-assignment.md) 질문의 본질은, 앱이 **잘못된 확신**을 주지 않게 하라는 뜻이다. 밖에서 앱을 열었다고 출근 실패가 확정되는 것도 아니고, 반대로 정상 출근 가능 상태처럼 보여도 안 된다. 즉 이 경우는 `지금 비콘을 감지하지 못해 출근/퇴근 처리가 불가함`을 명확히 보여주고, 기록 조회와 보정 경로는 계속 열어둬야 한다.
+- `추가로 중요:` “비콘 범위 밖에서 앱을 열면?”이라는 [raw-assignment.md](docs/raw-assignment.md) 질문의 본질은, 앱이 **잘못된 확신**을 주지 않게 하라는 뜻이다. 밖에서 앱을 열었다고 출근 실패가 확정되는 것도 아니고, 반대로 정상 출근 가능 상태처럼 보여도 안 된다. 즉 이 경우는 `지금 비콘을 감지하지 못해 출근/퇴근 처리가 불가함`을 명확히 보여주고, 기록 조회와 보정 경로는 계속 열어둬야 한다.
 - `금지:` 출퇴근 누락이 주간/월간 기록표 안에만 숨어 있는 것.
 - `금지:` 승인된 휴가일에 “미출근” 경고가 뜨는 것.
 - `금지:` 중복 수동 신청을 해도 왜 안 되는지 설명이 없는 것.

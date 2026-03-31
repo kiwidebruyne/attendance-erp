@@ -12,7 +12,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 | File                           | Primary concern                                      | Update when                                                                      |
 | ------------------------------ | ---------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `AGENTS.md`                    | human-readable repository overview and setup         | onboarding or project framing changes                                            |
-| `AGENTS.md`                    | repository rules and documentation workflow          | working rules or documentation policy changes                                    |
+| `docs/AGENTS.md`               | documentation catalog and documentation workflow     | docs inventory, ownership, or documentation policy changes                       |
 | `DESIGN.md`                    | design-agent visual system                           | design tokens, component style, or visual guardrails change                      |
 | `docs/raw-assignment.md`       | raw assignment input and original reference material | the provided assignment text or local visual reference asset changes             |
 | `docs/product-spec-context.md` | living raw product-spec discussion log               | cross-screen spec discussions, locked defaults, or open product questions change |
