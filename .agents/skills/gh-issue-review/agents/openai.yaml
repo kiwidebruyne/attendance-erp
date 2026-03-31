@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Issue Review"
+  short_description: "Review issues and post verdict comments."
+  default_prompt: "Use $gh-issue-review to review open GitHub issues in this repository and post concise verdict comments."
