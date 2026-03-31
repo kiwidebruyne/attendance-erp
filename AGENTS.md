@@ -39,6 +39,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - All repository-wide rules must be defined in the appropriate AGENTS.md.
 - Update the relevant source-of-truth documents in the same change whenever routes, API payloads, data vocabulary, or UI rules change.
 - Write code, comments, and documentation in English.
+- Store repository text files with LF line endings. Reserve CRLF only for Windows-only scripts such as `.bat` and `.cmd`.
 - When introducing a workaround, leave sufficient comments that explain why it exists, its scope, and the conditions for removing it.
 - Prefer enum types over strings whenever possible.
 - If you modified frontend code, run `pnpm test` from the frontend directory before finishing your task
