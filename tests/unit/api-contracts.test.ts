@@ -255,6 +255,40 @@ describe("leave contracts", () => {
       hours: 2,
     });
   });
+
+  it("rejects hourly leave responses without numeric hours", () => {
+    expect(() =>
+      leaveRequestResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        leaveType: "hourly",
+        date: "2026-04-03",
+        hours: null,
+        reason: "Medical appointment",
+        status: "pending",
+        requestedAt: "2026-03-30T11:25:00+09:00",
+        reviewedAt: null,
+        rejectionReason: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects non-hourly leave responses with numeric hours", () => {
+    expect(() =>
+      leaveRequestResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        leaveType: "annual",
+        date: "2026-04-03",
+        hours: 2,
+        reason: "Medical appointment",
+        status: "pending",
+        requestedAt: "2026-03-30T11:25:00+09:00",
+        reviewedAt: null,
+        rejectionReason: null,
+      }),
+    ).toThrow();
+  });
 });
 
 describe("admin attendance contracts", () => {
@@ -366,6 +400,32 @@ describe("admin request-review contracts", () => {
     });
   });
 
+  it("rejects leave queue items with manual attendance subtypes", () => {
+    expect(() =>
+      adminRequestsResponseSchema.parse({
+        statusFilter: "pending",
+        items: [
+          {
+            id: "req_leave_001",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            requestType: "leave",
+            subtype: "clock_in",
+            targetDate: "2026-03-30",
+            reason: "Medical appointment",
+            status: "pending",
+            requestedAt: "2026-03-30T09:10:00+09:00",
+            reviewedAt: null,
+            rejectionReason: null,
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
   it("requires an explicit approve or reject decision", () => {
     expect(() =>
       adminRequestDecisionBodySchema.parse({
@@ -394,5 +454,17 @@ describe("admin request-review contracts", () => {
     ).toMatchObject({
       status: "rejected",
     });
+  });
+
+  it("rejects pending statuses in request decision responses", () => {
+    expect(() =>
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        status: "pending",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        rejectionReason: null,
+      }),
+    ).toThrow();
   });
 });

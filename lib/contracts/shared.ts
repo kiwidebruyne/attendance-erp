@@ -74,18 +74,27 @@ export const leaveBalanceSchema = z.object({
   remainingDays: z.number(),
 });
 
-export const leaveRequestSchema = z.object({
+const leaveRequestBaseSchema = z.object({
   id: z.string().min(1),
   requestType: z.literal("leave"),
-  leaveType: leaveTypeSchema,
   date: apiDateSchema,
-  hours: z.number().nullable(),
   reason: z.string().min(1),
   status: approvalStatusSchema,
   requestedAt: apiDateTimeSchema,
   reviewedAt: apiDateTimeSchema.nullable(),
   rejectionReason: z.string().nullable(),
 });
+
+export const leaveRequestSchema = z.discriminatedUnion("leaveType", [
+  leaveRequestBaseSchema.extend({
+    leaveType: z.literal("hourly"),
+    hours: z.number(),
+  }),
+  leaveRequestBaseSchema.extend({
+    leaveType: leaveTypeSchema.exclude(["hourly"]),
+    hours: z.null(),
+  }),
+]);
 
 export const manualAttendanceRequestResourceSchema = z.object({
   id: z.string().min(1),

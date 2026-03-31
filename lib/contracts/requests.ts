@@ -10,10 +10,33 @@ import {
   requestTypeSchema,
 } from "@/lib/contracts/shared";
 
-const requestSubtypeSchema = z.union([
-  manualAttendanceActionSchema,
-  leaveTypeSchema,
-]);
+const finalizedApprovalStatusSchema = approvalStatusSchema.exclude(["pending"]);
+
+const adminManualAttendanceRequestQueueItemSchema = z.object({
+  id: z.string().min(1),
+  employee: employeeSummarySchema,
+  requestType: z.literal("manual_attendance"),
+  subtype: manualAttendanceActionSchema,
+  targetDate: apiDateSchema,
+  reason: z.string().min(1),
+  status: approvalStatusSchema,
+  requestedAt: apiDateTimeSchema,
+  reviewedAt: apiDateTimeSchema.nullable(),
+  rejectionReason: z.string().nullable(),
+});
+
+const adminLeaveRequestQueueItemSchema = z.object({
+  id: z.string().min(1),
+  employee: employeeSummarySchema,
+  requestType: z.literal("leave"),
+  subtype: leaveTypeSchema,
+  targetDate: apiDateSchema,
+  reason: z.string().min(1),
+  status: approvalStatusSchema,
+  requestedAt: apiDateTimeSchema,
+  reviewedAt: apiDateTimeSchema.nullable(),
+  rejectionReason: z.string().nullable(),
+});
 
 export const adminRequestsQuerySchema = z.object({
   status: approvalStatusSchema.optional(),
@@ -22,18 +45,10 @@ export const adminRequestsQuerySchema = z.object({
 export const adminRequestsResponseSchema = z.object({
   statusFilter: approvalStatusSchema.optional(),
   items: z.array(
-    z.object({
-      id: z.string().min(1),
-      employee: employeeSummarySchema,
-      requestType: requestTypeSchema,
-      subtype: requestSubtypeSchema,
-      targetDate: apiDateSchema,
-      reason: z.string().min(1),
-      status: approvalStatusSchema,
-      requestedAt: apiDateTimeSchema,
-      reviewedAt: apiDateTimeSchema.nullable(),
-      rejectionReason: z.string().nullable(),
-    }),
+    z.discriminatedUnion("requestType", [
+      adminManualAttendanceRequestQueueItemSchema,
+      adminLeaveRequestQueueItemSchema,
+    ]),
   ),
 });
 
@@ -50,7 +65,7 @@ export const adminRequestDecisionBodySchema = z.discriminatedUnion("decision", [
 export const adminRequestDecisionResponseSchema = z.object({
   id: z.string().min(1),
   requestType: requestTypeSchema,
-  status: approvalStatusSchema,
+  status: finalizedApprovalStatusSchema,
   reviewedAt: apiDateTimeSchema,
   rejectionReason: z.string().nullable(),
 });
