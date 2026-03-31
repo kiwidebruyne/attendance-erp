@@ -442,6 +442,15 @@ describe("admin request-review contracts", () => {
     ).toThrow();
   });
 
+  it("rejects rejection reasons on approve decisions", () => {
+    expect(() =>
+      adminRequestDecisionBodySchema.parse({
+        decision: "approve",
+        rejectionReason: "This should not be sent for approvals.",
+      }),
+    ).toThrow();
+  });
+
   it("parses the documented request decision response", () => {
     expect(
       adminRequestDecisionResponseSchema.parse({
@@ -464,6 +473,30 @@ describe("admin request-review contracts", () => {
         status: "pending",
         reviewedAt: "2026-03-30T13:15:00+09:00",
         rejectionReason: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects rejected decision responses without a rejection reason", () => {
+    expect(() =>
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        status: "rejected",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        rejectionReason: null,
+      }),
+    ).toThrow();
+  });
+
+  it("rejects rejected decision responses with an empty rejection reason", () => {
+    expect(() =>
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        status: "rejected",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        rejectionReason: "   ",
       }),
     ).toThrow();
   });

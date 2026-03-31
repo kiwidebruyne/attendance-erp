@@ -10,8 +10,6 @@ import {
   requestTypeSchema,
 } from "@/lib/contracts/shared";
 
-const finalizedApprovalStatusSchema = approvalStatusSchema.exclude(["pending"]);
-
 const adminManualAttendanceRequestQueueItemSchema = z.object({
   id: z.string().min(1),
   employee: employeeSummarySchema,
@@ -53,22 +51,34 @@ export const adminRequestsResponseSchema = z.object({
 });
 
 export const adminRequestDecisionBodySchema = z.discriminatedUnion("decision", [
-  z.object({
+  z.strictObject({
     decision: z.literal("approve"),
   }),
-  z.object({
+  z.strictObject({
     decision: z.literal("reject"),
     rejectionReason: z.string().trim().min(1),
   }),
 ]);
 
-export const adminRequestDecisionResponseSchema = z.object({
+const adminRequestDecisionResponseBaseSchema = z.object({
   id: z.string().min(1),
   requestType: requestTypeSchema,
-  status: finalizedApprovalStatusSchema,
   reviewedAt: apiDateTimeSchema,
-  rejectionReason: z.string().nullable(),
 });
+
+export const adminRequestDecisionResponseSchema = z.discriminatedUnion(
+  "status",
+  [
+    adminRequestDecisionResponseBaseSchema.extend({
+      status: z.literal("approved"),
+      rejectionReason: z.null(),
+    }),
+    adminRequestDecisionResponseBaseSchema.extend({
+      status: z.literal("rejected"),
+      rejectionReason: z.string().trim().min(1),
+    }),
+  ],
+);
 
 export type AdminRequestsQuery = z.infer<typeof adminRequestsQuerySchema>;
 export type AdminRequestsResponse = z.infer<typeof adminRequestsResponseSchema>;

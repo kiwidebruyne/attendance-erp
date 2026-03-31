@@ -96,36 +96,36 @@ Represents the employee-level leave summary used by the leave page.
 
 Represents a submitted leave application.
 
-| Field             | Type           | Notes                                      |
-| ----------------- | -------------- | ------------------------------------------ |
-| `id`              | string         | stable request identifier                  |
-| `employeeId`      | string         | relation to `Employee.id`                  |
-| `requestType`     | enum           | always `leave`                             |
-| `leaveType`       | enum           | `Leave Type`                               |
-| `date`            | string         | target leave date                          |
-| `hours`           | number or null | required only when `leaveType` is `hourly` |
-| `reason`          | string         | employee-provided note                     |
-| `status`          | enum           | `Approval Status`                          |
-| `requestedAt`     | string         | submission time                            |
-| `reviewedAt`      | string or null | admin decision time                        |
-| `rejectionReason` | string or null | populated only when rejected               |
+| Field             | Type           | Notes                                          |
+| ----------------- | -------------- | ---------------------------------------------- |
+| `id`              | string         | stable request identifier                      |
+| `employeeId`      | string         | relation to `Employee.id`                      |
+| `requestType`     | enum           | always `leave`                                 |
+| `leaveType`       | enum           | `Leave Type`                                   |
+| `date`            | string         | target leave date                              |
+| `hours`           | number or null | required only when `leaveType` is `hourly`     |
+| `reason`          | string         | employee-provided note                         |
+| `status`          | enum           | `Approval Status`                              |
+| `requestedAt`     | string         | submission time                                |
+| `reviewedAt`      | string or null | admin decision time                            |
+| `rejectionReason` | string or null | non-empty string when rejected; null otherwise |
 
 ### Manual Attendance Request
 
 Represents a manual correction request when beacon-based verification is missing or incomplete.
 
-| Field             | Type           | Notes                        |
-| ----------------- | -------------- | ---------------------------- |
-| `id`              | string         | stable request identifier    |
-| `employeeId`      | string         | relation to `Employee.id`    |
-| `requestType`     | enum           | always `manual_attendance`   |
-| `action`          | enum           | `Manual Attendance Action`   |
-| `date`            | string         | target workday               |
-| `requestedAt`     | string         | requested correction time    |
-| `reason`          | string         | employee-provided note       |
-| `status`          | enum           | `Approval Status`            |
-| `reviewedAt`      | string or null | admin decision time          |
-| `rejectionReason` | string or null | populated only when rejected |
+| Field             | Type           | Notes                                          |
+| ----------------- | -------------- | ---------------------------------------------- |
+| `id`              | string         | stable request identifier                      |
+| `employeeId`      | string         | relation to `Employee.id`                      |
+| `requestType`     | enum           | always `manual_attendance`                     |
+| `action`          | enum           | `Manual Attendance Action`                     |
+| `date`            | string         | target workday                                 |
+| `requestedAt`     | string         | requested correction time                      |
+| `reason`          | string         | employee-provided note                         |
+| `status`          | enum           | `Approval Status`                              |
+| `reviewedAt`      | string or null | admin decision time                            |
+| `rejectionReason` | string or null | non-empty string when rejected; null otherwise |
 
 ## Derived Views
 

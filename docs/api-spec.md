@@ -332,6 +332,11 @@ Request body:
 - `decision`: required `approve` or `reject`
 - `rejectionReason`: required non-empty string when `decision` is `reject`; omit it when `decision` is `approve`
 
+Response notes:
+
+- `status`: finalized `approved` or `rejected`
+- `rejectionReason`: `null` when `status` is `approved`; required non-empty string when `status` is `rejected`
+
 ```json
 {
   "decision": "reject",
