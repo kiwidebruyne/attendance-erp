@@ -23,6 +23,10 @@ pnpm dev
 Useful commands:
 
 ```bash
+pnpm test
+pnpm test:unit
+pnpm test:integration
+pnpm test:coverage
 pnpm lint
 pnpm build
 ```
