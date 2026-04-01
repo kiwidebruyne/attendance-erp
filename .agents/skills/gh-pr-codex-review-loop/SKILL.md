@@ -11,7 +11,7 @@ Run a deterministic loop for PR hardening:
 1. Check whether Codex already reacted with `:+1:`.
 2. If not approved, gather Codex-authored feedback.
 3. Implement fixes, run validations, commit, and push.
-4. Repeat until approval is present.
+4. Repeat every 30 seconds until approval is present.
 
 Use GitHub CLI (`gh`) for all GitHub operations.
 
@@ -32,7 +32,9 @@ node scripts/check_codex_thumbs_up.js 123 --repo owner/repo
 ```bash
 node scripts/collect_codex_feedback.js 123 --repo owner/repo --format markdown
 ```
-4. Address all active feedback in a single coherent fix set.
+4. Branch on the result:
+   - If actionable feedback exists, address it in a single coherent fix set.
+   - If approval is absent and no actionable feedback exists yet, emit a short status update, wait 30 seconds, and return to step 1. Do not exit the loop.
 5. Run required project validations before commit.
 6. Stage and commit without delay after staging:
 ```bash
@@ -43,20 +45,17 @@ git push
 7. Resolve addressed review threads:
    - Inspect unresolved threads with `gh api graphql` query from `references/gh-review-loop-reference.md`.
    - Resolve only threads fully addressed by the push.
-8. Wait for Codex auto-review:
-   - Codex auto-review typically takes **~7 minutes** to generate after a push.
-   - Sleep or poll at intervals before re-checking (e.g., `sleep 420`).
-   - If using a polling strategy, check every 60-90 seconds starting ~5 minutes after push to avoid unnecessary API calls.
-   - Do NOT proceed to step 1 immediately after push; premature checks will find no new feedback and may cause the loop to exit incorrectly.
+8. After each push, emit a short status update, wait 30 seconds, and return to step 1.
 9. Repeat from step 1 until approval is detected.
 
 ## Validation Rules
 
 - Stop the loop only on explicit `:+1:` reaction by a Codex actor.
 - Do not claim success when feedback is missing but approval is absent.
+- Treat `approved=false` with no new feedback as a non-terminal state; wait 30 seconds and keep polling.
+- Emit a short status update on every 30-second polling pass so the user never sees a long silent wait.
 - Keep each iteration small and reviewable.
 - Preserve unrelated local changes.
-- After pushing, wait at least 7 minutes for Codex auto-review before re-checking approval status.
 
 ## Helper Scripts
 
