@@ -33,7 +33,12 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 
 ## Open Questions for Future Interviews
 
+- `message_0` introduced attendance-modeling concepts such as `workPhase`, `anomalies`, `verification`, and derived `displayStatus`; treat them as discussion inputs only, not adopted contract fields until they are promoted into the primary docs.
 - How should `보완 요청` map onto the current `pending/approved/rejected` contract vocabulary and state transitions?
+- Should “출근 전” remain a derived UI state for no-record days, or should the product promote a stored representation for that phase?
+- Should attendance modeling stay split across multiple axes such as phase, anomaly flags, and verification metadata, or should the product continue to center one primary attendance status field and derive everything else around it?
+- Should event-level beacon verification failures stay separate from day-level attendance status, and if so, where should that boundary appear in employee/admin UI and API vocabulary?
+- How should the product represent days where `late` and `early_leave` can coexist without forcing an overly lossy single-status interpretation?
 - Where should approve-time cancel, post-approval cancel request, and post-approval change request live: request type, status, history model, or a combination?
 - How far should company-event calendars go in the first product scope, and who owns them?
 - Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
@@ -44,6 +49,62 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - When should SLA, company-event conflict warnings, staffing caps, and external notification channels graduate into formal contract documents?
 
 ## Raw Conversation Archive
+
+### `<message_0>`
+
+```text
+가정은 이렇게 두겠습니다.
+비콘은 “항상 자동 감지”가 아니라, 사용자가 출근/퇴근 버튼을 눌렀을 때 그 시점에 비콘 범위 안인지 검증하는 장치입니다. 이 해석이면 중간에 잠깐 밖에 나갔다 오는 것은 그 자체로 상태 이벤트가 아닙니다.
+
+1. 출근 전을 새 상태로 둘지, 레코드 없음으로 둘지
+
+제 권장은 레코드 없음 + UI에서 출근 전 표시입니다. 이유는 명확합니다.
+
+출근 전은 출결 “사실(fact)”이라기보다, 현재 시각과 오늘 스케줄을 보고 계산한 일시적 표현값입니다.
+이걸 저장 상태로 만들면 매일 00:00이나 09:00에 모든 직원의 placeholder row를 생성해야 해서, 데이터가 이벤트 중심이 아니라 배치 중심으로 바뀝니다.
+현재 관리자 API도 이미 status와 별개로 notCheckedInCount를 둡니다. 즉 “아직 출근 안 함”은 원래도 집계/표시용 파생 개념에 가깝습니다. 참고: api-spec.md
+반대로 “출근 전”을 추가하고 싶다면, 기존 status에 섞기보다는 별도 축인 workPhase로 두는 편이 낫습니다. 지금 database-schema.md의 working/normal/late/...는 진행 상태와 판정 결과가 섞여 있어서, 여기에 출근 전까지 넣으면 더 혼잡해집니다.
+즉, “새 상태 추가 자체가 나쁘다”가 아니라, 추가한다면 attendance status가 아니라 work phase로 넣는 게 맞다는 판단입니다.
+
+2. 상태를 분리하자는 제안에 대해
+
+여기는 저도 동의합니다. 지금 복잡한 이유는 말씀하신 대로 근무 진행 상태와 출결 판정 결과를 한 필드에 몰아넣으려 하기 때문입니다.
+
+다만 저는 정상/비정상 + 비고보다는 아래처럼 나누는 쪽을 더 권장합니다.
+
+workPhase: before_check_in / working / checked_out
+anomalies 또는 flags: late, early_leave, absent
+verification: clockInVerified, clockOutVerified, manualRequestStatus
+leave: 승인된 연차/반차/시간차 정보는 별도 입력값으로 유지
+이 구성이 더 나은 이유는:
+
+late와 early_leave가 같은 날 동시에 발생할 수 있습니다. 정상/비정상 + 단일 비고는 이 조합을 잘 못 담습니다.
+on_leave는 “비정상”이 아닙니다. 그래서 정상/비정상 축은 휴가와 잘 안 맞습니다.
+manual request pending은 출결 결과라기보다 검증/보정 상태에 가깝습니다.
+관리자 요약 카드에서 필요한 수치가 서로 다른 축을 봅니다. 근무중 몇 명, 지각 몇 명, 휴가 몇 명은 한 enum으로 묶으면 매번 예외가 생깁니다.
+그래서 제 추천은:
+
+내부 모델은 phase + anomalies + verification + leave input
+UI/API가 꼭 필요하면 여기서 displayStatus를 파생해서 working / normal / late / early_leave / absent / on_leave로 보여주기
+이렇게 하면 현재 문서의 단일 status도 유지할 수 있고, 나중에 룰이 늘어나도 덜 깨집니다.
+
+3. 비콘과 수동 신청 해석
+
+이 해석이 더 자연스럽습니다.
+
+기본 흐름: 사용자가 비콘 범위 안에서 출근/퇴근 버튼을 누른다.
+실패 흐름: 비콘 오류, 앱 오류, 버튼 미누름, 실수 등으로 기록이 빠졌을 때 수동 신청을 한다.
+따라서 beacon missing은 하루 종일 유지되는 출결 상태가 아니라, 특정 출근/퇴근 이벤트가 검증 실패했다는 사실로 다루는 게 맞습니다.
+중간 외출은 버튼을 누르지 않는 한 상태 변화가 아닙니다. 그렇지 않으면 점심 외출만으로 퇴근/재출근 이벤트가 난립합니다.
+그래서 1.1도 이렇게 보완하는 게 좋습니다.
+
+09:00 이전 체크인 성공 → workPhase=working, anomaly 없음
+09:00 이후 첫 체크인 성공 → workPhase=working, late 플래그 추가
+18:00 이전 체크아웃 성공 → checked_out, early_leave 플래그 추가
+18:00 이후 체크아웃 성공이고 anomaly 없음 → 최종 normal
+지금 가장 먼저 고정해야 할 질문은 이것입니다.
+하루에 late와 early_leave가 동시에 붙을 수 있다고 볼까요? 저는 실무적으로는 “가능”으로 두는 게 맞다고 봅니다.
+```
 
 ### `<message_1>`
 
