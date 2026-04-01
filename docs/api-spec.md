@@ -540,8 +540,10 @@ Response notes:
 - approved leave may later surface in attendance endpoints as `leaveCoverage`
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
-- each leave request item in this employee endpoint also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
+- each leave request item in this `GET /api/leave/me` employee aggregate also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
+- `isTopSurfaceSuppressed` is not a guaranteed field on every leave-request response shape; it is part of this employee aggregate response because this endpoint backs the leave page's history plus top-correction projection
 - when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and request-context surfaces but is excluded from top correction auto-surfacing until restored
+- top-surface suppression persists across sessions and browser instances for the owning employee account
 - admin request endpoints do not expose `isTopSurfaceSuppressed`
 
 Response:
@@ -731,7 +733,7 @@ Current-scope rules:
 - The request must currently have `requestType = leave`.
 - The request must currently have `status = rejected` or `revision_requested`.
 - The request must currently have `hasActiveFollowUp = false`.
-- The endpoint creates or preserves an `EmployeeLeaveTopSurfaceSuppression` relation and does not reopen, rewrite, or re-review the request.
+- The endpoint creates or preserves an `Employee Leave Top Surface Suppression` relation and does not reopen, rewrite, or re-review the request.
 - Repeating the same `PUT` is idempotent.
 
 Response:
