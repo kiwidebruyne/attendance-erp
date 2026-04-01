@@ -119,6 +119,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - `docs/leave-conflict-policy.md`: leave operational conflict policy, staffing-cap defaults, and company-event warning behavior.
 - `docs/feature-requirements.md`: user-visible scope, roles, screens, and edge cases.
 - `docs/ui-guidelines.md`: implementation-oriented UI guidance that bridges the ERP reference and `DESIGN.md`.
+- `docs/ux-writing-guidelines.md`: implementation-oriented UX writing contract adapted for this product from Toss-style copy rules.
 - `docs/app-architecture.md`: route map, layout boundaries, rendering boundaries, and code organization rules.
 - `docs/api-spec.md`: mock API contract for request and response shapes.
 - `docs/database-schema.md`: conceptual data model and shared enum vocabulary.
@@ -152,6 +153,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - If reviewed-request changes, follow-up-chain rules, or shared employee/admin request synchronization rules change, update `docs/request-lifecycle-model.md` and any impacted feature/API/schema documents together.
 - If company-event conflict policy, staffing-cap rules, or leave approval warning behavior changes, update `docs/leave-conflict-policy.md` and any affected feature or UI documents together.
 - If visual direction changes, update both `DESIGN.md` and `docs/ui-guidelines.md`.
+- If product copy tone, CTA wording rules, or screen-level writing guidance changes, update `docs/ux-writing-guidelines.md` and any affected UI or feature documents together.
 - If route structure or rendering boundaries change, update `docs/app-architecture.md` and any affected user-facing requirements.
 - If payloads, query parameters, or status values change, update `docs/api-spec.md` and `docs/database-schema.md` together.
 - Documentation-only phase may mark canonical paths as `planned` before creating path skeletons; create the skeleton in the same change where runtime implementation begins.

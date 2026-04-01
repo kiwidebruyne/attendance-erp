@@ -38,12 +38,15 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 
 Required UI:
 
-- a top-level attendance control panel that shows the adjusted expected work window, the current attendance phase, the current next action, and any active exceptions for today
-- a visible carry-over warning when the previous workday is still open because checkout is missing
-- visibility into same-day failed attendance attempts and the current manual attendance request state for the affected day
+- a stable today card that remains visible even when active exceptions exist and shows the adjusted expected work window, the current attendance phase, the current next action, and today's active exceptions summary
+- a separate top-of-screen exception stack that appears before history and uses independent exception surfaces instead of collapsing all problems into one warning
+- a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
+- a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
+- visibility into same-day failed attendance attempts, the current derived manual attendance request summary, leave-work conflicts, and expected-but-missing check-in states above history when they still matter operationally
+- same-day attendance action entry points that deep-link into the existing attendance action UI rather than introducing a second `/attendance`-local clock-in or clock-out owner
 - a weekly attendance history table with each date's expected work window summary, recorded check-in and check-out facts, work duration, and derived exceptions
 - a monthly view of the same attendance history data
-- a clear call to action for manual attendance requests when successful attendance facts are missing or an attempt failed
+- compact row-level actions in the history table that can reopen the same correction or review flows without replacing the top-of-screen action surfaces
 
 Edge cases to keep visible during implementation:
 
@@ -51,8 +54,10 @@ Edge cases to keep visible during implementation:
 - the user checked in but has not checked out yet
 - the user has no successful attendance fact for the current day after the expected check-in time
 - the beacon was not detected or the user opened the app outside the beacon range
-- the user has already submitted a manual request for the same day
+- the user has already submitted a same-day or carry-over manual request that still governs the current attendance state
+- the user sees a previous-day missing checkout and should be led into correction without needing to decode the history table first
 - the previous day's record is still open because checkout is missing
+- the user has a rejected or `revision_requested` manual request and should see the review reason plus a resubmission path above history
 - an approved leave day later conflicts with an actual attendance fact and must surface as a visible conflict instead of silently rewriting either fact
 
 ### Leave Management: `/attendance/leave`
