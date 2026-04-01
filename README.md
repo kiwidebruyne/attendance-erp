@@ -30,6 +30,7 @@ pnpm test:unit
 pnpm test:integration
 pnpm test:coverage
 pnpm lint
+pnpm format:check
 pnpm build
 ```
 
@@ -40,6 +41,15 @@ This repository uses Lefthook for local Git hooks and does not use Husky.
 - `pre-commit` formats and lints staged files only, then restages safe fixes.
 - `pre-push` runs `pnpm lint`, `pnpm format:check`, `pnpm test`, and
   `pnpm build`.
+
+## Pull Request CI
+
+Pull requests to `main` use the same baseline quality gate as the local `pre-push` hook:
+
+- `pnpm lint`
+- `pnpm format:check`
+- `pnpm test`
+- `pnpm build`
 
 ## Documentation
 
