@@ -94,14 +94,12 @@ This document owns endpoint shapes and final field names, not the broader workfl
 ### Request Queue View
 
 - `needs_review`
-- `waiting_for_employee`
 - `completed`
 - `all`
 
 ### Request Next Action
 
 - `admin_review`
-- `employee_resubmit`
 - `none`
 
 ### Manual Attendance Action
@@ -205,7 +203,7 @@ Fields:
 
 `status` uses `Request Status`.
 `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`.
-`governingReviewComment` is the latest unresolved `reject` or `request_revision` rationale that must remain visible while the employee still owes a response; otherwise it is `null`.
+`governingReviewComment` is the latest unresolved `reject` or `request_revision` rationale that must remain visible while a linked follow-up has not yet resolved that reviewed outcome; otherwise it is `null`.
 Attendance endpoints surface only `pending`, `revision_requested`, or `rejected` here.
 Approved manual requests do not remain embedded here after their changes are written back into the canonical attendance record.
 
@@ -225,9 +223,11 @@ Fields:
 
 `activeRequestId` and `activeStatus` are `null` when a chain has no active work.
 `effectiveStatus` uses `Request Status`.
-`effectiveRequestId` and `effectiveStatus` point to the current non-approved reviewed request while no employee follow-up exists. After an employee submits a linked `resubmission`, they move to the new pending follow-up while the earlier review rationale remains visible through linked chain history or parent-request context.
-`governingReviewComment` stays populated only while the employee still owes a response to the latest non-approved review rationale; otherwise it is `null`.
+When a chain is `rejected` or `revision_requested` with no active follow-up, `activeRequestId` and `activeStatus` are `null`, while `effectiveRequestId` and `effectiveStatus` still point to the latest reviewed outcome and `nextAction = none`.
+After an employee submits a linked `resubmission`, `active*` and `effective*` move to the new pending follow-up while the earlier review rationale remains visible through linked chain history or parent-request context.
+`governingReviewComment` stays populated only while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up; otherwise it is `null`.
 `nextAction` uses `Request Next Action`.
+Employee pages may still expose linked `resubmission` entry points from request status and relation fields even though the shared projection no longer treats the reviewed non-approved step as active work.
 
 ### `Request Relation Fields`
 
@@ -863,16 +863,17 @@ Returns the request-review queue for admins.
 
 Query parameters:
 
-- `view`: optional `needs_review`, `waiting_for_employee`, `completed`, or `all`
+- `view`: optional `needs_review`, `completed`, or `all`
 
 Response notes:
 
 - each item uses `Request Status` plus relation fields and the shared `Request Chain Projection`
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
-- `governingReviewComment` stays populated when the currently visible chain state still owes a response to an earlier non-approved review comment
+- `governingReviewComment` stays populated while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up
 - `needs_review` groups chains whose active request has `status = pending`
-- `waiting_for_employee` groups chains whose effective status is `revision_requested` or `rejected` and which have no active follow-up
-- `completed` groups chains whose effective status is `approved` or `withdrawn` and which have no active follow-up
+- `completed` groups chains whose effective status is `approved`, `withdrawn`, `revision_requested`, or `rejected` and which have no active follow-up
+- `all` includes both actionable review work and completed review history
+- admin clients may visually separate reviewed non-approved items from approved or withdrawn results inside `completed` and `all`
 - request-chain semantics, reviewed-request immutability, and follow-up workflow rules are defined in `docs/request-lifecycle-model.md`
 
 Response:
@@ -948,12 +949,12 @@ Response:
   "reviewedAt": "2026-03-30T13:15:00+09:00",
   "reviewComment": "Please clarify the missing clock-out time.",
   "governingReviewComment": "Please clarify the missing clock-out time.",
-  "activeRequestId": "req_manual_001",
-  "activeStatus": "revision_requested",
+  "activeRequestId": null,
+  "activeStatus": null,
   "effectiveRequestId": "req_manual_001",
   "effectiveStatus": "revision_requested",
   "hasActiveFollowUp": false,
-  "nextAction": "employee_resubmit"
+  "nextAction": "none"
 }
 ```
 
@@ -962,7 +963,7 @@ Typical error cases:
 - `400 validation_error` for invalid decision payloads
 - `404 not_found` when the request id does not exist
 - `409 conflict` when the request is `rejected`, `revision_requested`, `approved`, `withdrawn`, superseded, or otherwise not writable under the current request-lifecycle rules
-- `409 conflict` should explain when a reviewed request is locked and that employee resubmission is required before the chain becomes writable again
+- `409 conflict` should explain when a reviewed request remains locked on the same record and that any later resubmission must use a linked follow-up rather than reopening the reviewed request in place
 
 ## Change Triggers
 

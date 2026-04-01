@@ -30,6 +30,9 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - The earlier remediation wording in this section should now be read as historical pre-promotion context, not as an active contract rule.
 - Re-submission after rejection should start from a prefilled version of the previous input rather than an empty form.
 - A reviewed non-approved request is now treated as locked on the same request record: admins do not append a later review outcome to that record, and the chain reactivates only through an employee-submitted `resubmission` follow-up.
+- A reviewed non-approved request with no active follow-up is no longer treated as shared active work. The latest reviewed outcome still remains visible as chain history, but shared queue-state vocabulary should not model it as `waiting_for_employee`.
+- Any remaining `waiting_for_employee` mention in this document should be read as historical or rejected-alternative vocabulary only, not as active source-of-truth terminology.
+- Employee-facing resubmission prompting remains valid for reviewed non-approved requests, but that prompting now belongs to page IA rather than shared request queue-state semantics.
 - Any earlier direction that suggested same-record revision of a `rejected` or `revision_requested` request should now be read as superseded discussion history rather than active contract.
 - Notification scope is in-app first: warnings, badges, and status surfaces come before external push channels.
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
@@ -48,7 +51,8 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - The promoted request-lifecycle contract now lives in `docs/request-lifecycle-model.md`.
 - Use that document for request statuses, follow-up kinds, review decisions, queue views, and shared request projection rules.
 - Use that document for reviewed-request immutability, follow-up request chains, revision/change/cancel flows, and shared employee/admin request synchronization rules.
-- Keep issue `#41` focused on leave-page IA, issue `#42` focused on review-workspace IA, issue `#64` focused on queue placement and non-approved visibility grouping, and issue `#66` focused on leave top-surface suppression semantics.
+- Keep issue `#41` focused on leave-page IA, issue `#42` focused on review-workspace IA under the updated admin queue contract, issue `#64` focused on removing `waiting_for_employee` and promoting non-approved reviewed requests into completed review history on admin surfaces, and issue `#66` focused on leave top-surface suppression semantics.
+- The rejected alternatives behind issue `#64` are: keep a standalone `waiting_for_employee` admin queue, or add a separate source-of-truth document instead of promoting the decision into the existing canonical request documents.
 - Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
 ## Promoted Leave Conflict Policy
