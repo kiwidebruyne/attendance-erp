@@ -55,6 +55,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
 - Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
+- Contextual admin summary cards such as checked-in and on-leave should reuse the same fact set, but they must not be turned into queue-driving pseudo-exceptions just to force 1:1 row parity on the default today surface.
 - No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.

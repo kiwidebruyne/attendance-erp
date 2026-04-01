@@ -105,6 +105,7 @@ Implementation concerns that must stay aligned with narrower contract documents:
 - history review should remain a secondary mode inside `/admin/attendance` rather than replacing the today-first default entry behavior
 - mode, date range, and search state should remain URL-shareable when they affect admin attendance queries
 - action-needed summary cards and today queue rows should derive from the same date-level facts so counts never drift from the queue
+- contextual summary cards such as checked-in and on-leave should use the same date-level facts as the exception queue, but they do not need 1:1 queue-row parity because the default today surface remains exception-first
 
 Edge cases to keep visible during implementation:
 
