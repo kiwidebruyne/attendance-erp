@@ -36,12 +36,13 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Keep the today card visible even when multiple critical exceptions are active. The card provides the user's current context; exception surfaces should not replace it.
 - The today card should summarize the adjusted expected work window, current phase, next action, and current active exceptions.
 - Treat active exceptions as independent surfaces rather than a single combined warning area.
+- Keep every current active exception visible in the stack. Do not collapse lower-priority active exceptions into a badge count, overflow menu, or hidden secondary area while they still matter operationally.
 - Each active exception surface should own its own CTA and explanation.
 - Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
-- History rows may expose the same recovery or review flows, but row actions should be more compact and less prominent than the top-of-screen surfaces.
+- History rows may expose the same recovery or review flows, but row actions should be compact re-entry points that stay less prominent than the top-of-screen surfaces.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
 - If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
-- If the relevant carry-over manual request already exists, replace duplicate-request CTA language with status, rationale, or resubmission CTA language.
+- If the relevant carry-over manual request already exists, replace duplicate-request CTA language with status, rationale, or resubmission CTA language. For example, a `pending` request should move to status visibility, while a `rejected` or `revision_requested` request should move to review-reason and resubmission language.
 - If a `leave-work conflict` is active on the employee screen, prefer a conflict-review CTA over immediate correction wording.
 - Only show a beacon-range hint on page load when the product can actually detect that condition at that moment. Otherwise, explain the condition after the related attendance attempt fails.
 
@@ -49,13 +50,14 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
+- If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
-- Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active manual request state, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
+- Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
 - Admin attendance views should prioritize exceptions over aggregate comfort metrics. The exception queue should make unresolved operational risk easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 

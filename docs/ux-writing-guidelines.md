@@ -47,14 +47,19 @@ Do not treat the external Toss page as the live contract for this repository aft
 
 - The top carry-over surface should lead with the factual state first.
 - Use a supportive follow-up explanation such as `이미 퇴근했다면 퇴근 시간을 정정 요청할 수 있어요.`
-- The primary CTA should describe the recovery action directly, for example `어제 퇴근 시간 정정 요청`.
-- If the user already has a pending, rejected, or revision-requested request for the same carry-over problem, replace the duplicate-request CTA with status or resubmission language.
+- The primary headline can be `어제 퇴근 기록이 아직 없어요.` when the product knows the carry-over problem exists.
+- The default primary CTA should describe the recovery action directly, for example `어제 퇴근 시간 정정 요청`.
+- If the user already has a pending request for the same carry-over problem, replace the duplicate-request CTA with status language such as `상태 확인`.
+- If the user already has a `rejected` or `revision_requested` request for the same carry-over problem, replace the duplicate-request CTA with review or resubmission language such as `사유 확인` or `다시 제출`.
+- Keep speculative questions such as `이미 퇴근하셨나요?` inside the follow-up flow only. Do not use them as the top headline or the primary CTA on the carry-over surface.
 
 ### Request-State Copy
 
 - Use copy that keeps the review reason and the next action together.
 - Prefer `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.` over a bare `반려됨`.
 - Keep request status language aligned between employee and admin surfaces so both sides describe the same current state.
+- For a pending carry-over correction, prefer copy such as `어제 퇴근 시간 정정 요청을 검토하고 있어요. 진행 상태를 확인할 수 있어요.`
+- For a rejected or `revision_requested` carry-over correction, prefer copy such as `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.`
 
 ## Question-Form Exceptions
 
@@ -63,7 +68,7 @@ Question-form copy is allowed only when the product cannot determine the answer 
 Good uses in this product:
 
 - a confirmation question inside a prefilled carry-over correction flow
-- a user-input prompt where the product genuinely does not know whether the user already completed an action
+- a user-input prompt where the product genuinely does not know whether the user already completed an action, such as an in-flow confirmation like `이미 퇴근하셨나요?`
 
 Question-form copy should not be the default for:
 

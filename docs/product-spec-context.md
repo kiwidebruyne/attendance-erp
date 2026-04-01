@@ -60,6 +60,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Use those documents for the stable today-card model, the separate active-exception stack, exception ordering, carry-over correction entry, and history-action placement.
 - The promoted product-writing contract now lives in `docs/ux-writing-guidelines.md`.
 - Use that document for fact-led warning headlines, action-led CTA wording, and the limited cases where question-form copy is still allowed.
+- There are no remaining current-scope open questions in this file for `/attendance` first-view hierarchy or carry-over copy. Future changes to those contracts should start in the primary documents above, with this file used only for new unresolved rationale.
 - The key raw rationale behind those promotions is:
   - the most dangerous attendance problem is a silent error that stays buried in history
   - employee `/attendance` should reduce personal risk first, not behave like a passive ledger
