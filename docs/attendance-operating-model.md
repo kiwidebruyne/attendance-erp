@@ -12,13 +12,13 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, and
 
 ### Canonical Facts
 
-| Concept             | Meaning                                                                     | Created or Updated When                                                                                                               | Notes                                                         |
-| ------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `expectedWorkday`   | the expected work context for one employee on one calendar date             | computed before the day starts and recalculated when approved leave changes the expected work window                                  | a workday may exist even when no attendance fact exists yet   |
-| `attendanceAttempt` | one append-only check-in or check-out attempt                               | created on every check-in or check-out button click                                                                                   | failed attempts remain facts and are visible until resolved   |
-| `attendanceRecord`  | the canonical attendance fact for one workday                               | created on the first successful check-in or an approved manual writeback; updated on successful checkout or later approved correction | facts only; not a stored display status                       |
-| `leaveCoverage`     | the approved leave interval as consumed by attendance logic                 | derived from approved leave requests                                                                                                  | shifts the adjusted expected work window for the covered date |
-| `manualRequest`     | the correction request submitted for missing or incomplete attendance facts | created when the employee submits a manual attendance request; updated by admin review                                                | does not mutate `attendanceRecord` until approval             |
+| Concept             | Meaning                                                                     | Created or Updated When                                                                                                               | Notes                                                                                                                |
+| ------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `expectedWorkday`   | the expected work context for one employee on one calendar date             | computed before the day starts and recalculated when approved leave changes the expected work window                                  | a workday may exist even when no attendance fact exists yet                                                          |
+| `attendanceAttempt` | one append-only check-in or check-out attempt                               | created on every check-in or check-out button click                                                                                   | stores a target workday `date` separately from `attemptedAt`, so next-day checkout can still close the prior workday |
+| `attendanceRecord`  | the canonical attendance fact for one workday                               | created on the first successful check-in or an approved manual writeback; updated on successful checkout or later approved correction | facts only; not a stored display status                                                                              |
+| `leaveCoverage`     | the approved leave interval as consumed by attendance logic                 | derived from approved leave requests                                                                                                  | shifts the adjusted expected work window for the covered date                                                        |
+| `manualRequest`     | the correction request submitted for missing or incomplete attendance facts | created when the employee submits a manual attendance request; updated by admin review                                                | does not mutate `attendanceRecord` until approval                                                                    |
 
 ### Derived Presentation
 
@@ -41,7 +41,7 @@ Important model rule:
 - A previous-day open work record may still be closed by a next-day checkout until `08:59:59`.
 - Opening the app alone creates no `attendanceAttempt` and no `attendanceRecord`.
 - Before the first successful same-day check-in, no `attendanceRecord` is required.
-- When `expectedWorkday.isWorkday` is `false`, `phase` should be `non_workday`.
+- `phase` is derived in precedence order: `checked_out` when the requested date already has a same-day checkout fact, `working` when the requested date has a same-day check-in fact without checkout, `non_workday` when no same-day attendance fact exists and `expectedWorkday.isWorkday=false`, and `before_check_in` otherwise.
 - `not_checked_in` is a real-time expected-but-missing exception.
 - `absent` is derived only after day close or equivalent finalization logic.
 - Approved leave adjusts the effective expected work window for the covered period.
@@ -80,12 +80,12 @@ Important model rule:
 
 ### Previous-Day Missing Checkout and Overnight Work
 
-| Moment                                                       | Canonical Fact Changes                                                                              | Derived Result                                              | Required Surface Behavior                                                |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Previous day stays open after `18:00`                        | previous-day `attendanceRecord` has `clockInAt` but no `clockOutAt`                                 | no automatic error yet                                      | keep the prior workday open through the overnight close window           |
-| Next-day checkout before `09:00`                             | append `attendanceAttempt(success)` for checkout; update previous-day `attendanceRecord.clockOutAt` | previous day is closed normally                             | treat this as closing the prior workday, not as the new day's checkout   |
-| Next day reaches `09:00` and the prior workday is still open | no automatic writeback                                                                              | `activeExceptions` includes `previous_day_checkout_missing` | employee and admin must both see the carry-over exception prominently    |
-| Manual correction is approved later                          | update previous-day `attendanceRecord` from approved request                                        | carry-over exception clears                                 | today state and previous-day correction history must remain synchronized |
+| Moment                                                       | Canonical Fact Changes                                                                                                                                             | Derived Result                                              | Required Surface Behavior                                                |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Previous day stays open after `18:00`                        | previous-day `attendanceRecord` has `clockInAt` but no `clockOutAt`                                                                                                | no automatic error yet                                      | keep the prior workday open through the overnight close window           |
+| Next-day checkout before `09:00`                             | append `attendanceAttempt(success)` with `attemptedAt` on the next calendar day and `date` on the prior workday; update previous-day `attendanceRecord.clockOutAt` | previous day is closed normally                             | treat this as closing the prior workday, not as the new day's checkout   |
+| Next day reaches `09:00` and the prior workday is still open | no automatic writeback                                                                                                                                             | `activeExceptions` includes `previous_day_checkout_missing` | employee and admin must both see the carry-over exception prominently    |
+| Manual correction is approved later                          | update previous-day `attendanceRecord` from approved request                                                                                                       | carry-over exception clears                                 | today state and previous-day correction history must remain synchronized |
 
 ### Approved Leave With No Attendance
 
@@ -96,10 +96,12 @@ Important model rule:
 
 ### Non-Workday Or Closure
 
-| Moment                                                             | Canonical Fact Changes                                                     | Derived Result                                                                            | Required Surface Behavior                                                                        |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| Weekend, holiday, or company-wide closure with no carry-over issue | `expectedWorkday.isWorkday=false`; no same-day attendance fact is required | `phase=non_workday`; no generic missing-check-in exception                                | employee and admin should render this as a non-workday state rather than reusing a workday phase |
-| Non-workday with a previous-day open record still unresolved       | prior-day facts remain open                                                | `phase=non_workday`; `activeExceptions` may still include `previous_day_checkout_missing` | a non-workday must not hide a carry-over operational exception                                   |
+| Moment                                                             | Canonical Fact Changes                                                            | Derived Result                                                                            | Required Surface Behavior                                                                        |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Weekend, holiday, or company-wide closure with no carry-over issue | `expectedWorkday.isWorkday=false`; no same-day attendance fact is required        | `phase=non_workday`; no generic missing-check-in exception                                | employee and admin should render this as a non-workday state rather than reusing a workday phase |
+| Non-workday with a previous-day open record still unresolved       | prior-day facts remain open                                                       | `phase=non_workday`; `activeExceptions` may still include `previous_day_checkout_missing` | a non-workday must not hide a carry-over operational exception                                   |
+| Non-workday with a same-day successful check-in                    | append `attendanceAttempt(success)`; create same-day `attendanceRecord.clockInAt` | `phase=working`; `non_workday` no longer applies                                          | actual attendance facts take precedence over the non-workday expectation                         |
+| Non-workday with a same-day completed work record                  | same-day `attendanceRecord` already has both `clockInAt` and `clockOutAt`         | `phase=checked_out`; any leave/conflict exceptions still remain separate                  | do not force the card back into `non_workday` once the date has real work facts                  |
 
 ### Approved Leave With Actual Attendance Conflict
 
@@ -124,7 +126,7 @@ Important model rule:
 | `notCheckedInCount`    | expected workdays plus records plus leave coverage | count employees whose adjusted expected start has passed, who have no successful same-day check-in fact, and who are not covered by leave for that period |
 | `lateCount`            | expected workdays plus records                     | count employees whose successful check-in happened after the adjusted expected start                                                                      |
 | `onLeaveCount`         | leave coverage                                     | count employees with approved leave coverage for the date                                                                                                 |
-| `failedAttemptCount`   | same-day attendance attempts                       | count unresolved same-day failed attempts that still matter operationally                                                                                 |
+| `failedAttemptCount`   | attendance attempts in the active admin queue      | count unresolved failed attempts that still matter operationally, even when their target workday is the previous date during carry-over handling          |
 | `previousDayOpenCount` | prior-day attendance records                       | count prior workdays that remain open after the overnight close window                                                                                    |
 
 Priority guidance for same-day admin exception review:

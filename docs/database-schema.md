@@ -114,15 +114,15 @@ Represents the attendance expectation for one employee on one calendar date befo
 
 Represents one append-only clock-in or clock-out attempt.
 
-| Field           | Type           | Notes                                    |
-| --------------- | -------------- | ---------------------------------------- |
-| `id`            | string         | stable attempt identifier                |
-| `employeeId`    | string         | relation to `Employee.id`                |
-| `date`          | string         | intended workday for the attempt         |
-| `action`        | enum           | `Attendance Attempt Action`              |
-| `attemptedAt`   | string         | actual timestamp of the button click     |
-| `status`        | enum           | `Attendance Attempt Status`              |
-| `failureReason` | string or null | non-empty string when the attempt failed |
+| Field           | Type           | Notes                                                                                                                       |
+| --------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | string         | stable attempt identifier                                                                                                   |
+| `employeeId`    | string         | relation to `Employee.id`                                                                                                   |
+| `date`          | string         | intended workday for the attempt; may differ from the calendar date of `attemptedAt` during overnight carry-over resolution |
+| `action`        | enum           | `Attendance Attempt Action`                                                                                                 |
+| `attemptedAt`   | string         | actual timestamp of the button click                                                                                        |
+| `status`        | enum           | `Attendance Attempt Status`                                                                                                 |
+| `failureReason` | string or null | non-empty string when the attempt failed                                                                                    |
 
 ### Attendance Record
 
@@ -218,7 +218,8 @@ Expected fields:
 Important rules:
 
 - `status` is no longer the canonical stored attendance field.
-- `non_workday` is the derived phase when `Expected Workday.isWorkday` is `false`.
+- `non_workday` is the derived phase only when `Expected Workday.isWorkday` is `false` and the same date still has no attendance facts.
+- `working` and `checked_out` may still appear on non-workdays when same-day attendance facts exist.
 - `late` and `early_leave` may coexist for the same date.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 - `absent` is a finalized derived interpretation after day-close.

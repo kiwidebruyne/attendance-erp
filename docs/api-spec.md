@@ -122,10 +122,14 @@ Represents one append-only user attempt to clock in or clock out.
 Fields:
 
 - `id`
+- `date`
 - `action`
 - `attemptedAt`
 - `status`
 - `failureReason`
+
+`date` is the target workday for the attempt.
+It may differ from the calendar date portion of `attemptedAt` when a next-day checkout still closes the prior workday.
 
 ### `Attendance Record`
 
@@ -162,7 +166,7 @@ Fields:
 - `type`
 - `relatedRequestId`
 
-`phase` should be `non_workday` whenever `expectedWorkday.isWorkday` is `false`.
+`phase` is derived in precedence order: `checked_out` when the requested date already has a same-day checkout fact, `working` when the requested date has a same-day check-in fact without checkout, `non_workday` when no same-day attendance fact exists and `expectedWorkday.isWorkday` is `false`, and `before_check_in` otherwise.
 
 ### `Previous Day Open Record`
 
@@ -179,7 +183,7 @@ Fields:
 
 ### `GET /api/attendance/me`
 
-Returns the current employee context, today's expected work window, current-day facts, failed attempts, and the derived display state for today.
+Returns the current employee context, today's expected work window, current-day facts, operationally relevant attempts, and the derived display state for today.
 
 Response:
 
@@ -213,6 +217,7 @@ Response:
   "attempts": [
     {
       "id": "attempt_001",
+      "date": "2026-03-30",
       "action": "clock_in",
       "attemptedAt": "2026-03-30T09:03:00+09:00",
       "status": "success",
@@ -236,9 +241,9 @@ Response notes:
 
 - `todayRecord` is `null` until a successful attendance fact exists or an approved manual correction writes one back.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
-- `attempts` covers only the current date.
+- `attempts` may include any attempt that still matters for the current card state; each attempt's `date` identifies the target workday.
 - `display.activeExceptions` may contain multiple values at once.
-- `display.phase` should be `non_workday` when `expectedWorkday.isWorkday` is `false`.
+- `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 
 ### `GET /api/attendance/me/history?from=&to=`
@@ -468,7 +473,8 @@ Response:
 
 Response notes:
 
-- `latestFailedAttempt` is `null` unless the employee has a same-day failed attempt that still matters operationally.
+- `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
+- When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape, and its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open.
 - No-record employees must still appear if they count toward today's expected workday.
 
