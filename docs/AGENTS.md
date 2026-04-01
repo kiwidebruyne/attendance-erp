@@ -18,6 +18,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 | `docs/product-spec-context.md`       | living raw product-spec discussion log               | cross-screen spec discussions, locked defaults, or open product questions change                             |
 | `docs/attendance-operating-model.md` | attendance runtime flow and timeline semantics       | attendance fact lifecycle, derived exception timing, or cross-screen attendance synchronization rules change |
 | `docs/request-lifecycle-model.md`    | request workflow semantics and follow-up chains      | reviewed-request change rules, follow-up chains, or cross-screen request synchronization rules change        |
+| `docs/leave-conflict-policy.md`      | leave operational conflict policy                    | company-event conflict, staffing-cap policy, or leave approval warning rules change                          |
 | `docs/feature-requirements.md`       | user-visible features, roles, and edge cases         | screen scope or product behavior changes                                                                     |
 | `docs/ui-guidelines.md`              | ERP-aligned implementation UI guidance               | layout patterns, table rules, badge rules, or responsive behavior changes                                    |
 | `docs/app-architecture.md`           | routing, layout, rendering, and code organization    | route map, layout boundaries, or state-placement rules change                                                |
@@ -34,6 +35,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 - `docs/product-spec-context.md` owns the living raw discussion log, cross-screen decision context, and open interview questions that have not yet been promoted into narrower contract documents.
 - `docs/attendance-operating-model.md` owns the attendance fact lifecycle, derived attendance interpretation, and shared attendance timeline semantics.
 - `docs/request-lifecycle-model.md` owns reviewed-request lifecycle semantics, follow-up-chain rules, and shared employee/admin request-state synchronization.
+- `docs/leave-conflict-policy.md` owns company-event conflicts, staffing-cap policy, and leave-specific warning-versus-block defaults across employee and admin review surfaces.
 - `docs/app-architecture.md` owns where routes, layouts, and state boundaries live.
 - `docs/api-spec.md` owns the mock HTTP contract.
 - `docs/database-schema.md` owns the conceptual model and enum vocabulary behind that contract.
@@ -45,6 +47,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 - If ongoing product-spec discussions establish new cross-screen principles, preserve raw context in `docs/product-spec-context.md` before promoting final decisions into narrower source-of-truth documents.
 - If the attendance fact lifecycle, exception timing, or cross-screen attendance synchronization rules change, update `docs/attendance-operating-model.md` and any affected contract documents in the same change set.
 - If reviewed-request changes, follow-up-chain semantics, or request-state synchronization rules change, update `docs/request-lifecycle-model.md` and any affected contract documents in the same change set.
+- If company-event conflict policy, staffing-cap rules, or leave approval warning behavior changes, update `docs/leave-conflict-policy.md` and any affected feature or UI docs in the same change set.
 - If a visual rule changes, update `DESIGN.md` and `docs/ui-guidelines.md`.
 - If a route or rendering boundary changes, update `docs/app-architecture.md`.
 - If an API shape changes, update `docs/api-spec.md` and `docs/database-schema.md` together.

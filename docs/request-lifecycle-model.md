@@ -247,6 +247,7 @@ This document owns request workflow semantics, not every downstream contract det
 
 - `docs/feature-requirements.md` owns user-visible screen requirements for employee and admin request surfaces.
 - `docs/ui-guidelines.md` owns layout, copy, and interaction guidance for request-related UI.
+- `docs/leave-conflict-policy.md` owns company-event conflicts, staffing-cap policy, and leave approval warning defaults that apply around leave request review.
 - `docs/api-spec.md` owns endpoint shapes, query parameters, and final field names for request lifecycle data.
 - `docs/database-schema.md` owns the conceptual request entities, relations, review-event model, and final enum names.
 - `docs/product-spec-context.md` keeps the raw discussion history and higher-level product rationale that led here.
