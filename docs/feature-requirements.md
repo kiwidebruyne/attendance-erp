@@ -18,6 +18,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 - `docs/attendance-operating-model.md` owns the detailed attendance fact lifecycle and derived exception timing. This document keeps only the user-visible requirements that depend on that lifecycle.
 - `docs/request-lifecycle-model.md` owns reviewed-request changes, follow-up request chains, and cross-screen request-state synchronization. This document keeps only the user-visible requirements that depend on that lifecycle.
 - The product should behave like a trust product rather than a passive ledger: the user should be able to understand the current state, the reason for that state, and the next action without decoding tables first.
+- The product should not feel like a manager-surveillance tool. Both managers and team members should feel that the system helps them align on the same facts and protect themselves from silent mistakes.
 - Employee and admin views must stay synchronized on the same facts for the same date. A date or request must not look resolved on one screen and exceptional on another.
 
 ## Shared Shell Contract
@@ -133,6 +134,8 @@ Decision points for later issue planning:
 - Top-of-screen warnings should take priority over buried table-only states when the user needs immediate action.
 - Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, previous-day missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
 - Every important state should include the current state, the reason, and the next action.
+- Korean product copy, CTA wording, and question-versus-fact phrasing should follow `docs/ux-writing-guidelines.md`.
+- The chosen Korean tone should reinforce that the ERP helps both sides do their work accurately and should avoid language that frames the manager as watching people.
 - Warning, badge, and CTA cleanup after approvals, rejections, or successful corrections must happen consistently across employee and admin surfaces.
 - Request surfaces should expose the same active request, effective status, review comment, and next action to both employees and admins.
 
