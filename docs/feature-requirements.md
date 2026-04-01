@@ -8,7 +8,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 ## Roles
 
 - **Employee**: views personal attendance facts and active exceptions, submits manual attendance requests, and manages leave requests.
-- **Admin**: monitors team attendance, reviews current exceptions, and reviews pending requests.
+- **Admin**: monitors team attendance, reviews current exceptions, and reviews request work across needs-review, waiting-for-employee, and completed states.
 
 ## Shared Product Rules
 
@@ -16,6 +16,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 - The application must use mock data that feels operationally realistic for a small team, including late arrivals, early departures, missing records, failed attendance attempts, leave coverage, and follow-up correction requests.
 - The current assignment scope covers frontend pages and mock API behavior only. Real BLE integration and a production backend are out of scope.
 - `docs/attendance-operating-model.md` owns the detailed attendance fact lifecycle and derived exception timing. This document keeps only the user-visible requirements that depend on that lifecycle.
+- `docs/request-lifecycle-model.md` owns reviewed-request changes, follow-up request chains, and cross-screen request-state synchronization. This document keeps only the user-visible requirements that depend on that lifecycle.
 - The product should behave like a trust product rather than a passive ledger: the user should be able to understand the current state, the reason for that state, and the next action without decoding tables first.
 - Employee and admin views must stay synchronized on the same facts for the same date. A date or request must not look resolved on one screen and exceptional on another.
 
@@ -48,7 +49,9 @@ Required UI:
 
 - a leave balance summary card showing total, used, and remaining leave
 - a request form for annual leave, half-day AM, half-day PM, and hourly leave
-- a list of the current user's previous leave requests with date, type, reason, and review state
+- a list of the current user's leave request chains with date, type, reason, current request status, and latest review timing
+- visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
+- a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
 
 Validation and policy topics that must be handled explicitly in later issues:
 
@@ -81,14 +84,17 @@ Implementation concerns that should be tracked during issue creation:
 Required UI:
 
 - a request table covering manual attendance requests and leave requests
-- filter tabs for pending, approved, rejected, and all
-- approve and reject actions with confirmation UI
-- explicit rejection-reason input when rejecting a request
+- filter tabs for needs review, waiting for employee, completed, and all
+- approve, reject, and request-revision actions with confirmation UI
+- explicit review-comment input when rejecting a request or requesting revision
+- visible request-chain context that shows the active request, the effective status, and any earlier review comment that still explains the current state
+- post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval
+- approved-state follow-up `change` and `cancel` flows are in current scope for leave requests only; approved manual-attendance follow-up changes remain out of current scope
 
 Decision points for later issue planning:
 
 - whether bulk approval is needed in the first pass
-- whether approved requests can be reversed
+- whether any future product phase should allow exceptional administrative revocation of approved requests beyond current scope; see issue `#53`
 - how much detail should be visible inline versus in a modal or side panel
 - how request review surfaces should clean up stale warnings and badges after an approval, rejection, or follow-up submission
 
@@ -102,6 +108,7 @@ Decision points for later issue planning:
 - Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, previous-day missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
 - Every important state should include the current state, the reason, and the next action.
 - Warning, badge, and CTA cleanup after approvals, rejections, or successful corrections must happen consistently across employee and admin surfaces.
+- Request surfaces should expose the same active request, effective status, review comment, and next action to both employees and admins.
 
 ## Out Of Scope
 

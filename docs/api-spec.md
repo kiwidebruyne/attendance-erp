@@ -68,11 +68,41 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 - `review_leave_conflict`
 - `wait`
 
-### Approval Status
+### Request Status
 
 - `pending`
+- `revision_requested`
+- `withdrawn`
 - `approved`
 - `rejected`
+
+The exact lifecycle semantics for reviewed-request changes, follow-up chains, and revision-requested flows are defined in `docs/request-lifecycle-model.md`.
+This document owns endpoint shapes and final field names, not the broader workflow rationale.
+
+### Follow-Up Kind
+
+- `resubmission`
+- `change`
+- `cancel`
+
+### Request Review Decision
+
+- `approve`
+- `reject`
+- `request_revision`
+
+### Request Queue View
+
+- `needs_review`
+- `waiting_for_employee`
+- `completed`
+- `all`
+
+### Request Next Action
+
+- `admin_review`
+- `employee_resubmit`
+- `none`
 
 ### Manual Attendance Action
 
@@ -161,11 +191,54 @@ Fields:
 - `date`
 - `requestedAt`
 - `status`
-- `rejectionReason`
+- `reviewComment`
+- `governingReviewComment`
+- `rootRequestId`
+- `parentRequestId`
+- `followUpKind`
+- `activeRequestId`
+- `activeStatus`
+- `effectiveRequestId`
+- `effectiveStatus`
+- `hasActiveFollowUp`
+- `nextAction`
 
-`status` uses `Approval Status`.
-`rejectionReason` is `null` unless `status` is `rejected`.
+`status` uses `Request Status`.
+`reviewComment` is `null` unless the latest review event used `reject` or `request_revision`.
+`governingReviewComment` is the latest unresolved `reject` or `request_revision` rationale that must remain visible while the employee still owes a response; otherwise it is `null`.
+Attendance endpoints surface only `pending`, `revision_requested`, or `rejected` here.
 Approved manual requests do not remain embedded here after their changes are written back into the canonical attendance record.
+
+### `Request Chain Projection`
+
+Represents the minimum shared request-state projection that employee and admin surfaces must interpret the same way.
+
+Fields:
+
+- `activeRequestId`
+- `activeStatus`
+- `effectiveRequestId`
+- `effectiveStatus`
+- `governingReviewComment`
+- `hasActiveFollowUp`
+- `nextAction`
+
+`activeRequestId` and `activeStatus` are `null` when a chain has no active work.
+`effectiveStatus` uses `Request Status`.
+`governingReviewComment` stays populated when a prior non-approved review rationale must remain visible alongside the current chain state.
+`nextAction` uses `Request Next Action`.
+
+### `Request Relation Fields`
+
+These fields appear on leave-request and manual-attendance-request resources.
+
+- `rootRequestId`
+- `parentRequestId`
+- `followUpKind`
+- `supersededByRequestId`
+
+`rootRequestId` points to the first request in the chain.
+`parentRequestId` is `null` on the root request.
 
 ### `Attendance Display`
 
@@ -259,7 +332,7 @@ Response notes:
 - `todayRecord` is `null` until a successful attendance fact exists or an approved manual correction writes one back.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
 - `attempts` may include any attempt that still matters for the current card state; each attempt's `date` identifies the target workday.
-- `manualRequest` is `null` unless a pending or rejected manual attendance request still matters for the current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
+- `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for the current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
 - `display.activeExceptions` may contain multiple values at once.
 - `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
@@ -325,7 +398,22 @@ Response notes:
 Creates a manual attendance request for the current employee.
 The request itself does not mutate the canonical attendance record until an admin approves it.
 
-Request body:
+Example request body:
+
+- `date`: required target workday
+- `action`: required `clock_in`, `clock_out`, or `both`
+- `requestedAt`: required employee submission time
+- `reason`: required employee note
+- `parentRequestId`: optional; required when creating a follow-up resubmission
+- `followUpKind`: optional `resubmission` only in the current product
+
+Current-scope rules:
+
+- Omit `parentRequestId` and `followUpKind` for a new root request.
+- `followUpKind = resubmission` is valid only when the parent manual request currently has `status = rejected` or `revision_requested`.
+- Approved manual-attendance requests do not support follow-up `change` or `cancel` in the current product.
+
+Example request body:
 
 ```json
 {
@@ -346,7 +434,20 @@ Response:
   "date": "2026-03-30",
   "requestedAt": "2026-03-30T09:00:00+09:00",
   "reason": "Beacon was not detected at the office entrance.",
-  "status": "pending"
+  "status": "pending",
+  "reviewedAt": null,
+  "reviewComment": null,
+  "governingReviewComment": null,
+  "rootRequestId": "req_manual_001",
+  "parentRequestId": null,
+  "followUpKind": null,
+  "supersededByRequestId": null,
+  "activeRequestId": "req_manual_001",
+  "activeStatus": "pending",
+  "effectiveRequestId": "req_manual_001",
+  "effectiveStatus": "pending",
+  "hasActiveFollowUp": false,
+  "nextAction": "admin_review"
 }
 ```
 
@@ -354,6 +455,76 @@ Typical error cases:
 
 - `400 validation_error` for malformed payloads
 - `409 conflict` when a duplicate manual request already exists for the same employee and date
+- `409 conflict` when the same chain already has another active employee follow-up
+- `409 conflict` when the parent request is already approved and would require an out-of-scope manual-attendance rollback flow
+
+### `PATCH /api/attendance/manual/[id]`
+
+Edits a pending manual attendance request in place or withdraws it before review.
+
+Request body:
+
+- `date`: optional when editing the pending request
+- `action`: optional when editing the pending request
+- `requestedAt`: optional when editing the pending request
+- `reason`: optional when editing the pending request
+- `status`: optional; the only writable status value is `withdrawn`
+
+Current-scope rules:
+
+- The request must currently have `status = pending`.
+- If `status = withdrawn`, omit the other editable fields.
+- If `status` is omitted, provide at least one employee-editable field.
+- This endpoint never creates a follow-up request; it only mutates the current pending request in place.
+
+Example request body:
+
+```json
+{
+  "reason": "Beacon failed again; correcting the note before review."
+}
+```
+
+Example withdrawal body:
+
+```json
+{
+  "status": "withdrawn"
+}
+```
+
+Response:
+
+```json
+{
+  "id": "req_manual_001",
+  "requestType": "manual_attendance",
+  "action": "clock_in",
+  "date": "2026-03-30",
+  "requestedAt": "2026-03-30T09:00:00+09:00",
+  "reason": "Beacon failed again; correcting the note before review.",
+  "status": "pending",
+  "reviewedAt": null,
+  "reviewComment": null,
+  "governingReviewComment": null,
+  "rootRequestId": "req_manual_001",
+  "parentRequestId": null,
+  "followUpKind": null,
+  "supersededByRequestId": null,
+  "activeRequestId": "req_manual_001",
+  "activeStatus": "pending",
+  "effectiveRequestId": "req_manual_001",
+  "effectiveStatus": "pending",
+  "hasActiveFollowUp": false,
+  "nextAction": "admin_review"
+}
+```
+
+Typical error cases:
+
+- `400 validation_error` when the payload mixes `status = withdrawn` with editable fields or otherwise violates the pending-edit contract
+- `404 not_found` when the request id does not exist
+- `409 conflict` when the request is no longer `pending`
 
 ### `GET /api/leave/me`
 
@@ -361,9 +532,12 @@ Returns leave balance plus the current employee's leave request history.
 
 Response notes:
 
-- `rejectionReason`: `null` unless `status` is `rejected`; required non-empty string when `status` is `rejected`
+- each request item uses `Request Status` and includes relation fields plus the shared `Request Chain Projection`
+- `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
+- `governingReviewComment` stays populated when a prior non-approved review rationale must remain visible while a resubmission is still pending
 - approved leave may later surface in attendance endpoints as `leaveCoverage`
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
+- follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
 
 Response:
 
@@ -376,16 +550,27 @@ Response:
   },
   "requests": [
     {
-      "id": "req_leave_001",
+      "id": "req_leave_002",
       "requestType": "leave",
-      "leaveType": "annual",
-      "date": "2026-04-02",
-      "hours": null,
-      "reason": "Personal appointment",
+      "leaveType": "hourly",
+      "date": "2026-04-03",
+      "hours": 2,
+      "reason": "Personal appointment moved later.",
       "status": "pending",
-      "requestedAt": "2026-03-30T11:10:00+09:00",
+      "requestedAt": "2026-03-30T11:25:00+09:00",
       "reviewedAt": null,
-      "rejectionReason": null
+      "reviewComment": null,
+      "governingReviewComment": null,
+      "rootRequestId": "req_leave_001",
+      "parentRequestId": "req_leave_001",
+      "followUpKind": "change",
+      "supersededByRequestId": null,
+      "activeRequestId": "req_leave_002",
+      "activeStatus": "pending",
+      "effectiveRequestId": "req_leave_001",
+      "effectiveStatus": "approved",
+      "hasActiveFollowUp": true,
+      "nextAction": "admin_review"
     }
   ]
 }
@@ -397,12 +582,30 @@ Creates a leave request for the current employee.
 
 Request body:
 
+- `leaveType`: required
+- `date`: required
+- `hours`: required only when `leaveType` is `hourly`
+- `reason`: required employee note
+- `parentRequestId`: optional; required for follow-up submissions
+- `followUpKind`: optional `resubmission`, `change`, or `cancel`
+
+Current-scope rules:
+
+- Omit `parentRequestId` and `followUpKind` for a new root leave request.
+- `followUpKind = resubmission` is valid only when the parent request currently has `status = rejected` or `revision_requested`.
+- `followUpKind = change` or `cancel` is valid only when the parent request itself currently has `status = approved` and `supersededByRequestId = null`.
+- A chain may have at most one active employee-submitted follow-up at a time.
+
+Request body:
+
 ```json
 {
   "leaveType": "hourly",
   "date": "2026-04-03",
   "hours": 2,
-  "reason": "Medical appointment"
+  "reason": "Medical appointment moved later.",
+  "parentRequestId": "req_leave_001",
+  "followUpKind": "change"
 }
 ```
 
@@ -415,11 +618,22 @@ Response:
   "leaveType": "hourly",
   "date": "2026-04-03",
   "hours": 2,
-  "reason": "Medical appointment",
+  "reason": "Medical appointment moved later.",
   "status": "pending",
   "requestedAt": "2026-03-30T11:25:00+09:00",
   "reviewedAt": null,
-  "rejectionReason": null
+  "reviewComment": null,
+  "governingReviewComment": null,
+  "rootRequestId": "req_leave_001",
+  "parentRequestId": "req_leave_001",
+  "followUpKind": "change",
+  "supersededByRequestId": null,
+  "activeRequestId": "req_leave_002",
+  "activeStatus": "pending",
+  "effectiveRequestId": "req_leave_001",
+  "effectiveStatus": "approved",
+  "hasActiveFollowUp": true,
+  "nextAction": "admin_review"
 }
 ```
 
@@ -427,6 +641,78 @@ Typical error cases:
 
 - `400 validation_error` for invalid dates or missing required fields
 - `409 conflict` when a conflicting leave request already exists
+- `409 conflict` when the same chain already has another active employee follow-up; include the existing active follow-up request id in the error payload
+- `409 conflict` when `followUpKind` does not match the parent request's current lifecycle state
+
+### `PATCH /api/leave/request/[id]`
+
+Edits a pending leave request in place or withdraws it before review.
+
+Request body:
+
+- `leaveType`: optional when editing the pending request
+- `date`: optional when editing the pending request
+- `hours`: optional when editing the pending request
+- `reason`: optional when editing the pending request
+- `status`: optional; the only writable status value is `withdrawn`
+
+Current-scope rules:
+
+- The request must currently have `status = pending`.
+- If `status = withdrawn`, omit the other editable fields.
+- If `status` is omitted, provide at least one employee-editable field.
+- This endpoint never creates a follow-up request; approved-state leave change or cancel still requires `POST /api/leave/request` with `followUpKind`.
+
+Example request body:
+
+```json
+{
+  "hours": 3,
+  "reason": "The appointment window expanded."
+}
+```
+
+Example withdrawal body:
+
+```json
+{
+  "status": "withdrawn"
+}
+```
+
+Response:
+
+```json
+{
+  "id": "req_leave_001",
+  "requestType": "leave",
+  "leaveType": "hourly",
+  "date": "2026-04-03",
+  "hours": 3,
+  "reason": "The appointment window expanded.",
+  "status": "pending",
+  "requestedAt": "2026-03-30T11:25:00+09:00",
+  "reviewedAt": null,
+  "reviewComment": null,
+  "governingReviewComment": null,
+  "rootRequestId": "req_leave_001",
+  "parentRequestId": null,
+  "followUpKind": null,
+  "supersededByRequestId": null,
+  "activeRequestId": "req_leave_001",
+  "activeStatus": "pending",
+  "effectiveRequestId": "req_leave_001",
+  "effectiveStatus": "pending",
+  "hasActiveFollowUp": false,
+  "nextAction": "admin_review"
+}
+```
+
+Typical error cases:
+
+- `400 validation_error` when the payload mixes `status = withdrawn` with editable fields or otherwise violates the pending-edit contract
+- `404 not_found` when the request id does not exist
+- `409 conflict` when the request is no longer `pending`
 
 ## Admin Endpoints
 
@@ -494,7 +780,7 @@ Response notes:
 - `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
 - When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape, and its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open.
-- `manualRequest` is `null` unless a pending or rejected manual attendance request still matters for that employee's current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
+- `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for that employee's current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
 - No-record employees must still appear if they count toward today's expected workday.
 
 ### `GET /api/admin/attendance/list?from=&to=&name=`
@@ -560,24 +846,29 @@ Response:
 
 ## Request Review Endpoints
 
-### `GET /api/admin/requests?status=`
+### `GET /api/admin/requests?view=`
 
 Returns the request-review queue for admins.
 
 Query parameters:
 
-- `status`: optional `pending`, `approved`, or `rejected`
+- `view`: optional `needs_review`, `waiting_for_employee`, `completed`, or `all`
 
 Response notes:
 
-- `rejectionReason`: `null` unless an item `status` is `rejected`; required non-empty string when an item `status` is `rejected`
-- this document does not yet formalize remediation chains, supersession, or a separate remediation status; those decisions remain in the request-lifecycle issues
+- each item uses `Request Status` plus relation fields and the shared `Request Chain Projection`
+- `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
+- `governingReviewComment` stays populated when the currently visible chain state still owes a response to an earlier non-approved review comment
+- `needs_review` groups chains whose active request has `status = pending`
+- `waiting_for_employee` groups chains whose effective status is `revision_requested` or `rejected` and which have no active follow-up
+- `completed` groups chains whose effective status is `approved` or `withdrawn` and which have no active follow-up
+- request-chain semantics, reviewed-request immutability, and follow-up workflow rules are defined in `docs/request-lifecycle-model.md`
 
 Response:
 
 ```json
 {
-  "statusFilter": "pending",
+  "viewFilter": "needs_review",
   "items": [
     {
       "id": "req_manual_001",
@@ -593,7 +884,18 @@ Response:
       "status": "pending",
       "requestedAt": "2026-03-30T09:10:00+09:00",
       "reviewedAt": null,
-      "rejectionReason": null
+      "reviewComment": null,
+      "governingReviewComment": null,
+      "rootRequestId": "req_manual_001",
+      "parentRequestId": null,
+      "followUpKind": null,
+      "supersededByRequestId": null,
+      "activeRequestId": "req_manual_001",
+      "activeStatus": "pending",
+      "effectiveRequestId": "req_manual_001",
+      "effectiveStatus": "pending",
+      "hasActiveFollowUp": false,
+      "nextAction": "admin_review"
     }
   ]
 }
@@ -601,23 +903,25 @@ Response:
 
 ### `PATCH /api/admin/requests/[id]`
 
-Approves or rejects a request.
+Writes a new review event for a request.
 
 Request body:
 
-- `decision`: required `approve` or `reject`
-- `rejectionReason`: required non-empty string when `decision` is `reject`; omit it when `decision` is `approve`
+- `decision`: required `approve`, `reject`, or `request_revision`
+- `reviewComment`: required non-empty string when `decision` is `reject` or `request_revision`; omit it when `decision` is `approve`
 
 Response notes:
 
-- `status`: finalized `approved` or `rejected`
-- `rejectionReason`: `null` when `status` is `approved`; required non-empty string when `status` is `rejected`
+- `status` uses `Request Status`
+- `reviewComment` is `null` when `status` is `approved`; required non-empty string when `status` is `rejected` or `revision_requested`
+- `reviewedAt` is the timestamp of the latest review event
 - approved manual attendance requests should write back into the relevant attendance record and clear stale attendance warnings in employee and admin views
+- the endpoint may append a revised non-approved decision on the same request, but it must reject writes to `approved`, `withdrawn`, or superseded requests with `409 conflict`
 
 ```json
 {
-  "decision": "reject",
-  "rejectionReason": "Please clarify the missing clock-out time."
+  "decision": "request_revision",
+  "reviewComment": "Please clarify the missing clock-out time."
 }
 ```
 
@@ -627,9 +931,16 @@ Response:
 {
   "id": "req_manual_001",
   "requestType": "manual_attendance",
-  "status": "rejected",
+  "status": "revision_requested",
   "reviewedAt": "2026-03-30T13:15:00+09:00",
-  "rejectionReason": "Please clarify the missing clock-out time."
+  "reviewComment": "Please clarify the missing clock-out time.",
+  "governingReviewComment": "Please clarify the missing clock-out time.",
+  "activeRequestId": "req_manual_001",
+  "activeStatus": "revision_requested",
+  "effectiveRequestId": "req_manual_001",
+  "effectiveStatus": "revision_requested",
+  "hasActiveFollowUp": false,
+  "nextAction": "employee_resubmit"
 }
 ```
 
@@ -637,7 +948,7 @@ Typical error cases:
 
 - `400 validation_error` for invalid decision payloads
 - `404 not_found` when the request id does not exist
-- `409 conflict` when the request has already been finalized
+- `409 conflict` when the request is `approved`, `withdrawn`, superseded, or otherwise not writable under the current request-lifecycle rules
 
 ## Change Triggers
 

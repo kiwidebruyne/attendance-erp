@@ -59,11 +59,41 @@ The runtime meaning of those concepts over time lives in `docs/attendance-operat
 - `review_leave_conflict`
 - `wait`
 
-### Approval Status
+### Request Status
 
 - `pending`
+- `revision_requested`
+- `withdrawn`
 - `approved`
 - `rejected`
+
+The exact lifecycle semantics for reviewed-request changes, follow-up chains, and revision-requested flows are defined in `docs/request-lifecycle-model.md`.
+This document owns the conceptual entities and final enum names, not the broader workflow rationale.
+
+### Follow-Up Kind
+
+- `resubmission`
+- `change`
+- `cancel`
+
+### Request Review Decision
+
+- `approve`
+- `reject`
+- `request_revision`
+
+### Request Queue View
+
+- `needs_review`
+- `waiting_for_employee`
+- `completed`
+- `all`
+
+### Request Next Action
+
+- `admin_review`
+- `employee_resubmit`
+- `none`
 
 ### Manual Attendance Action
 
@@ -156,19 +186,23 @@ Represents the employee-level leave summary used by the leave page.
 
 Represents a submitted leave application.
 
-| Field             | Type           | Notes                                          |
-| ----------------- | -------------- | ---------------------------------------------- |
-| `id`              | string         | stable request identifier                      |
-| `employeeId`      | string         | relation to `Employee.id`                      |
-| `requestType`     | enum           | always `leave`                                 |
-| `leaveType`       | enum           | `Leave Type`                                   |
-| `date`            | string         | target leave date                              |
-| `hours`           | number or null | required only when `leaveType` is `hourly`     |
-| `reason`          | string         | employee-provided note                         |
-| `status`          | enum           | `Approval Status`                              |
-| `requestedAt`     | string         | submission time                                |
-| `reviewedAt`      | string or null | admin decision time                            |
-| `rejectionReason` | string or null | non-empty string when rejected; null otherwise |
+| Field                   | Type           | Notes                                                                             |
+| ----------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `id`                    | string         | stable request identifier                                                         |
+| `employeeId`            | string         | relation to `Employee.id`                                                         |
+| `requestType`           | enum           | always `leave`                                                                    |
+| `leaveType`             | enum           | `Leave Type`                                                                      |
+| `date`                  | string         | target leave date                                                                 |
+| `hours`                 | number or null | required only when `leaveType` is `hourly`                                        |
+| `reason`                | string         | employee-provided note                                                            |
+| `status`                | enum           | `Request Status`                                                                  |
+| `requestedAt`           | string         | submission time                                                                   |
+| `reviewedAt`            | string or null | timestamp of the latest review event                                              |
+| `reviewComment`         | string or null | non-empty string when the latest review event used `reject` or `request_revision` |
+| `rootRequestId`         | string         | self for the root request; same root id for every follow-up in the chain          |
+| `parentRequestId`       | string or null | immediate earlier request for a follow-up; `null` on the root request             |
+| `followUpKind`          | enum or null   | `Follow-Up Kind` for follow-up requests; `null` on the root request               |
+| `supersededByRequestId` | string or null | later approved follow-up that supersedes this request                             |
 
 ### Leave Coverage
 
@@ -188,18 +222,37 @@ This is a derived attendance input rather than a separate employee-facing workfl
 
 Represents a manual correction request when successful attendance facts are missing or incomplete.
 
-| Field             | Type           | Notes                                          |
-| ----------------- | -------------- | ---------------------------------------------- |
-| `id`              | string         | stable request identifier                      |
-| `employeeId`      | string         | relation to `Employee.id`                      |
-| `requestType`     | enum           | always `manual_attendance`                     |
-| `action`          | enum           | `Manual Attendance Action`                     |
-| `date`            | string         | target workday                                 |
-| `requestedAt`     | string         | requested correction time                      |
-| `reason`          | string         | employee-provided note                         |
-| `status`          | enum           | `Approval Status`                              |
-| `reviewedAt`      | string or null | admin decision time                            |
-| `rejectionReason` | string or null | non-empty string when rejected; null otherwise |
+| Field                   | Type           | Notes                                                                             |
+| ----------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `id`                    | string         | stable request identifier                                                         |
+| `employeeId`            | string         | relation to `Employee.id`                                                         |
+| `requestType`           | enum           | always `manual_attendance`                                                        |
+| `action`                | enum           | `Manual Attendance Action`                                                        |
+| `date`                  | string         | target workday                                                                    |
+| `requestedAt`           | string         | requested correction time                                                         |
+| `reason`                | string         | employee-provided note                                                            |
+| `status`                | enum           | `Request Status`                                                                  |
+| `reviewedAt`            | string or null | timestamp of the latest review event                                              |
+| `reviewComment`         | string or null | non-empty string when the latest review event used `reject` or `request_revision` |
+| `rootRequestId`         | string         | self for the root request; same root id for every follow-up in the chain          |
+| `parentRequestId`       | string or null | immediate earlier request for a follow-up; `null` on the root request             |
+| `followUpKind`          | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups          |
+| `supersededByRequestId` | string or null | later request that supersedes this request when current-product rules allow it    |
+
+Approved manual-attendance requests currently do not support post-approval follow-up `change` or `cancel`.
+
+### Request Review Event
+
+Represents one append-only admin review record for either a leave request or a manual attendance request.
+
+| Field           | Type           | Notes                                                                         |
+| --------------- | -------------- | ----------------------------------------------------------------------------- |
+| `id`            | string         | stable review-event identifier                                                |
+| `requestId`     | string         | relation to one leave or manual attendance request                            |
+| `decision`      | enum           | `Request Review Decision`                                                     |
+| `reviewComment` | string or null | required non-empty string for `reject` and `request_revision`; otherwise null |
+| `reviewedAt`    | string         | review timestamp                                                              |
+| `reviewerId`    | string         | relation to `Employee.id` for the acting admin                                |
 
 ## Derived Views
 
@@ -208,14 +261,38 @@ Represents a manual correction request when successful attendance facts are miss
 Represents the endpoint-facing attendance projection for the manual request that still matters to the current attendance state, including prior-workday carry-over corrections.
 This is derived from `Manual Attendance Request` rather than persisted as a second source of truth.
 
-| Field             | Type           | Notes                                                                            |
-| ----------------- | -------------- | -------------------------------------------------------------------------------- |
-| `id`              | string         | stable request identifier                                                        |
-| `action`          | enum           | `Manual Attendance Action`                                                       |
-| `date`            | string         | target workday                                                                   |
-| `requestedAt`     | string         | employee submission timestamp                                                    |
-| `status`          | enum           | `Approval Status`; attendance endpoints only surface pending or rejected entries |
-| `rejectionReason` | string or null | non-empty string when `status` is `rejected`; otherwise `null`                   |
+| Field                    | Type           | Notes                                                                                                                        |
+| ------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `id`                     | string         | stable request identifier                                                                                                    |
+| `action`                 | enum           | `Manual Attendance Action`                                                                                                   |
+| `date`                   | string         | target workday                                                                                                               |
+| `requestedAt`            | string         | employee submission timestamp                                                                                                |
+| `status`                 | enum           | `Request Status`; attendance endpoints surface only `pending`, `revision_requested`, or `rejected`                           |
+| `reviewComment`          | string or null | non-empty string when the latest review event used `reject` or `request_revision`                                            |
+| `governingReviewComment` | string or null | latest unresolved `reject` or `request_revision` rationale that must remain visible while employee response is still pending |
+| `rootRequestId`          | string         | root request in the chain                                                                                                    |
+| `parentRequestId`        | string or null | immediate prior request for a follow-up                                                                                      |
+| `followUpKind`           | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups                                                     |
+| `activeRequestId`        | string or null | chain-level active request                                                                                                   |
+| `activeStatus`           | enum or null   | chain-level active status                                                                                                    |
+| `effectiveRequestId`     | string         | request whose current status governs the chain                                                                               |
+| `effectiveStatus`        | enum           | chain-level effective status                                                                                                 |
+| `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                  |
+| `nextAction`             | enum           | `Request Next Action`                                                                                                        |
+
+### Request Chain Projection
+
+Represents the minimum request-state projection that employee and admin surfaces must interpret the same way.
+
+Expected fields:
+
+- `activeRequestId`
+- `activeStatus`
+- `effectiveRequestId`
+- `effectiveStatus`
+- `governingReviewComment`
+- `hasActiveFollowUp`
+- `nextAction`
 
 ### Attendance Display
 
@@ -271,7 +348,8 @@ This should be treated as a query or view model rather than a separate persisted
 The admin review action itself is an API command rather than a persisted entity field:
 
 - `approve` moves a request into the `approved` status
-- `reject` moves a request into the `rejected` status and stores a non-empty `rejectionReason`
+- `reject` moves a request into the `rejected` status and stores a non-empty `reviewComment`
+- `request_revision` moves a request into the `revision_requested` status and stores a non-empty `reviewComment`
 
 Expected fields:
 
@@ -281,8 +359,10 @@ Expected fields:
 - subtype detail such as leave type or manual attendance action
 - target date
 - reason
-- approval status
-- `rejectionReason`, which is `null` unless approval status is `rejected`, where it must be a non-empty string
+- request status
+- `reviewComment`, which is `null` unless the latest review event used `reject` or `request_revision`
+- relation fields: `rootRequestId`, `parentRequestId`, `followUpKind`, `supersededByRequestId`
+- `Request Chain Projection`
 - submission and review timestamps
 
 ## Relationships
@@ -294,9 +374,14 @@ Expected fields:
 - One `Employee` has many `Leave Request` rows.
 - One `Employee` has many derived `Leave Coverage` intervals from approved leave requests.
 - One `Employee` has many `Manual Attendance Request` rows.
+- One `Employee` acting as an admin may author many `Request Review Event` rows.
+- One `Leave Request` may have many `Request Review Event` rows over time.
+- One `Manual Attendance Request` may have many `Request Review Event` rows over time.
+- `rootRequestId`, `parentRequestId`, and `followUpKind` link requests into a chain without a separate `chainId`.
+- `supersededByRequestId` links an older request to the later approved follow-up that replaced it.
 - A `Manual Attendance Request` may be linked back to one `Attendance Record` after approval.
 - Attendance display state is derived from expected workdays, attempts, records, leave coverage, and request state.
-- The admin request queue is derived from both request entities.
+- The admin request queue is derived from both request entities plus chain projection rules.
 
 ## Change Triggers
 
