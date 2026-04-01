@@ -4,6 +4,7 @@
 
 This document defines the mock HTTP contract for the assignment.
 It intentionally documents the assignment-facing REST API only. It does not lock in a future production backend design.
+Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `attendanceRecord`, leave conflicts, and carry-over exceptions live in `docs/attendance-operating-model.md`.
 
 ## Common Conventions
 

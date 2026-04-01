@@ -15,6 +15,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 - The app assumes a single signed-in user context for each route. Authentication UI is out of scope for the assignment.
 - The application must use mock data that feels operationally realistic for a small team, including late arrivals, early departures, missing records, failed attendance attempts, leave coverage, and follow-up correction requests.
 - The current assignment scope covers frontend pages and mock API behavior only. Real BLE integration and a production backend are out of scope.
+- `docs/attendance-operating-model.md` owns the detailed attendance fact lifecycle and derived exception timing. This document keeps only the user-visible requirements that depend on that lifecycle.
 - The product should behave like a trust product rather than a passive ledger: the user should be able to understand the current state, the reason for that state, and the next action without decoding tables first.
 - Employee and admin views must stay synchronized on the same facts for the same date. A date or request must not look resolved on one screen and exceptional on another.
 

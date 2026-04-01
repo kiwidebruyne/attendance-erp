@@ -31,21 +31,13 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
 - Use action-first UX so both employees and admins can see the problem and the resolution path together.
 
-## Promoted Attendance Foundation Decisions
+## Promoted Attendance Operating Model
 
-- No-record before the first successful same-day check-in remains a derived state, not a stored attendance status.
-- Attendance modeling is now split into canonical facts and derived presentation:
-  - Canonical facts: `expectedWorkday`, `attendanceAttempt`, `attendanceRecord`, `leaveCoverage`, `manualRequest`
-  - Derived presentation: `phase`, `flags`, `activeExceptions`, `nextAction`, and admin summary counts
-- `attendanceAttempt` is append-only. Failed attempts are visible to both employees and admins until the underlying issue is resolved.
-- Approved leave does not block or erase later attendance facts. When actual attendance happens on a leave-covered day, surface it as `leave_work_conflict`.
-- A previous-day open workday may still be closed by a next-day checkout until `08:59:59`. After that cutoff, keep it visible as `previous_day_checkout_missing` until manual correction resolves it.
-- `not_checked_in` is a real-time expected-but-missing exception. `absent` is only derived after day close or equivalent day-finalization logic.
-- `late` and `early_leave` are coexisting flags, not mutually exclusive status outcomes.
+- The promoted attendance operating-flow contract now lives in `docs/attendance-operating-model.md`.
+- Use that document for canonical attendance fact lifecycle, derived exception timing, carry-over behavior, leave-work conflict handling, and shared employee/admin synchronization rules.
+- Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
 ## Open Questions for Future Interviews
-
-- Historical note: the no-record pre-check-in question, split attendance-modeling question, event-level verification boundary, and coexistence of `late` plus `early_leave` have been promoted into the primary docs. Any matching raw archive prompts below remain only as provenance.
 
 - How should `보완 요청` map onto the current `pending/approved/rejected` contract vocabulary and state transitions?
 - Where should approve-time cancel, post-approval cancel request, and post-approval change request live: request type, status, history model, or a combination?

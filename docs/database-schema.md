@@ -4,6 +4,7 @@
 
 This document defines the conceptual data model for the assignment.
 It is not a physical database schema. Its job is to keep mock data, API contracts, and UI terminology aligned.
+The runtime meaning of those concepts over time lives in `docs/attendance-operating-model.md`.
 
 ## Modeling Conventions
 
@@ -12,6 +13,7 @@ It is not a physical database schema. Its job is to keep mock data, API contract
 - Event timestamps use ISO 8601 strings with timezone offsets.
 - Canonical facts should stay separate from derived presentation state.
 - API-visible derived concepts should stay aligned with `docs/api-spec.md`.
+- Time-sequenced attendance lifecycle and exception timing should stay aligned with `docs/attendance-operating-model.md`.
 
 ## Shared Enums
 
