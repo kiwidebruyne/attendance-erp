@@ -99,7 +99,7 @@ Do not add a separate `chainId` in the current product.
 | active request    | the request that currently awaits action from either employee or admin     | there may be at most one active employee-submitted follow-up per chain |
 | effective status  | the request state that currently governs what the product should show      | may differ from latest activity while a follow-up is still pending     |
 | review comment    | the admin rationale attached to `reject` or `request_revision`             | must stay visible until the employee resolves that outcome             |
-| review event      | an append-only admin review record                                         | used for first review and later non-approved decision revision         |
+| review event      | an append-only admin review record                                         | used for the first review on a request record                          |
 | supersession      | the relationship by which a newer approved follow-up replaces an older one | stored as request-to-request linkage, not as deleted history           |
 
 ## Contract Decisions
@@ -115,7 +115,7 @@ Do not add a separate `chainId` in the current product.
 | How should an employee modify an approved leave request?     | Submit a follow-up leave request with `followUpKind = change`.                                                                  | The current approval must remain effective until the new request is reviewed.                                |
 | How should an employee cancel an approved leave request?     | Submit a follow-up leave request with `followUpKind = cancel`.                                                                  | Pre-review withdrawal and post-approval cancellation are different contracts.                                |
 | How should manual attendance behave after approval?          | Approved manual attendance currently does not support follow-up `change` or `cancel`.                                           | Approval already writes canonical attendance facts, so post-approval rollback is deferred.                   |
-| How should an admin change a past non-approved decision?     | Append a new review event rather than rewriting employee-submitted request content.                                             | Decision history should stay explainable to both sides without reopening approved data.                      |
+| How should an admin change a past non-approved decision?     | Do not change it on the same request record. A reviewed non-approved request stays locked until the employee submits a linked `resubmission` follow-up. | Both sides need one stable rule for who acts next after a non-approved review.                               |
 | Can an approved request transition directly to rejected?     | No.                                                                                                                             | Retroactive rejection would break trust and obscure the already-effective approval.                          |
 | Are manager-initiated post-approval changes in scope?        | No. Use employee-submitted follow-up leave change or cancel requests instead.                                                   | The first-pass product keeps approved-request reversal out of scope.                                         |
 | How should supersession work?                                | As a relationship inside the chain via `supersededByRequestId`.                                                                 | The product must show both the latest effective result and the previous reviewed steps.                      |
@@ -152,8 +152,8 @@ Do not add a separate `chainId` in the current product.
 | Moment                                                        | Lifecycle Fact Changes                                                                                       | Effective Status                                                                                            | Required Surface Behavior                                                                                   |
 | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Employee starts from a rejected or revision-requested request | load the prior request as the source for a prefilled follow-up form                                          | the current non-approved status remains governing until the new follow-up is submitted                      | the employee should not have to re-enter the whole request from scratch                                     |
-| Employee submits the corrected version                        | create a follow-up request with `followUpKind = resubmission` and `parentRequestId` set to the prior request | `activeRequestId` moves to the new follow-up; the previous review comment remains chain history             | employee and admin both see that this is a resubmission of an earlier request, not an unrelated new request |
-| Admin opens the new follow-up                                 | no new lifecycle change                                                                                      | the active request is the new resubmission, while the prior non-approved outcome remains historical context | the workspace must keep the previous review reason visible beside the new payload                           |
+| Employee submits the corrected version                        | create a follow-up request with `followUpKind = resubmission` and `parentRequestId` set to the prior request | `activeRequestId`, `activeStatus`, `effectiveRequestId`, and `effectiveStatus` move to the new pending follow-up; the previous review comment remains visible as chain context | employee and admin both see that this is a resubmission of an earlier request, not an unrelated new request, and the prior non-approved outcome stops being the current review target |
+| Admin opens the new follow-up                                 | no new lifecycle change                                                                                      | the active and effective request is the new resubmission, while the prior non-approved outcome remains historical context | the workspace must keep the previous review reason visible beside the new payload                           |
 
 ### Employee Requests A Leave Change After Approval
 
@@ -187,13 +187,13 @@ Do not add a separate `chainId` in the current product.
 | The manager needs an approved leave request to change                        | ask the employee to submit a follow-up leave change or cancel request | the earlier approval remains effective until the follow-up is reviewed | employee and admin should both understand that the next action belongs to the employee follow-up flow |
 | A true emergency override is discussed                                       | still no current-product lifecycle change                             | no exceptional admin override exists in the current scope              | treat this as future policy work tracked in issue `#53`, not as behavior to implement now             |
 
-### Admin Revises A Non-Approved Decision
+### Admin Tries To Re-Review A Non-Approved Request On The Same Record
 
-| Moment                                                                                      | Lifecycle Fact Changes                                                                               | Effective Status                                                                        | Required Surface Behavior                                                                                           |
-| ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Admin decides a previous `rejected` or `revision_requested` outcome was wrong or incomplete | append a new review event to the existing request; do not rewrite employee-submitted request content | the effective status changes only if the new review outcome changes it                  | both sides must be able to see that the admin changed the decision and why                                          |
-| The prior outcome had already driven downstream UI state                                    | no new lifecycle change beyond the appended review event                                             | the new review event becomes the governing state when applicable                        | old badges, warnings, and next actions must be replaced so the employee does not keep seeing the overturned outcome |
-| Another admin inspects the chain later                                                      | no new lifecycle change                                                                              | the chain should explain the full decision path from original review to revised outcome | the product must not look like the first decision never existed                                                     |
+| Moment                                                                                              | Lifecycle Fact Changes                                              | Effective Status                                                                     | Required Surface Behavior                                                                                              |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Admin attempts to review a previously `rejected` or `revision_requested` request on the same record | no lifecycle change; reject the write with `409 conflict`           | the prior non-approved outcome remains governing until an employee follow-up exists | both sides must keep seeing the prior outcome, rationale, and `nextAction = employee_resubmit` as the current rule    |
+| The employee has not submitted a linked follow-up yet                                               | no new lifecycle change                                             | the non-approved reviewed step still governs the chain                              | the product must not look like the admin can reopen the same request record or silently change the earlier decision   |
+| The employee later submits a linked `resubmission` follow-up                                        | create a new follow-up request linked to the prior reviewed request | the new pending follow-up becomes the active and effective review target            | the old rationale remains visible as historical context, but the new pending follow-up becomes the only admin target |
 
 ### Latest Activity Versus Effective Status
 
@@ -201,8 +201,8 @@ Do not add a separate `chainId` in the current product.
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | A pending root request awaits first review             | latest activity and effective status both point to the root pending request                  | show one pending item with `nextAction = admin_review`                                 |
 | A withdrawn root request has no follow-up              | latest activity and effective status both point to the withdrawn request                     | keep it historical only; do not surface it as active work                              |
-| A revision-requested request has no follow-up yet      | latest activity and effective status both point to the revision-requested reviewed step      | show the review comment and the submit-corrected-follow-up action together             |
-| A rejected request has a new pending resubmission      | latest activity is the resubmission, while the previous rejection remains relevant history   | keep the previous review comment visible until the resubmission is reviewed            |
+| A rejected or revision-requested request has no follow-up yet | latest activity and effective status both point to the non-approved reviewed step            | show the review comment and the submit-corrected-follow-up action together             |
+| A rejected or revision-requested request has a new pending resubmission | latest activity and effective status both point to the resubmission, while the previous non-approved outcome remains relevant history | keep the previous review comment visible until the resubmission is reviewed            |
 | An approved leave request has a pending change request | latest activity is the pending follow-up, but effective status is still the earlier approval | show both facts together so the employee does not think the change is already approved |
 | A follow-up approval supersedes an earlier approval    | latest activity and effective status both point to the new approved follow-up                | the older approval remains visible only as superseded history                          |
 
@@ -215,13 +215,14 @@ Do not add a separate `chainId` in the current product.
 | admin requests revision                           | simple pending indicators are replaced by revision-requested messaging and correction guidance            |
 | employee submits a resubmission                   | old revision or rejection warnings stop being the active state and become historical context              |
 | admin approves a leave change or cancel follow-up | prior effective approvals become superseded history and stop driving active CTAs                          |
-| admin revises an earlier non-approved decision    | overturned non-approved outcomes stop driving active banners, badges, or warnings anywhere in the product |
+| admin attempts a same-record rewrite of a reviewed non-approved request | no lifecycle change occurs; current banners, badges, queue states, and next actions remain unchanged while the API returns `409 conflict` |
 
 ## Shared Invariants And Forbidden Behaviors
 
 ### Shared Invariants
 
 - A reviewed request must never be silently overwritten by a later employee change.
+- A reviewed `rejected` or `revision_requested` request stays locked to same-record admin review writes until an employee submits a linked `resubmission` follow-up.
 - Employee and admin views must agree on the same active request, effective status, review rationale, and next action for a chain.
 - A resubmission, leave change request, or leave cancel request must stay visibly linked to the earlier request that it follows.
 - Resubmission flows must start from a prefilled copy of the earlier request rather than a blank form.
@@ -234,6 +235,7 @@ Do not add a separate `chainId` in the current product.
 ### Forbidden Behaviors
 
 - Do not let admins edit employee-submitted request content in place after review.
+- Do not let admins append a new review outcome to a `rejected` or `revision_requested` request on the same request record.
 - Do not treat a `revision_requested` item as if it were an untouched pending request.
 - Do not delete or hide the prior review comment when a resubmission is created.
 - Do not mark an approved leave request as changed or canceled before the follow-up request is actually reviewed and approved.
