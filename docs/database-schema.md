@@ -143,7 +143,7 @@ Unlike the previous single-status model, this entity stores facts only. Derived 
 
 ### Manual Attendance Request Summary
 
-Represents the date-scoped manual attendance request that remains visible in attendance endpoints until an admin finalizes or clears it through approval.
+Represents the date-scoped manual attendance request that remains visible in attendance endpoints until an admin finalizes or clears it through approval, including prior-workday carry-over corrections.
 
 | Field             | Type           | Notes                                                                            |
 | ----------------- | -------------- | -------------------------------------------------------------------------------- |
