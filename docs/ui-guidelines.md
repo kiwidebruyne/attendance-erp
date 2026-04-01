@@ -27,6 +27,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Reuse the reference image's persistent dark sidebar, light content canvas, restrained top utility bar, and white card surfaces.
 - Keep the shared page chrome consistent: each route should present a page title and one brief context line near the top of the content area.
 - Global navigation should stay limited to the four assignment routes. Do not promote request queue views or attendance history view toggles into the sidebar.
+- Keep `/admin/attendance` today-versus-history switching inside the page itself rather than promoting it into separate navigation.
 - Narrow-width behavior should preserve the same information architecture through a drawer or sheet version of the sidebar instead of inventing a second mobile IA.
 - Keep the shell visually calm. Avoid decorative dashboards or icon clutter that does not support a real assignment workflow.
 
@@ -49,16 +50,19 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 ## Exception Surface Rules
 
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
+- Treat `/admin/attendance` as a today-first operations surface. Historical review should stay secondary to the same-day exception workflow.
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
+- Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
+- No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
 - Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
-- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The exception queue should make unresolved operational risk easier to notice than nominal counts.
+- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The default today queue should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or late cases so unresolved operational risk is easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
 ## State Messaging Rules
@@ -67,7 +71,9 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
+- When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface. If the projection points at a prior-workday correction, show the target date explicitly.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
+- If an employee edits or withdraws a pending request before review, the admin row summary should refresh promptly from the latest projection rather than lingering as stale request state.
 - Employee leave-conflict warnings should communicate operational sensitivity without exposing peer identities or exact staffing counts.
 - Leave approvals that proceed despite a company-event or staffing-cap warning must use explicit confirmation rather than a blind single-click action.
 

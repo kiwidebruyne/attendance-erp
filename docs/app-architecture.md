@@ -70,6 +70,7 @@ app/
 - `app/(erp)/layout.tsx` should own the shared shell chrome such as the sidebar, restrained top bar, and page frame.
 - The global sidebar should own only the four assignment routes.
 - Keep page-local tabs and filters inside their route UI. Queue views such as `needs_review`, `waiting_for_employee`, `completed`, and `all`, plus attendance history toggles such as week and month, must not become global navigation items.
+- Keep `/admin/attendance` today and history switching inside the same route as page-local view state instead of creating additional child routes for those modes.
 - Narrow-width fallback should preserve the same information architecture through a collapsible drawer or sheet pattern instead of a separate mobile route tree.
 - Use private folders such as `_components`, `_lib`, or `_constants` for colocated implementation files that should never become routes.
 
@@ -83,6 +84,8 @@ app/
 ## State Placement
 
 - Use the URL for shareable screen state such as date ranges, search text, and view tabs when that state affects data queries.
+- `/admin/attendance` should keep its mode (`today` or `history`), date-range state, and search text in the URL because those values change the active admin attendance query.
+- `/admin/attendance` should default to `today` mode, and entering history mode without explicit URL state should initialize the range to the last 7 days including today.
 - Use local client state for ephemeral UI concerns such as open modals, draft form values, and inline filter widgets.
 - Avoid introducing a global client store by default. Add one only if later issues reveal truly cross-route client state.
 

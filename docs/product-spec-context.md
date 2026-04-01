@@ -68,6 +68,12 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
   - the product should speak like an alignment tool, not a blame tool
   - if the system already knows the factual problem, the headline should state the fact and the CTA should state the action
 
+## Promoted Admin Attendance View Contract
+
+- The promoted admin attendance view contract from issue `#40` now lives across `docs/feature-requirements.md`, `docs/ui-guidelines.md`, `docs/app-architecture.md`, and `docs/api-spec.md`.
+- Use those documents for the today-first default mode, the same-route today-versus-history switch, no-record operational visibility, grouped exception families, action-card parity expectations, and compact carry-over-aware row request projections on `/admin/attendance`.
+- Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
+
 ## Open Questions for Future Interviews
 
 - How far should future company-event ownership go beyond the current read-only seeded inputs defined in `docs/leave-conflict-policy.md`?
