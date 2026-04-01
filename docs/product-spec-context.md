@@ -37,15 +37,20 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Use that document for canonical attendance fact lifecycle, derived exception timing, carry-over behavior, leave-work conflict handling, and shared employee/admin synchronization rules.
 - Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
+## Promoted Request Lifecycle Model
+
+- The promoted request-lifecycle contract now lives in `docs/request-lifecycle-model.md`.
+- Use that document for reviewed-request immutability, follow-up request chains, revision/change/cancel flows, and shared employee/admin request synchronization rules.
+- Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
+
 ## Open Questions for Future Interviews
 
-- How should `보완 요청` map onto the current `pending/approved/rejected` contract vocabulary and state transitions?
-- Where should approve-time cancel, post-approval cancel request, and post-approval change request live: request type, status, history model, or a combination?
 - How far should company-event calendars go in the first product scope, and who owns them?
 - Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
 - What are the exact triggers, priority rules, cleanup rules, and unread model for in-app notifications?
 - How much leave summary should appear directly on `/attendance`?
-- What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and `보완 요청` waiting states?
+- What exact API and schema naming should encode the promoted request lifecycle semantics without overloading the older approval-status vocabulary?
+- What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and revision-requested waiting states?
 - What concrete writing rules should encode the desired collaborative tone and Toss-like microcopy style?
 - When should SLA, company-event conflict warnings, staffing caps, and external notification channels graduate into formal contract documents?
 

@@ -65,6 +65,9 @@ The runtime meaning of those concepts over time lives in `docs/attendance-operat
 - `approved`
 - `rejected`
 
+The exact lifecycle semantics for reviewed-request changes, follow-up chains, and revision-requested flows are defined in `docs/request-lifecycle-model.md`.
+This document owns the conceptual entities and final enum names, not the broader workflow rationale.
+
 ### Manual Attendance Action
 
 - `clock_in`

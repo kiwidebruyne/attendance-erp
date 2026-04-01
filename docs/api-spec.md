@@ -74,6 +74,9 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 - `approved`
 - `rejected`
 
+The exact lifecycle semantics for reviewed-request changes, follow-up chains, and revision-requested flows are defined in `docs/request-lifecycle-model.md`.
+This document owns endpoint shapes and final field names, not the broader workflow rationale.
+
 ### Manual Attendance Action
 
 - `clock_in`
@@ -571,7 +574,7 @@ Query parameters:
 Response notes:
 
 - `rejectionReason`: `null` unless an item `status` is `rejected`; required non-empty string when an item `status` is `rejected`
-- this document does not yet formalize remediation chains, supersession, or a separate remediation status; those decisions remain in the request-lifecycle issues
+- request-chain semantics, reviewed-request immutability, and follow-up workflow rules are defined in `docs/request-lifecycle-model.md`
 
 Response:
 

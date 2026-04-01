@@ -164,11 +164,10 @@ This document owns attendance flow semantics, not every downstream contract deta
 - `docs/ui-guidelines.md` owns UI presentation, exception priority on screen, and interaction guidance.
 - `docs/api-spec.md` owns request and response shapes.
 - `docs/database-schema.md` owns the conceptual entity and enum vocabulary.
+- `docs/request-lifecycle-model.md` owns reviewed-request changes, follow-up-chain semantics, and shared request-state synchronization.
 - `docs/product-spec-context.md` keeps raw discussion history and unresolved product questions.
 
 Open questions that remain outside this document:
 
-- formal remediation vocabulary such as `보완 요청`
-- request supersession, change-request, and cancel-request modeling
 - staffing-cap policy and company-event calendar policy
 - notification unread, priority, and cleanup rules beyond the attendance flow defaults defined here
