@@ -19,6 +19,7 @@ The runtime meaning of those concepts over time lives in `docs/attendance-operat
 
 ### Attendance Phase
 
+- `non_workday`
 - `before_check_in`
 - `working`
 - `checked_out`
@@ -217,6 +218,7 @@ Expected fields:
 Important rules:
 
 - `status` is no longer the canonical stored attendance field.
+- `non_workday` is the derived phase when `Expected Workday.isWorkday` is `false`.
 - `late` and `early_leave` may coexist for the same date.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 - `absent` is a finalized derived interpretation after day-close.

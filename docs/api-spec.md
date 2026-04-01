@@ -28,6 +28,7 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 
 ### Attendance Phase
 
+- `non_workday`
 - `before_check_in`
 - `working`
 - `checked_out`
@@ -161,6 +162,8 @@ Fields:
 - `type`
 - `relatedRequestId`
 
+`phase` should be `non_workday` whenever `expectedWorkday.isWorkday` is `false`.
+
 ### `Previous Day Open Record`
 
 Represents the still-open prior workday when checkout is missing.
@@ -235,6 +238,7 @@ Response notes:
 - `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
 - `attempts` covers only the current date.
 - `display.activeExceptions` may contain multiple values at once.
+- `display.phase` should be `non_workday` when `expectedWorkday.isWorkday` is `false`.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 
 ### `GET /api/attendance/me/history?from=&to=`

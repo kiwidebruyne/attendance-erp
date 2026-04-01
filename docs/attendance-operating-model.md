@@ -24,7 +24,7 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, and
 
 | Concept              | Derived From                                     | Meaning                                                                                                                                                                |
 | -------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `phase`              | expected workday plus same-day attendance record | current work progression such as `before_check_in`, `working`, or `checked_out`                                                                                        |
+| `phase`              | expected workday plus same-day attendance record | current work progression such as `non_workday`, `before_check_in`, `working`, or `checked_out`                                                                         |
 | `flags`              | expected workday plus attendance record          | coexisting attendance interpretations such as `late` and `early_leave`                                                                                                 |
 | `activeExceptions`   | facts plus request state                         | visible operational exceptions such as `attempt_failed`, `not_checked_in`, `absent`, `previous_day_checkout_missing`, `leave_work_conflict`, or request-related states |
 | `nextAction`         | facts plus active exceptions                     | the next recommended action for the current user context                                                                                                               |
@@ -41,6 +41,7 @@ Important model rule:
 - A previous-day open work record may still be closed by a next-day checkout until `08:59:59`.
 - Opening the app alone creates no `attendanceAttempt` and no `attendanceRecord`.
 - Before the first successful same-day check-in, no `attendanceRecord` is required.
+- When `expectedWorkday.isWorkday` is `false`, `phase` should be `non_workday`.
 - `not_checked_in` is a real-time expected-but-missing exception.
 - `absent` is derived only after day close or equivalent finalization logic.
 - Approved leave adjusts the effective expected work window for the covered period.
@@ -92,6 +93,13 @@ Important model rule:
 | ------------------------------------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Approved full-day leave before the workday starts | `leaveCoverage` exists; `expectedWorkday` is adjusted for the covered date    | generic missing-check-in logic is suppressed for the covered period     | employee and admin both see leave coverage rather than a missing attendance warning |
 | Approved half-day or hourly leave                 | `leaveCoverage` exists; `adjustedClockInAt` and/or `adjustedClockOutAt` shift | lateness and early-leave logic compare against the adjusted work window | leave-adjusted expectations must drive both employee and admin interpretation       |
+
+### Non-Workday Or Closure
+
+| Moment                                                             | Canonical Fact Changes                                                     | Derived Result                                                                            | Required Surface Behavior                                                                        |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Weekend, holiday, or company-wide closure with no carry-over issue | `expectedWorkday.isWorkday=false`; no same-day attendance fact is required | `phase=non_workday`; no generic missing-check-in exception                                | employee and admin should render this as a non-workday state rather than reusing a workday phase |
+| Non-workday with a previous-day open record still unresolved       | prior-day facts remain open                                                | `phase=non_workday`; `activeExceptions` may still include `previous_day_checkout_missing` | a non-workday must not hide a carry-over operational exception                                   |
 
 ### Approved Leave With Actual Attendance Conflict
 
