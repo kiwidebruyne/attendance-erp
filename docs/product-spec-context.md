@@ -26,11 +26,14 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 
 - When an already reviewed request must change, use a follow-up request model rather than silently overwriting the original request.
 - At the product-workflow level, plan for a remediation outcome labeled `보완 요청`; do not treat it as current API or schema vocabulary until the contract documents are updated in a synchronized follow-up change.
+- The promoted request contract now formalizes the remediation outcome as `revision_requested` and keeps the employee-facing idea of correction guidance rather than silent reset-to-pending behavior.
+- The earlier remediation wording in this section should now be read as historical pre-promotion context, not as an active contract rule.
 - Re-submission after rejection should start from a prefilled version of the previous input rather than an empty form.
 - Notification scope is in-app first: warnings, badges, and status surfaces come before external push channels.
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
 - Use action-first UX so both employees and admins can see the problem and the resolution path together.
 - An already approved request must not be directly re-rejected or administratively reversed in the current product; normal post-approval changes go through employee-submitted follow-up change or cancel requests.
+- Approved-state follow-up `change` and `cancel` flows are currently formalized for leave requests only; approved manual-attendance rollback stays out of current product scope.
 
 ## Promoted Attendance Operating Model
 
@@ -41,6 +44,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 ## Promoted Request Lifecycle Model
 
 - The promoted request-lifecycle contract now lives in `docs/request-lifecycle-model.md`.
+- Use that document for request statuses, follow-up kinds, review decisions, queue views, and shared request projection rules.
 - Use that document for reviewed-request immutability, follow-up request chains, revision/change/cancel flows, and shared employee/admin request synchronization rules.
 - Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
@@ -50,9 +54,9 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
 - What are the exact triggers, priority rules, cleanup rules, and unread model for in-app notifications?
 - How much leave summary should appear directly on `/attendance`?
-- What exact API and schema naming should encode the promoted request lifecycle semantics without overloading the older approval-status vocabulary?
 - What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and revision-requested waiting states?
 - Should any future product phase support exceptional administrative revocation of already approved requests under tightly audited conditions, or should that remain unsupported? See `#53`.
+- Should any future product phase support approved manual-attendance rollback or follow-up change/cancel flows after canonical attendance facts have already been written back?
 - What concrete writing rules should encode the desired collaborative tone and Toss-like microcopy style?
 - When should SLA, company-event conflict warnings, staffing caps, and external notification channels graduate into formal contract documents?
 

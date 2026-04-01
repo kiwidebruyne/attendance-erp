@@ -112,11 +112,11 @@ Important model rule:
 
 ### Manual Correction Submission, Rejection, and Approval
 
-| Stage                             | Canonical Fact Changes                                                      | Derived Result                                                           | Required Surface Behavior                                                                      |
-| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------- |
-| Employee submits a manual request | create `manualRequest(status=pending)`                                      | `activeExceptions` includes `manual_request_pending` when relevant       | both employee and admin see the pending state immediately                                      |
-| Admin rejects the manual request  | update `manualRequest.status=rejected` and store `rejectionReason`          | `activeExceptions` may include `manual_request_rejected`                 | show the rejection reason and the next action; the canonical attendance fact remains unchanged |
-| Admin approves the manual request | update the target `attendanceRecord`; link the approved request when needed | the attendance fact is corrected and stale request warnings should clear | approval is the point that mutates canonical attendance facts                                  |
+| Stage                             | Canonical Fact Changes                                                      | Derived Result                                                           | Required Surface Behavior                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| Employee submits a manual request | create `manualRequest(status=pending)`                                      | `activeExceptions` includes `manual_request_pending` when relevant       | both employee and admin see the pending state immediately                                    |
+| Admin rejects the manual request  | update `manualRequest.status=rejected` and store `reviewComment`            | `activeExceptions` may include `manual_request_rejected`                 | show the review comment and the next action; the canonical attendance fact remains unchanged |
+| Admin approves the manual request | update the target `attendanceRecord`; link the approved request when needed | the attendance fact is corrected and stale request warnings should clear | approval is the point that mutates canonical attendance facts                                |
 
 ### Admin Summary And Exception Queue Derivation
 
