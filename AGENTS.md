@@ -49,6 +49,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - All repository-wide rules must be defined in the appropriate AGENTS.md.
 - Update the relevant source-of-truth documents in the same change whenever routes, API payloads, data vocabulary, or UI rules change.
 - Write code, comments, and documentation in English.
+- Exception: `docs/ux-writing-guidelines.md` and directly related Korean example copy or tone-rule text may be written in Korean when they exist only to define product wording.
 - Store repository text files with LF line endings. Reserve CRLF only for Windows-only scripts such as `.bat` and `.cmd`.
 - When introducing a workaround, leave sufficient comments that explain why it exists, its scope, and the conditions for removing it.
 - Prefer enum types over strings whenever possible.
@@ -119,7 +120,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - `docs/leave-conflict-policy.md`: leave operational conflict policy, staffing-cap defaults, and company-event warning behavior.
 - `docs/feature-requirements.md`: user-visible scope, roles, screens, and edge cases.
 - `docs/ui-guidelines.md`: implementation-oriented UI guidance that bridges the ERP reference and `DESIGN.md`.
-- `docs/ux-writing-guidelines.md`: implementation-oriented UX writing contract adapted for this product from Toss-style copy rules.
+- `docs/ux-writing-guidelines.md`: Korean UX writing contract adapted for this product from Toss-style copy rules.
 - `docs/app-architecture.md`: route map, layout boundaries, rendering boundaries, and code organization rules.
 - `docs/api-spec.md`: mock API contract for request and response shapes.
 - `docs/database-schema.md`: conceptual data model and shared enum vocabulary.
@@ -154,6 +155,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - If company-event conflict policy, staffing-cap rules, or leave approval warning behavior changes, update `docs/leave-conflict-policy.md` and any affected feature or UI documents together.
 - If visual direction changes, update both `DESIGN.md` and `docs/ui-guidelines.md`.
 - If product copy tone, CTA wording rules, or screen-level writing guidance changes, update `docs/ux-writing-guidelines.md` and any affected UI or feature documents together.
+- Keep `docs/ux-writing-guidelines.md` in Korean unless its ownership changes away from defining product wording.
 - If route structure or rendering boundaries change, update `docs/app-architecture.md` and any affected user-facing requirements.
 - If payloads, query parameters, or status values change, update `docs/api-spec.md` and `docs/database-schema.md` together.
 - Documentation-only phase may mark canonical paths as `planned` before creating path skeletons; create the skeleton in the same change where runtime implementation begins.

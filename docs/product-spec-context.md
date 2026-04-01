@@ -15,6 +15,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 
 - Treat the product as a trust product, not only a record-keeping tool.
 - Employees and admins should feel like they are aligning on shared facts, not supervising one another.
+- ERP wording and UI framing must not make managers feel like watchers of people or make team members feel watched. The product should feel like a tool that helps both sides protect themselves from silent mistakes.
 - Every screen should show not only the current state, but also why that state exists and what action comes next.
 - Problems must not stay buried inside tables. Today’s state, risk, and next action should be visible near the top of the screen.
 - Silent inconsistency between employee and admin views for the same date or request is not acceptable.
@@ -59,7 +60,8 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - The promoted `/attendance` first-view hierarchy now lives in `docs/feature-requirements.md` and `docs/ui-guidelines.md`.
 - Use those documents for the stable today-card model, the separate active-exception stack, exception ordering, carry-over correction entry, and history-action placement.
 - The promoted product-writing contract now lives in `docs/ux-writing-guidelines.md`.
-- Use that document for fact-led warning headlines, action-led CTA wording, and the limited cases where question-form copy is still allowed.
+- Use that document for the Korean tone rules, the Toss-style section structure, fact-led warning headlines, action-led CTA wording, question-versus-fact wording, the limited cases where question-form copy is still allowed, and product-specific copy examples.
+- The choice to follow Toss-style tone is intentional: it is the preferred reference for keeping the ERP collaborative and helpful instead of supervisory or hostile in tone.
 - There are no remaining current-scope open questions in this file for `/attendance` first-view hierarchy or carry-over copy. Future changes to those contracts should start in the primary documents above, with this file used only for new unresolved rationale.
 - The key raw rationale behind those promotions is:
   - the most dangerous attendance problem is a silent error that stays buried in history

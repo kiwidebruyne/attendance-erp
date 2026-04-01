@@ -9,23 +9,23 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 
 ### Document Inventory
 
-| File                                 | Primary concern                                      | Update when                                                                                                  |
-| ------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `AGENTS.md`                          | human-readable repository overview and setup         | onboarding or project framing changes                                                                        |
-| `docs/AGENTS.md`                     | documentation catalog and documentation workflow     | docs inventory, ownership, or documentation policy changes                                                   |
-| `DESIGN.md`                          | design-agent visual system                           | design tokens, component style, or visual guardrails change                                                  |
-| `docs/raw-assignment.md`             | raw assignment input and original reference material | the provided assignment text or local visual reference asset changes                                         |
-| `docs/product-spec-context.md`       | living raw product-spec discussion log               | cross-screen spec discussions, locked defaults, or open product questions change                             |
-| `docs/attendance-operating-model.md` | attendance runtime flow and timeline semantics       | attendance fact lifecycle, derived exception timing, or cross-screen attendance synchronization rules change |
-| `docs/request-lifecycle-model.md`    | request workflow semantics and follow-up chains      | reviewed-request change rules, follow-up chains, or cross-screen request synchronization rules change        |
-| `docs/leave-conflict-policy.md`      | leave operational conflict policy                    | company-event conflict, staffing-cap policy, or leave approval warning rules change                          |
-| `docs/feature-requirements.md`       | user-visible features, roles, and edge cases         | screen scope or product behavior changes                                                                     |
-| `docs/ui-guidelines.md`              | ERP-aligned implementation UI guidance               | layout patterns, table rules, badge rules, or responsive behavior changes                                    |
-| `docs/ux-writing-guidelines.md`      | in-product copy contract and CTA wording rules       | tone, CTA wording, question-versus-fact guidance, or copy-specific product rules change                      |
-| `docs/app-architecture.md`           | routing, layout, rendering, and code organization    | route map, layout boundaries, or state-placement rules change                                                |
-| `docs/api-spec.md`                   | mock API contract                                    | endpoint, payload, query parameter, or error contract changes                                                |
-| `docs/database-schema.md`            | conceptual data model and shared enums               | entities, relationships, or shared vocabulary change                                                         |
-| `docs/assets/`                       | documentation image assets                           | a referenced local docs image is added, renamed, or replaced                                                 |
+| File                                 | Primary concern                                       | Update when                                                                                                  |
+| ------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `AGENTS.md`                          | human-readable repository overview and setup          | onboarding or project framing changes                                                                        |
+| `docs/AGENTS.md`                     | documentation catalog and documentation workflow      | docs inventory, ownership, or documentation policy changes                                                   |
+| `DESIGN.md`                          | design-agent visual system                            | design tokens, component style, or visual guardrails change                                                  |
+| `docs/raw-assignment.md`             | raw assignment input and original reference material  | the provided assignment text or local visual reference asset changes                                         |
+| `docs/product-spec-context.md`       | living raw product-spec discussion log                | cross-screen spec discussions, locked defaults, or open product questions change                             |
+| `docs/attendance-operating-model.md` | attendance runtime flow and timeline semantics        | attendance fact lifecycle, derived exception timing, or cross-screen attendance synchronization rules change |
+| `docs/request-lifecycle-model.md`    | request workflow semantics and follow-up chains       | reviewed-request change rules, follow-up chains, or cross-screen request synchronization rules change        |
+| `docs/leave-conflict-policy.md`      | leave operational conflict policy                     | company-event conflict, staffing-cap policy, or leave approval warning rules change                          |
+| `docs/feature-requirements.md`       | user-visible features, roles, and edge cases          | screen scope or product behavior changes                                                                     |
+| `docs/ui-guidelines.md`              | ERP-aligned implementation UI guidance                | layout patterns, table rules, badge rules, or responsive behavior changes                                    |
+| `docs/ux-writing-guidelines.md`      | Korean in-product copy contract and CTA wording rules | tone, CTA wording, question-versus-fact guidance, or copy-specific product rules change                      |
+| `docs/app-architecture.md`           | routing, layout, rendering, and code organization     | route map, layout boundaries, or state-placement rules change                                                |
+| `docs/api-spec.md`                   | mock API contract                                     | endpoint, payload, query parameter, or error contract changes                                                |
+| `docs/database-schema.md`            | conceptual data model and shared enums                | entities, relationships, or shared vocabulary change                                                         |
+| `docs/assets/`                       | documentation image assets                            | a referenced local docs image is added, renamed, or replaced                                                 |
 
 ### Ownership Matrix
 
@@ -38,7 +38,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 - `docs/request-lifecycle-model.md` owns reviewed-request lifecycle semantics, follow-up-chain rules, and shared employee/admin request-state synchronization.
 - `docs/leave-conflict-policy.md` owns company-event conflicts, staffing-cap policy, and leave-specific warning-versus-block defaults across employee and admin review surfaces.
 - `docs/app-architecture.md` owns where routes, layouts, and state boundaries live.
-- `docs/ux-writing-guidelines.md` owns in-product copy tone, CTA wording rules, and question-versus-fact guidance.
+- `docs/ux-writing-guidelines.md` owns in-product copy tone, CTA wording rules, question-versus-fact guidance, and Korean example copy for product wording.
 - `docs/api-spec.md` owns the mock HTTP contract.
 - `docs/database-schema.md` owns the conceptual model and enum vocabulary behind that contract.
 
@@ -52,6 +52,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 - If company-event conflict policy, staffing-cap rules, or leave approval warning behavior changes, update `docs/leave-conflict-policy.md` and any affected feature or UI docs in the same change set.
 - If a visual rule changes, update `DESIGN.md` and `docs/ui-guidelines.md`.
 - If product copy tone, CTA wording, or question-versus-fact guidance changes, update `docs/ux-writing-guidelines.md` and any affected UI or feature docs.
+- Repository docs stay English by default. `docs/ux-writing-guidelines.md` and directly related Korean example copy may stay in Korean because they define the product's wording contract itself.
 - If a route or rendering boundary changes, update `docs/app-architecture.md`.
 - If an API shape changes, update `docs/api-spec.md` and `docs/database-schema.md` together.
 - If a terminology change affects multiple documents, update every affected file in one change set.

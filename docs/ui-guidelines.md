@@ -67,6 +67,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
+- Detailed Korean wording rules, section-by-section tone guidance, and before-and-after copy examples belong in `docs/ux-writing-guidelines.md`.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
 - Employee leave-conflict warnings should communicate operational sensitivity without exposing peer identities or exact staffing counts.
 - Leave approvals that proceed despite a company-event or staffing-cap warning must use explicit confirmation rather than a blind single-click action.
@@ -81,13 +82,15 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 - Employee screens should feel like "protect my day from silent mistakes," not "prove my innocence."
 - Admin screens should feel like "help me resolve operational exceptions," not "rank problem employees."
+- The product should feel like a tool that helps both managers and team members protect accurate records together, not a surveillance surface that turns managers into monitors of people.
 - Event-centered language is preferred over person-centered blame.
 - Keep the next action clear, but do not hide the seriousness of a real issue behind overly soft language.
+- The Korean tone contract in `docs/ux-writing-guidelines.md` intentionally leans on Toss-style voice because that voice reduces surveillance tone while keeping the next action clear.
 
 ## Relationship To `DESIGN.md`
 
 - `DESIGN.md` should carry tokens, typography choices, and visual guardrails for design agents.
 - This file should carry implementation guidance for layout, component usage, density, exception priority, and responsive behavior.
-- `docs/ux-writing-guidelines.md` should carry copy tone, CTA wording, and question-versus-fact rules for in-product text.
+- `docs/ux-writing-guidelines.md` should carry the Korean tone contract, CTA wording rules, question-versus-fact rules, and product-specific copy examples.
 - `docs/leave-conflict-policy.md` should carry leave-specific conflict severity, staffing-cap policy, and approval-warning defaults.
 - If a rule belongs equally to both documents, keep the token-level statement in `DESIGN.md` and the usage rule here.
