@@ -150,6 +150,23 @@ Allowed source values:
 - `beacon`
 - `manual`
 
+### `Manual Attendance Request Summary`
+
+Represents the date-scoped manual attendance request that still matters to attendance rendering for the requested workday.
+
+Fields:
+
+- `id`
+- `action`
+- `date`
+- `requestedAt`
+- `status`
+- `rejectionReason`
+
+`status` uses `Approval Status`.
+`rejectionReason` is `null` unless `status` is `rejected`.
+Approved manual requests do not remain embedded here after their changes are written back into the canonical attendance record.
+
 ### `Attendance Display`
 
 Represents derived presentation state rather than canonical stored state.
@@ -242,6 +259,7 @@ Response notes:
 - `todayRecord` is `null` until a successful attendance fact exists or an approved manual correction writes one back.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
 - `attempts` may include any attempt that still matters for the current card state; each attempt's `date` identifies the target workday.
+- `manualRequest` is `null` unless a pending or rejected manual attendance request still matters for the requested workday; when present it reuses the shared `Manual Attendance Request Summary` shape.
 - `display.activeExceptions` may contain multiple values at once.
 - `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
@@ -476,6 +494,7 @@ Response notes:
 - `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
 - When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape, and its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open.
+- `manualRequest` is `null` unless a pending or rejected manual attendance request still matters for that employee-date row; when present it reuses the shared `Manual Attendance Request Summary` shape.
 - No-record employees must still appear if they count toward today's expected workday.
 
 ### `GET /api/admin/attendance/list?from=&to=&name=`

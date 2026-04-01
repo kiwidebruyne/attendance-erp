@@ -141,6 +141,19 @@ Unlike the previous single-status model, this entity stores facts only. Derived 
 | `workMinutes`     | number or null | derived from completed in/out facts when available                |
 | `manualRequestId` | string or null | link to the approved manual request that last changed this record |
 
+### Manual Attendance Request Summary
+
+Represents the date-scoped manual attendance request that remains visible in attendance endpoints until an admin finalizes or clears it through approval.
+
+| Field             | Type           | Notes                                                                            |
+| ----------------- | -------------- | -------------------------------------------------------------------------------- |
+| `id`              | string         | stable request identifier                                                        |
+| `action`          | enum           | `Manual Attendance Action`                                                       |
+| `date`            | string         | target workday                                                                   |
+| `requestedAt`     | string         | employee submission timestamp                                                    |
+| `status`          | enum           | `Approval Status`; attendance endpoints only surface pending or rejected entries |
+| `rejectionReason` | string or null | non-empty string when `status` is `rejected`; otherwise `null`                   |
+
 ### Leave Balance
 
 Represents the employee-level leave summary used by the leave page.
