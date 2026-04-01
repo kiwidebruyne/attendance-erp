@@ -71,6 +71,11 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Every important state should communicate the current state, the reason, and the next action.
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
+- On `/admin/attendance/requests`, treat reviewed `rejected` and `revision_requested` items as completed review history/context inside `completed` and `all`, not as a separate employee-waiting queue.
+- Give reviewed non-approved history lower visual emphasis than actionable `needs_review` work.
+- Do not frame reviewed non-approved admin rows or detail surfaces as "waiting for employee".
+- Do not show employee-resubmit CTA copy or guidance inside admin detail for those reviewed-history cases.
+- Keep their rationale visible without implying new admin action on the same record.
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
 - When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface. If the projection points at a prior-workday correction, show the target date explicitly.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.

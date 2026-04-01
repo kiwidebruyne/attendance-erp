@@ -85,14 +85,12 @@ This document owns the conceptual entities and final enum names, not the broader
 ### Request Queue View
 
 - `needs_review`
-- `waiting_for_employee`
 - `completed`
 - `all`
 
 ### Request Next Action
 
 - `admin_review`
-- `employee_resubmit`
 - `none`
 
 ### Manual Attendance Action
@@ -262,24 +260,24 @@ In the current product, a request record gets at most one review event because r
 Represents the endpoint-facing attendance projection for the manual request that still matters to the current attendance state, including prior-workday carry-over corrections.
 This is derived from `Manual Attendance Request` rather than persisted as a second source of truth.
 
-| Field                    | Type           | Notes                                                                                                                        |
-| ------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `id`                     | string         | stable request identifier                                                                                                    |
-| `action`                 | enum           | `Manual Attendance Action`                                                                                                   |
-| `date`                   | string         | target workday                                                                                                               |
-| `requestedAt`            | string         | employee submission timestamp                                                                                                |
-| `status`                 | enum           | `Request Status`; attendance endpoints surface only `pending`, `revision_requested`, or `rejected`                           |
-| `reviewComment`          | string or null | non-empty string when the latest review event used `reject` or `request_revision`                                            |
-| `governingReviewComment` | string or null | latest unresolved `reject` or `request_revision` rationale that must remain visible while employee response is still pending |
-| `rootRequestId`          | string         | root request in the chain                                                                                                    |
-| `parentRequestId`        | string or null | immediate prior request for a follow-up                                                                                      |
-| `followUpKind`           | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups                                                     |
-| `activeRequestId`        | string or null | chain-level active request                                                                                                   |
-| `activeStatus`           | enum or null   | chain-level active status                                                                                                    |
-| `effectiveRequestId`     | string         | request whose current status governs the chain                                                                               |
-| `effectiveStatus`        | enum           | chain-level effective status                                                                                                 |
-| `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                  |
-| `nextAction`             | enum           | `Request Next Action`                                                                                                        |
+| Field                    | Type           | Notes                                                                                                                                                   |
+| ------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                     | string         | stable request identifier                                                                                                                               |
+| `action`                 | enum           | `Manual Attendance Action`                                                                                                                              |
+| `date`                   | string         | target workday                                                                                                                                          |
+| `requestedAt`            | string         | employee submission timestamp                                                                                                                           |
+| `status`                 | enum           | `Request Status`; attendance endpoints surface only `pending`, `revision_requested`, or `rejected`                                                      |
+| `reviewComment`          | string or null | non-empty string when the latest review event used `reject` or `request_revision`                                                                       |
+| `governingReviewComment` | string or null | latest unresolved `reject` or `request_revision` rationale that must remain visible while a linked follow-up has not yet resolved that reviewed outcome |
+| `rootRequestId`          | string         | root request in the chain                                                                                                                               |
+| `parentRequestId`        | string or null | immediate prior request for a follow-up                                                                                                                 |
+| `followUpKind`           | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups                                                                                |
+| `activeRequestId`        | string or null | chain-level active request                                                                                                                              |
+| `activeStatus`           | enum or null   | chain-level active status                                                                                                                               |
+| `effectiveRequestId`     | string         | request whose current status governs the chain                                                                                                          |
+| `effectiveStatus`        | enum           | chain-level effective status                                                                                                                            |
+| `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                                             |
+| `nextAction`             | enum           | `Request Next Action`                                                                                                                                   |
 
 ### Request Chain Projection
 
@@ -297,8 +295,10 @@ Expected fields:
 
 Important rules:
 
-- When a chain is `rejected` or `revision_requested` with no active follow-up, `effectiveRequestId` and `effectiveStatus` point to that reviewed request and `nextAction = employee_resubmit`.
+- When a chain is `rejected` or `revision_requested` with no active follow-up, `activeRequestId` and `activeStatus` are `null`, while `effectiveRequestId` and `effectiveStatus` still point to that reviewed request and `nextAction = none`.
 - When an employee submits a linked `resubmission`, `activeRequestId`, `activeStatus`, `effectiveRequestId`, and `effectiveStatus` move to the new pending follow-up while the earlier non-approved rationale may remain visible through linked request history or parent-request context.
+- `governingReviewComment` stays populated only while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up; otherwise it is `null`.
+- Employee pages may still expose linked `resubmission` entry points from request status and relation fields even though the shared projection no longer treats the reviewed non-approved step as active work.
 
 ### Attendance Display
 
