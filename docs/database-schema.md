@@ -141,19 +141,6 @@ Unlike the previous single-status model, this entity stores facts only. Derived 
 | `workMinutes`     | number or null | derived from completed in/out facts when available                |
 | `manualRequestId` | string or null | link to the approved manual request that last changed this record |
 
-### Manual Attendance Request Summary
-
-Represents the date-scoped manual attendance request that remains visible in attendance endpoints until an admin finalizes or clears it through approval, including prior-workday carry-over corrections.
-
-| Field             | Type           | Notes                                                                            |
-| ----------------- | -------------- | -------------------------------------------------------------------------------- |
-| `id`              | string         | stable request identifier                                                        |
-| `action`          | enum           | `Manual Attendance Action`                                                       |
-| `date`            | string         | target workday                                                                   |
-| `requestedAt`     | string         | employee submission timestamp                                                    |
-| `status`          | enum           | `Approval Status`; attendance endpoints only surface pending or rejected entries |
-| `rejectionReason` | string or null | non-empty string when `status` is `rejected`; otherwise `null`                   |
-
 ### Leave Balance
 
 Represents the employee-level leave summary used by the leave page.
@@ -215,6 +202,20 @@ Represents a manual correction request when successful attendance facts are miss
 | `rejectionReason` | string or null | non-empty string when rejected; null otherwise |
 
 ## Derived Views
+
+### Manual Attendance Request Summary
+
+Represents the endpoint-facing attendance projection for the manual request that still matters to the current attendance state, including prior-workday carry-over corrections.
+This is derived from `Manual Attendance Request` rather than persisted as a second source of truth.
+
+| Field             | Type           | Notes                                                                            |
+| ----------------- | -------------- | -------------------------------------------------------------------------------- |
+| `id`              | string         | stable request identifier                                                        |
+| `action`          | enum           | `Manual Attendance Action`                                                       |
+| `date`            | string         | target workday                                                                   |
+| `requestedAt`     | string         | employee submission timestamp                                                    |
+| `status`          | enum           | `Approval Status`; attendance endpoints only surface pending or rejected entries |
+| `rejectionReason` | string or null | non-empty string when `status` is `rejected`; otherwise `null`                   |
 
 ### Attendance Display
 
