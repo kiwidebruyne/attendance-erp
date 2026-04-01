@@ -25,20 +25,46 @@ It intentionally documents the assignment-facing REST API only. It does not lock
 
 ## Shared Enums
 
-### Attendance Status
+### Attendance Phase
 
+- `before_check_in`
 - `working`
-- `normal`
+- `checked_out`
+
+### Attendance Flag
+
 - `late`
 - `early_leave`
+
+### Attendance Attempt Action
+
+- `clock_in`
+- `clock_out`
+
+### Attendance Attempt Status
+
+- `success`
+- `failed`
+
+### Attendance Exception Type
+
+- `attempt_failed`
+- `not_checked_in`
 - `absent`
-- `on_leave`
+- `previous_day_checkout_missing`
+- `leave_work_conflict`
+- `manual_request_pending`
+- `manual_request_rejected`
 
-### Verification Method
+### Next Action Type
 
-- `beacon`
-- `manual`
-- `none`
+- `clock_in`
+- `clock_out`
+- `submit_manual_request`
+- `resolve_previous_day_checkout`
+- `review_request_status`
+- `review_leave_conflict`
+- `wait`
 
 ### Approval Status
 
@@ -64,11 +90,92 @@ It intentionally documents the assignment-facing REST API only. It does not lock
 - `manual_attendance`
 - `leave`
 
+## Shared Attendance Objects
+
+### `Expected Workday`
+
+Represents the work expectation for the requested calendar date before any attendance fact is derived into UI state.
+
+Fields:
+
+- `isWorkday`
+- `expectedClockInAt`
+- `expectedClockOutAt`
+- `adjustedClockInAt`
+- `adjustedClockOutAt`
+- `countsTowardAdminSummary`
+- `leaveCoverage`
+
+`leaveCoverage` is either `null` or:
+
+- `requestId`
+- `leaveType`
+- `startAt`
+- `endAt`
+
+### `Attendance Attempt`
+
+Represents one append-only user attempt to clock in or clock out.
+
+Fields:
+
+- `id`
+- `action`
+- `attemptedAt`
+- `status`
+- `failureReason`
+
+### `Attendance Record`
+
+Represents the canonical attendance fact for one workday after a successful event or an approved manual correction exists.
+
+Fields:
+
+- `id`
+- `date`
+- `clockInAt`
+- `clockInSource`
+- `clockOutAt`
+- `clockOutSource`
+- `workMinutes`
+
+Allowed source values:
+
+- `beacon`
+- `manual`
+
+### `Attendance Display`
+
+Represents derived presentation state rather than canonical stored state.
+
+Fields:
+
+- `phase`
+- `flags`
+- `activeExceptions`
+- `nextAction`
+
+`nextAction` is an object with:
+
+- `type`
+- `relatedRequestId`
+
+### `Previous Day Open Record`
+
+Represents the still-open prior workday when checkout is missing.
+
+Fields:
+
+- `date`
+- `clockInAt`
+- `clockOutAt`
+- `expectedClockOutAt`
+
 ## Employee Endpoints
 
 ### `GET /api/attendance/me`
 
-Returns the current employee context and today's attendance state.
+Returns the current employee context, today's expected work window, current-day facts, failed attempts, and the derived display state for today.
 
 Response:
 
@@ -80,21 +187,58 @@ Response:
     "name": "Alex Kim",
     "department": "Product"
   },
-  "today": {
+  "expectedWorkday": {
+    "isWorkday": true,
+    "expectedClockInAt": "2026-03-30T09:00:00+09:00",
+    "expectedClockOutAt": "2026-03-30T18:00:00+09:00",
+    "adjustedClockInAt": "2026-03-30T09:00:00+09:00",
+    "adjustedClockOutAt": "2026-03-30T18:00:00+09:00",
+    "countsTowardAdminSummary": true,
+    "leaveCoverage": null
+  },
+  "previousDayOpenRecord": null,
+  "todayRecord": {
+    "id": "att_20260330_emp_001",
+    "date": "2026-03-30",
     "clockInAt": "2026-03-30T09:03:00+09:00",
+    "clockInSource": "beacon",
     "clockOutAt": null,
-    "workMinutes": null,
-    "status": "working",
-    "beaconVerified": true,
-    "verificationMethod": "beacon",
-    "manualRequest": null
+    "clockOutSource": null,
+    "workMinutes": null
+  },
+  "attempts": [
+    {
+      "id": "attempt_001",
+      "action": "clock_in",
+      "attemptedAt": "2026-03-30T09:03:00+09:00",
+      "status": "success",
+      "failureReason": null
+    }
+  ],
+  "manualRequest": null,
+  "display": {
+    "phase": "working",
+    "flags": ["late"],
+    "activeExceptions": [],
+    "nextAction": {
+      "type": "clock_out",
+      "relatedRequestId": null
+    }
   }
 }
 ```
 
+Response notes:
+
+- `todayRecord` is `null` until a successful attendance fact exists or an approved manual correction writes one back.
+- `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
+- `attempts` covers only the current date.
+- `display.activeExceptions` may contain multiple values at once.
+- `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
+
 ### `GET /api/attendance/me/history?from=&to=`
 
-Returns attendance history for the signed-in employee over a date range.
+Returns date-level attendance facts plus derived display state over a selected range.
 
 Query parameters:
 
@@ -110,20 +254,48 @@ Response:
   "records": [
     {
       "date": "2026-03-30",
-      "clockInAt": "2026-03-30T09:03:00+09:00",
-      "clockOutAt": null,
-      "workMinutes": null,
-      "status": "working",
-      "beaconVerified": true,
-      "verificationMethod": "beacon"
+      "expectedWorkday": {
+        "isWorkday": true,
+        "expectedClockInAt": "2026-03-30T09:00:00+09:00",
+        "expectedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "adjustedClockInAt": "2026-03-30T09:00:00+09:00",
+        "adjustedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "countsTowardAdminSummary": true,
+        "leaveCoverage": null
+      },
+      "record": {
+        "id": "att_20260330_emp_001",
+        "date": "2026-03-30",
+        "clockInAt": "2026-03-30T09:03:00+09:00",
+        "clockInSource": "beacon",
+        "clockOutAt": null,
+        "clockOutSource": null,
+        "workMinutes": null
+      },
+      "display": {
+        "phase": "working",
+        "flags": ["late"],
+        "activeExceptions": [],
+        "nextAction": {
+          "type": "clock_out",
+          "relatedRequestId": null
+        }
+      }
     }
   ]
 }
 ```
 
+Response notes:
+
+- Each row keeps facts and derived display separate.
+- `record` may be `null`.
+- `display.activeExceptions` may include `absent` only after day-close finalization.
+
 ### `POST /api/attendance/manual`
 
 Creates a manual attendance request for the current employee.
+The request itself does not mutate the canonical attendance record until an admin approves it.
 
 Request body:
 
@@ -162,6 +334,8 @@ Returns leave balance plus the current employee's leave request history.
 Response notes:
 
 - `rejectionReason`: `null` unless `status` is `rejected`; required non-empty string when `status` is `rejected`
+- approved leave may later surface in attendance endpoints as `leaveCoverage`
+- a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 
 Response:
 
@@ -230,7 +404,7 @@ Typical error cases:
 
 ### `GET /api/admin/attendance/today`
 
-Returns today's team-level summary and same-day attendance rows.
+Returns today's team-level summary plus employee-level fact and exception rows for same-day operations.
 
 Response:
 
@@ -241,25 +415,61 @@ Response:
     "checkedInCount": 8,
     "notCheckedInCount": 2,
     "lateCount": 1,
-    "onLeaveCount": 1
+    "onLeaveCount": 1,
+    "failedAttemptCount": 1,
+    "previousDayOpenCount": 1
   },
   "items": [
     {
-      "employeeId": "emp_001",
-      "name": "Alex Kim",
-      "department": "Product",
-      "clockInAt": "2026-03-30T09:03:00+09:00",
-      "clockOutAt": null,
-      "status": "working",
-      "verificationMethod": "beacon"
+      "employee": {
+        "id": "emp_001",
+        "name": "Alex Kim",
+        "department": "Product"
+      },
+      "expectedWorkday": {
+        "isWorkday": true,
+        "expectedClockInAt": "2026-03-30T09:00:00+09:00",
+        "expectedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "adjustedClockInAt": "2026-03-30T09:00:00+09:00",
+        "adjustedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "countsTowardAdminSummary": true,
+        "leaveCoverage": null
+      },
+      "todayRecord": {
+        "id": "att_20260330_emp_001",
+        "date": "2026-03-30",
+        "clockInAt": "2026-03-30T09:03:00+09:00",
+        "clockInSource": "beacon",
+        "clockOutAt": null,
+        "clockOutSource": null,
+        "workMinutes": null
+      },
+      "display": {
+        "phase": "working",
+        "flags": ["late"],
+        "activeExceptions": [],
+        "nextAction": {
+          "type": "clock_out",
+          "relatedRequestId": null
+        }
+      },
+      "latestFailedAttempt": null,
+      "previousDayOpenRecord": null,
+      "manualRequest": null
     }
   ]
 }
 ```
 
+Response notes:
+
+- `latestFailedAttempt` is `null` unless the employee has a same-day failed attempt that still matters operationally.
+- `previousDayOpenRecord` is `null` unless the prior workday is still open.
+- No-record employees must still appear if they count toward today's expected workday.
+
 ### `GET /api/admin/attendance/list?from=&to=&name=`
 
-Returns attendance rows across employees for a selected date range.
+Returns date-level attendance facts plus derived display state across employees for a selected range.
 
 Query parameters:
 
@@ -280,18 +490,45 @@ Response:
   "records": [
     {
       "date": "2026-03-30",
-      "employeeId": "emp_001",
-      "name": "Alex Kim",
-      "department": "Product",
-      "clockInAt": "2026-03-30T09:03:00+09:00",
-      "clockOutAt": null,
-      "workMinutes": null,
-      "status": "working",
-      "verificationMethod": "beacon"
+      "employee": {
+        "id": "emp_001",
+        "name": "Alex Kim",
+        "department": "Product"
+      },
+      "expectedWorkday": {
+        "isWorkday": true,
+        "expectedClockInAt": "2026-03-30T09:00:00+09:00",
+        "expectedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "adjustedClockInAt": "2026-03-30T09:00:00+09:00",
+        "adjustedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "countsTowardAdminSummary": true,
+        "leaveCoverage": null
+      },
+      "record": {
+        "id": "att_20260330_emp_001",
+        "date": "2026-03-30",
+        "clockInAt": "2026-03-30T09:03:00+09:00",
+        "clockInSource": "beacon",
+        "clockOutAt": null,
+        "clockOutSource": null,
+        "workMinutes": null
+      },
+      "display": {
+        "phase": "working",
+        "flags": ["late"],
+        "activeExceptions": [],
+        "nextAction": {
+          "type": "clock_out",
+          "relatedRequestId": null
+        }
+      },
+      "latestFailedAttempt": null
     }
   ]
 }
 ```
+
+## Request Review Endpoints
 
 ### `GET /api/admin/requests?status=`
 
@@ -304,6 +541,7 @@ Query parameters:
 Response notes:
 
 - `rejectionReason`: `null` unless an item `status` is `rejected`; required non-empty string when an item `status` is `rejected`
+- this document does not yet formalize remediation chains, supersession, or a separate remediation status; those decisions remain in the request-lifecycle issues
 
 Response:
 
@@ -344,6 +582,7 @@ Response notes:
 
 - `status`: finalized `approved` or `rejected`
 - `rejectionReason`: `null` when `status` is `approved`; required non-empty string when `status` is `rejected`
+- approved manual attendance requests should write back into the relevant attendance record and clear stale attendance warnings in employee and admin views
 
 ```json
 {

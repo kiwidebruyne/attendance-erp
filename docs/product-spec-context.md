@@ -31,14 +31,23 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
 - Use action-first UX so both employees and admins can see the problem and the resolution path together.
 
+## Promoted Attendance Foundation Decisions
+
+- No-record before the first successful same-day check-in remains a derived state, not a stored attendance status.
+- Attendance modeling is now split into canonical facts and derived presentation:
+  - Canonical facts: `expectedWorkday`, `attendanceAttempt`, `attendanceRecord`, `leaveCoverage`, `manualRequest`
+  - Derived presentation: `phase`, `flags`, `activeExceptions`, `nextAction`, and admin summary counts
+- `attendanceAttempt` is append-only. Failed attempts are visible to both employees and admins until the underlying issue is resolved.
+- Approved leave does not block or erase later attendance facts. When actual attendance happens on a leave-covered day, surface it as `leave_work_conflict`.
+- A previous-day open workday may still be closed by a next-day checkout until `08:59:59`. After that cutoff, keep it visible as `previous_day_checkout_missing` until manual correction resolves it.
+- `not_checked_in` is a real-time expected-but-missing exception. `absent` is only derived after day close or equivalent day-finalization logic.
+- `late` and `early_leave` are coexisting flags, not mutually exclusive status outcomes.
+
 ## Open Questions for Future Interviews
 
-- `message_0` introduced attendance-modeling concepts such as `workPhase`, `anomalies`, `verification`, and derived `displayStatus`; treat them as discussion inputs only, not adopted contract fields until they are promoted into the primary docs.
+- Historical note: the no-record pre-check-in question, split attendance-modeling question, event-level verification boundary, and coexistence of `late` plus `early_leave` have been promoted into the primary docs. Any matching raw archive prompts below remain only as provenance.
+
 - How should `보완 요청` map onto the current `pending/approved/rejected` contract vocabulary and state transitions?
-- Should “출근 전” remain a derived UI state for no-record days, or should the product promote a stored representation for that phase?
-- Should attendance modeling stay split across multiple axes such as phase, anomaly flags, and verification metadata, or should the product continue to center one primary attendance status field and derive everything else around it?
-- Should event-level beacon verification failures stay separate from day-level attendance status, and if so, where should that boundary appear in employee/admin UI and API vocabulary?
-- How should the product represent days where `late` and `early_leave` can coexist without forcing an overly lossy single-status interpretation?
 - Where should approve-time cancel, post-approval cancel request, and post-approval change request live: request type, status, history model, or a combination?
 - How far should company-event calendars go in the first product scope, and who owns them?
 - Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
