@@ -31,14 +31,15 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
 - Use action-first UX so both employees and admins can see the problem and the resolution path together.
 
+## Promoted Attendance Operating Model
+
+- The promoted attendance operating-flow contract now lives in `docs/attendance-operating-model.md`.
+- Use that document for canonical attendance fact lifecycle, derived exception timing, carry-over behavior, leave-work conflict handling, and shared employee/admin synchronization rules.
+- Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
+
 ## Open Questions for Future Interviews
 
-- `message_0` introduced attendance-modeling concepts such as `workPhase`, `anomalies`, `verification`, and derived `displayStatus`; treat them as discussion inputs only, not adopted contract fields until they are promoted into the primary docs.
 - How should `보완 요청` map onto the current `pending/approved/rejected` contract vocabulary and state transitions?
-- Should “출근 전” remain a derived UI state for no-record days, or should the product promote a stored representation for that phase?
-- Should attendance modeling stay split across multiple axes such as phase, anomaly flags, and verification metadata, or should the product continue to center one primary attendance status field and derive everything else around it?
-- Should event-level beacon verification failures stay separate from day-level attendance status, and if so, where should that boundary appear in employee/admin UI and API vocabulary?
-- How should the product represent days where `late` and `early_leave` can coexist without forcing an overly lossy single-status interpretation?
 - Where should approve-time cancel, post-approval cancel request, and post-approval change request live: request type, status, history model, or a combination?
 - How far should company-event calendars go in the first product scope, and who owns them?
 - Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
