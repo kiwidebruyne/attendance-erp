@@ -60,6 +60,9 @@ Do not treat the external Toss page as the live contract for this repository aft
 - Keep request status language aligned between employee and admin surfaces so both sides describe the same current state.
 - For a pending carry-over correction, prefer copy such as `어제 퇴근 시간 정정 요청을 검토하고 있어요. 진행 상태를 확인할 수 있어요.`
 - For a rejected or `revision_requested` carry-over correction, prefer copy such as `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.`
+- For reviewed non-approved leave top-surface suppression, prefer CTA copy such as `상단에서 숨기기` and restore copy such as `다시 상단에 표시`.
+- Do not label leave top-surface suppression as `삭제`, `해결`, `알림 끄기`, or a temporary close such as `닫기`.
+- When a reviewed non-approved leave request has been hidden from top auto-surfacing, keep history or request-context copy explicit that the record, review reason, and resubmission path still remain available.
 
 ## Question-Form Exceptions
 

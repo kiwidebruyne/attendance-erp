@@ -202,6 +202,22 @@ Represents a submitted leave application.
 | `followUpKind`          | enum or null   | `Follow-Up Kind` for follow-up requests; `null` on the root request               |
 | `supersededByRequestId` | string or null | later approved follow-up that supersedes this request                             |
 
+### Employee Leave Top Surface Suppression
+
+Represents employee-specific persistent suppression of one reviewed non-approved leave request from top correction auto-surfacing on `/attendance/leave`.
+
+| Field        | Type   | Notes                                                                                      |
+| ------------ | ------ | ------------------------------------------------------------------------------------------ |
+| `employeeId` | string | relation to `Employee.id`                                                                  |
+| `requestId`  | string | relation to `Leave Request.id`                                                             |
+| `createdAt`  | string | timestamp when the employee chose to suppress the reviewed request from top auto-surfacing |
+
+Important rules:
+
+- This relation is valid only for a reviewed leave request whose `status` is `rejected` or `revision_requested` and which currently has no active follow-up.
+- The relation may remain readable through employee history even after the request no longer qualifies for top auto-surfacing.
+- This relation does not change `Leave Request.status` or the shared request-chain projection.
+
 ### Leave Coverage
 
 Represents the approved leave interval as it is consumed by attendance modeling.
@@ -299,6 +315,7 @@ Important rules:
 - When an employee submits a linked `resubmission`, `activeRequestId`, `activeStatus`, `effectiveRequestId`, and `effectiveStatus` move to the new pending follow-up while the earlier non-approved rationale may remain visible through linked request history or parent-request context.
 - `governingReviewComment` stays populated only while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up; otherwise it is `null`.
 - Employee pages may still expose linked `resubmission` entry points from request status and relation fields even though the shared projection no longer treats the reviewed non-approved step as active work.
+- Employee-only leave top-surface suppression is separate visibility metadata and must not change `active*`, `effective*`, `governingReviewComment`, or `nextAction`.
 
 ### Attendance Display
 
@@ -380,10 +397,12 @@ Expected fields:
 - One `Employee` has many `Attendance Record` rows.
 - One `Employee` has one `Leave Balance`.
 - One `Employee` has many `Leave Request` rows.
+- One `Employee` has many `Employee Leave Top Surface Suppression` rows.
 - One `Employee` has many derived `Leave Coverage` intervals from approved leave requests.
 - One `Employee` has many `Manual Attendance Request` rows.
 - One `Employee` acting as an admin may author many `Request Review Event` rows.
 - One `Leave Request` may have zero or one `Request Review Event` in the current product.
+- One `Leave Request` may have zero or one `Employee Leave Top Surface Suppression` row for its owning employee in the current product.
 - One `Manual Attendance Request` may have zero or one `Request Review Event` in the current product.
 - `rootRequestId`, `parentRequestId`, and `followUpKind` link requests into a chain without a separate `chainId`.
 - `supersededByRequestId` links an older request to the later approved follow-up that replaced it.

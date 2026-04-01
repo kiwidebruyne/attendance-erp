@@ -75,6 +75,9 @@ Required UI:
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
 - reviewed non-approved leave requests should read as completed admin review with a clear employee-side resubmission path; `revision_requested` should emphasize correction guidance, while `rejected` should emphasize refusal of the current version without removing the linked resubmission path
 - a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
+- reviewed non-approved leave requests may be hidden from top correction auto-surfacing one reviewed request at a time without removing history, rationale, or linked resubmission context
+- employees may restore a previously suppressed reviewed leave request from history or request-context surfaces when they want it back in the top correction tier
+- suppressing one reviewed leave request must not hide a different request that only shares the same date, leave type, or root chain history
 - visible pre-submit conflict guidance for company-event-sensitive or staffing-sensitive dates without exposing team-private details; see `docs/leave-conflict-policy.md`
 
 Validation and policy topics that must stay aligned with narrower contract documents:
