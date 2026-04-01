@@ -30,6 +30,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Notification scope is in-app first: warnings, badges, and status surfaces come before external push channels.
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
 - Use action-first UX so both employees and admins can see the problem and the resolution path together.
+- An already approved request must not be directly re-rejected or administratively reversed in the current product; normal post-approval changes go through employee-submitted follow-up change or cancel requests.
 
 ## Promoted Attendance Operating Model
 
@@ -51,6 +52,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - How much leave summary should appear directly on `/attendance`?
 - What exact API and schema naming should encode the promoted request lifecycle semantics without overloading the older approval-status vocabulary?
 - What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and revision-requested waiting states?
+- Should any future product phase support exceptional administrative revocation of already approved requests under tightly audited conditions, or should that remain unsupported? See `#53`.
 - What concrete writing rules should encode the desired collaborative tone and Toss-like microcopy style?
 - When should SLA, company-event conflict warnings, staffing caps, and external notification channels graduate into formal contract documents?
 

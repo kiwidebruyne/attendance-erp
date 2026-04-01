@@ -17,19 +17,20 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 - A chain may have at most one active employee-submitted follow-up at a time.
 - The latest activity in a chain and the currently effective reviewed result are related but not always identical.
 - Employee and admin views must stay synchronized on the same active request, effective result, review rationale, and next action.
+- The current product does not allow a manager to directly reverse an already approved request. Normal post-approval changes continue through employee-submitted follow-up change or cancel requests.
 
 ## Lifecycle Concepts
 
-| Concept           | Meaning                                                                              | Notes                                                                             |
-| ----------------- | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
-| root request      | the first submitted request in a lifecycle chain                                     | preserved as history even when later requests supersede it                        |
-| pending request   | a request that has not yet been reviewed by an admin                                 | may still be edited or withdrawn by the employee                                  |
-| reviewed request  | a request that already received an admin outcome                                     | request content is no longer edited in place                                      |
-| follow-up request | a later employee-submitted request linked to an earlier reviewed request             | used for resubmission, approved-state change, or approved-state cancel flows      |
-| active request    | the request that currently awaits action from either employee or admin               | there should be at most one active employee-submitted follow-up in the same chain |
-| effective result  | the latest reviewed result that currently governs attendance or leave interpretation | may remain the prior approval while a follow-up request is still pending          |
-| review comment    | the admin-provided rationale that explains a rejection or revision request           | must stay visible until the employee resolves that outcome                        |
-| decision revision | an admin-side change to a previous review outcome                                    | recorded as append-only review history, not a silent rewrite of employee input    |
+| Concept                        | Meaning                                                                              | Notes                                                                             |
+| ------------------------------ | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- |
+| root request                   | the first submitted request in a lifecycle chain                                     | preserved as history even when later requests supersede it                        |
+| pending request                | a request that has not yet been reviewed by an admin                                 | may still be edited or withdrawn by the employee                                  |
+| reviewed request               | a request that already received an admin outcome                                     | request content is no longer edited in place                                      |
+| follow-up request              | a later employee-submitted request linked to an earlier reviewed request             | used for resubmission, approved-state change, or approved-state cancel flows      |
+| active request                 | the request that currently awaits action from either employee or admin               | there should be at most one active employee-submitted follow-up in the same chain |
+| effective result               | the latest reviewed result that currently governs attendance or leave interpretation | may remain the prior approval while a follow-up request is still pending          |
+| review comment                 | the admin-provided rationale that explains a rejection or revision request           | must stay visible until the employee resolves that outcome                        |
+| non-approved decision revision | an admin-side change to a previous non-approved review outcome                       | recorded as append-only review history, not a silent rewrite of employee input    |
 
 ## Contract Decisions
 
@@ -41,7 +42,9 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 | How should an employee reapply after a reviewed outcome? | Submit a new follow-up request that is prefilled from the prior request.              | This preserves history while keeping resubmission easy.                                 |
 | How should an employee modify an approved request?       | Submit a follow-up change request.                                                    | The current approval must remain effective until the new request is reviewed.           |
 | How should an employee cancel an approved request?       | Submit a follow-up cancel request.                                                    | Pre-review withdrawal and post-approval cancellation are different contracts.           |
-| How should an admin change a past decision?              | Append a new review event rather than rewriting employee-submitted request content.   | Decision history should stay explainable to both sides.                                 |
+| How should an admin change a past non-approved decision? | Append a new review event rather than rewriting employee-submitted request content.   | Decision history should stay explainable to both sides without reopening approved data. |
+| Can an approved request transition directly to rejected? | No.                                                                                   | Retroactive rejection would break trust and obscure the already-effective approval.     |
+| Are manager-initiated post-approval changes in scope?    | No. Use employee-submitted follow-up change or cancel requests instead.               | The first-pass product keeps approved-request reversal out of scope.                    |
 | How should supersession work?                            | As a relationship inside the chain, not as a replacement of history.                  | The product must show both the latest effective result and the previous reviewed steps. |
 
 ## Operational Flow Scenarios
@@ -102,7 +105,15 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 | Employee submits a cancel request                     | create a follow-up cancel request linked to the approved request                                    | the prior approval remains effective until cancel review is complete | employee and admin both see that cancellation is requested but not yet effective                    |
 | Admin approves the cancel request                     | append the cancel approval to the follow-up request and supersede the earlier approval in the chain | the effective result changes from approved to canceled-by-follow-up  | stale approved-state CTAs, badges, and calendar assumptions must clear promptly across all surfaces |
 
-### Admin Revises A Prior Decision
+### Manager Encounters An Approved Request That Needs Adjustment
+
+| Moment                                                                       | Lifecycle Fact Changes                                          | Effective Result                                                       | Required Surface Behavior                                                                             |
+| ---------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| A request is already approved, but the manager now believes it should change | no new lifecycle change in the current product                  | the existing approval remains effective                                | the product must not offer a direct `approved -> rejected` or manager-driven overwrite path           |
+| The manager needs the request to change                                      | ask the employee to submit a follow-up change or cancel request | the earlier approval remains effective until the follow-up is reviewed | employee and admin should both understand that the next action belongs to the employee follow-up flow |
+| A true emergency override is discussed                                       | still no current-product lifecycle change                       | no exceptional admin override exists in the current scope              | treat this as future policy work tracked in issue `#53`, not as behavior to implement now             |
+
+### Admin Revises A Non-Approved Decision
 
 | Moment                                                          | Lifecycle Fact Changes                                                                                     | Effective Result                                                                        | Required Surface Behavior                                                                                           |
 | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -121,14 +132,14 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 
 ### Stale State Cleanup
 
-| Trigger                                     | Cleanup Expectation                                                                                      |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| employee edits a pending request            | older pending payload snapshots disappear from active surfaces                                           |
-| employee withdraws a pending request        | pending queue badges and review CTAs clear immediately                                                   |
-| admin requests revision                     | simple pending indicators are replaced by revision-requested messaging and correction guidance           |
-| employee submits a resubmission             | old "please revise" or rejection-only warnings stop being the active state and become historical context |
-| admin approves a change or cancel follow-up | prior effective approvals become superseded history and stop driving active CTAs                         |
-| admin revises an earlier decision           | overturned outcomes stop driving active banners, badges, or warnings anywhere in the product             |
+| Trigger                                        | Cleanup Expectation                                                                                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| employee edits a pending request               | older pending payload snapshots disappear from active surfaces                                            |
+| employee withdraws a pending request           | pending queue badges and review CTAs clear immediately                                                    |
+| admin requests revision                        | simple pending indicators are replaced by revision-requested messaging and correction guidance            |
+| employee submits a resubmission                | old "please revise" or rejection-only warnings stop being the active state and become historical context  |
+| admin approves a change or cancel follow-up    | prior effective approvals become superseded history and stop driving active CTAs                          |
+| admin revises an earlier non-approved decision | overturned non-approved outcomes stop driving active banners, badges, or warnings anywhere in the product |
 
 ## Shared Invariants And Forbidden Behaviors
 
@@ -139,6 +150,7 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 - A resubmission, change request, or cancel request must stay visibly linked to the earlier request that it follows.
 - Resubmission flows must start from a prefilled copy of the earlier request rather than a blank form.
 - Pre-review withdrawal must remain distinguishable from post-approval cancellation.
+- An already approved request must not transition directly to `rejected` in the current product.
 - Latest activity and effective result must both be explainable from the same visible chain history.
 - Important request-state changes must clear or replace stale warnings, badges, queue states, and CTAs promptly.
 
@@ -148,6 +160,7 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 - Do not treat a revision-requested item as if it were an untouched pending request.
 - Do not delete or hide the prior rejection or revision reason when a resubmission is created.
 - Do not mark an approved request as changed or canceled before the follow-up request is actually reviewed and approved.
+- Do not let a manager directly reverse an already approved request in the current product.
 - Do not allow the same chain to accumulate multiple active employee-submitted follow-up requests at once.
 - Do not let employee and admin screens disagree about whether a request is pending review, awaiting employee correction, still effectively approved, or already superseded.
 

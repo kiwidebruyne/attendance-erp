@@ -85,11 +85,12 @@ Required UI:
 - filter tabs for pending, approved, rejected, and all
 - approve and reject actions with confirmation UI
 - explicit rejection-reason input when rejecting a request
+- post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval
 
 Decision points for later issue planning:
 
 - whether bulk approval is needed in the first pass
-- whether approved requests can be reversed
+- whether any future product phase should allow exceptional administrative revocation of approved requests beyond current scope; see issue `#53`
 - how much detail should be visible inline versus in a modal or side panel
 - how request review surfaces should clean up stale warnings and badges after an approval, rejection, or follow-up submission
 
