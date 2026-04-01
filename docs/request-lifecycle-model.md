@@ -82,11 +82,13 @@ Do not add a separate `chainId` in the current product.
 - `activeStatus`
 - `effectiveRequestId`
 - `effectiveStatus`
+- `governingReviewComment`
 - `hasActiveFollowUp`
 - `nextAction`
 
 `active*` points to the request that currently awaits employee or admin action and becomes `null` when a chain has no active work.
 `effective*` points to the request state that currently governs the chain, including pre-review `withdrawn`.
+`governingReviewComment` is the latest unresolved `reject` or `request_revision` rationale that must stay visible while the employee still owes a response; otherwise it is `null`.
 
 ## Lifecycle Concepts
 
@@ -102,21 +104,22 @@ Do not add a separate `chainId` in the current product.
 
 ## Contract Decisions
 
-| Question                                                     | Decision                                                                                             | Why                                                                                        |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Can a pending request be edited directly?                    | Yes.                                                                                                 | Review has not happened yet, so employee convenience should win over chain expansion.      |
-| Can a pending request be withdrawn directly?                 | Yes. Use `status = withdrawn` on the same request.                                                   | Pre-review withdrawal is simpler than creating another lifecycle object.                   |
-| Can a reviewed request be edited directly?                   | No.                                                                                                  | Silent overwrite would break auditability and employee-admin trust.                        |
-| How should an admin ask for corrections?                     | Use `status = revision_requested` through a `request_revision` review event.                         | Both sides need one shared current state and next action.                                  |
-| How should an employee reapply after a non-approved outcome? | Submit a prefilled follow-up request with `followUpKind = resubmission`.                             | This preserves history while keeping resubmission easy.                                    |
-| How should an employee modify an approved leave request?     | Submit a follow-up leave request with `followUpKind = change`.                                       | The current approval must remain effective until the new request is reviewed.              |
-| How should an employee cancel an approved leave request?     | Submit a follow-up leave request with `followUpKind = cancel`.                                       | Pre-review withdrawal and post-approval cancellation are different contracts.              |
-| How should manual attendance behave after approval?          | Approved manual attendance currently does not support follow-up `change` or `cancel`.                | Approval already writes canonical attendance facts, so post-approval rollback is deferred. |
-| How should an admin change a past non-approved decision?     | Append a new review event rather than rewriting employee-submitted request content.                  | Decision history should stay explainable to both sides without reopening approved data.    |
-| Can an approved request transition directly to rejected?     | No.                                                                                                  | Retroactive rejection would break trust and obscure the already-effective approval.        |
-| Are manager-initiated post-approval changes in scope?        | No. Use employee-submitted follow-up leave change or cancel requests instead.                        | The first-pass product keeps approved-request reversal out of scope.                       |
-| How should supersession work?                                | As a relationship inside the chain via `supersededByRequestId`.                                      | The product must show both the latest effective result and the previous reviewed steps.    |
-| How many active employee follow-ups may exist per chain?     | One. Any second follow-up attempt must fail with `409 conflict` and point to the existing follow-up. | Parallel branches would make the chain ambiguous.                                          |
+| Question                                                     | Decision                                                                                                                        | Why                                                                                                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Can a pending request be edited directly?                    | Yes.                                                                                                                            | Review has not happened yet, so employee convenience should win over chain expansion.                        |
+| Can a pending request be withdrawn directly?                 | Yes. Use `status = withdrawn` on the same request.                                                                              | Pre-review withdrawal is simpler than creating another lifecycle object.                                     |
+| How do employee clients mutate a pending request over HTTP?  | Use `PATCH /api/attendance/manual/[id]` or `PATCH /api/leave/request/[id]` to edit fields in place or set `status = withdrawn`. | The API contract must expose the same pre-review edit and withdraw behavior that the lifecycle model allows. |
+| Can a reviewed request be edited directly?                   | No.                                                                                                                             | Silent overwrite would break auditability and employee-admin trust.                                          |
+| How should an admin ask for corrections?                     | Use `status = revision_requested` through a `request_revision` review event.                                                    | Both sides need one shared current state and next action.                                                    |
+| How should an employee reapply after a non-approved outcome? | Submit a prefilled follow-up request with `followUpKind = resubmission`.                                                        | This preserves history while keeping resubmission easy.                                                      |
+| How should an employee modify an approved leave request?     | Submit a follow-up leave request with `followUpKind = change`.                                                                  | The current approval must remain effective until the new request is reviewed.                                |
+| How should an employee cancel an approved leave request?     | Submit a follow-up leave request with `followUpKind = cancel`.                                                                  | Pre-review withdrawal and post-approval cancellation are different contracts.                                |
+| How should manual attendance behave after approval?          | Approved manual attendance currently does not support follow-up `change` or `cancel`.                                           | Approval already writes canonical attendance facts, so post-approval rollback is deferred.                   |
+| How should an admin change a past non-approved decision?     | Append a new review event rather than rewriting employee-submitted request content.                                             | Decision history should stay explainable to both sides without reopening approved data.                      |
+| Can an approved request transition directly to rejected?     | No.                                                                                                                             | Retroactive rejection would break trust and obscure the already-effective approval.                          |
+| Are manager-initiated post-approval changes in scope?        | No. Use employee-submitted follow-up leave change or cancel requests instead.                                                   | The first-pass product keeps approved-request reversal out of scope.                                         |
+| How should supersession work?                                | As a relationship inside the chain via `supersededByRequestId`.                                                                 | The product must show both the latest effective result and the previous reviewed steps.                      |
+| How many active employee follow-ups may exist per chain?     | One. Any second follow-up attempt must fail with `409 conflict` and point to the existing follow-up.                            | Parallel branches would make the chain ambiguous.                                                            |
 
 ## Operational Flow Scenarios
 

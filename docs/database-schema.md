@@ -261,23 +261,24 @@ Represents one append-only admin review record for either a leave request or a m
 Represents the endpoint-facing attendance projection for the manual request that still matters to the current attendance state, including prior-workday carry-over corrections.
 This is derived from `Manual Attendance Request` rather than persisted as a second source of truth.
 
-| Field                | Type           | Notes                                                                                              |
-| -------------------- | -------------- | -------------------------------------------------------------------------------------------------- |
-| `id`                 | string         | stable request identifier                                                                          |
-| `action`             | enum           | `Manual Attendance Action`                                                                         |
-| `date`               | string         | target workday                                                                                     |
-| `requestedAt`        | string         | employee submission timestamp                                                                      |
-| `status`             | enum           | `Request Status`; attendance endpoints surface only `pending`, `revision_requested`, or `rejected` |
-| `reviewComment`      | string or null | non-empty string when the latest review event used `reject` or `request_revision`                  |
-| `rootRequestId`      | string         | root request in the chain                                                                          |
-| `parentRequestId`    | string or null | immediate prior request for a follow-up                                                            |
-| `followUpKind`       | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups                           |
-| `activeRequestId`    | string or null | chain-level active request                                                                         |
-| `activeStatus`       | enum or null   | chain-level active status                                                                          |
-| `effectiveRequestId` | string         | request whose current status governs the chain                                                     |
-| `effectiveStatus`    | enum           | chain-level effective status                                                                       |
-| `hasActiveFollowUp`  | boolean        | whether an employee-submitted follow-up is currently active                                        |
-| `nextAction`         | enum           | `Request Next Action`                                                                              |
+| Field                    | Type           | Notes                                                                                                                        |
+| ------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `id`                     | string         | stable request identifier                                                                                                    |
+| `action`                 | enum           | `Manual Attendance Action`                                                                                                   |
+| `date`                   | string         | target workday                                                                                                               |
+| `requestedAt`            | string         | employee submission timestamp                                                                                                |
+| `status`                 | enum           | `Request Status`; attendance endpoints surface only `pending`, `revision_requested`, or `rejected`                           |
+| `reviewComment`          | string or null | non-empty string when the latest review event used `reject` or `request_revision`                                            |
+| `governingReviewComment` | string or null | latest unresolved `reject` or `request_revision` rationale that must remain visible while employee response is still pending |
+| `rootRequestId`          | string         | root request in the chain                                                                                                    |
+| `parentRequestId`        | string or null | immediate prior request for a follow-up                                                                                      |
+| `followUpKind`           | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups                                                     |
+| `activeRequestId`        | string or null | chain-level active request                                                                                                   |
+| `activeStatus`           | enum or null   | chain-level active status                                                                                                    |
+| `effectiveRequestId`     | string         | request whose current status governs the chain                                                                               |
+| `effectiveStatus`        | enum           | chain-level effective status                                                                                                 |
+| `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                  |
+| `nextAction`             | enum           | `Request Next Action`                                                                                                        |
 
 ### Request Chain Projection
 
@@ -289,6 +290,7 @@ Expected fields:
 - `activeStatus`
 - `effectiveRequestId`
 - `effectiveStatus`
+- `governingReviewComment`
 - `hasActiveFollowUp`
 - `nextAction`
 
