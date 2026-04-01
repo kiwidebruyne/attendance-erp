@@ -54,16 +54,28 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Use that document for company-event conflicts, staffing-cap warning-versus-block defaults, employee pre-submit conflict guidance, and admin approval-side conflict visibility.
 - Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
+## Promoted Attendance First-View and Writing Contracts
+
+- The promoted `/attendance` first-view hierarchy now lives in `docs/feature-requirements.md` and `docs/ui-guidelines.md`.
+- Use those documents for the stable today-card model, the separate active-exception stack, exception ordering, carry-over correction entry, and history-action placement.
+- The promoted product-writing contract now lives in `docs/ux-writing-guidelines.md`.
+- Use that document for fact-led warning headlines, action-led CTA wording, and the limited cases where question-form copy is still allowed.
+- There are no remaining current-scope open questions in this file for `/attendance` first-view hierarchy or carry-over copy. Future changes to those contracts should start in the primary documents above, with this file used only for new unresolved rationale.
+- The key raw rationale behind those promotions is:
+  - the most dangerous attendance problem is a silent error that stays buried in history
+  - employee `/attendance` should reduce personal risk first, not behave like a passive ledger
+  - previous-day missing checkout should lead to an obvious correction path without making the user decode table rows first
+  - the product should speak like an alignment tool, not a blame tool
+  - if the system already knows the factual problem, the headline should state the fact and the CTA should state the action
+
 ## Open Questions for Future Interviews
 
 - How far should future company-event ownership go beyond the current read-only seeded inputs defined in `docs/leave-conflict-policy.md`?
 - When should half-day or hourly leave graduate from admin-reviewed context into formal automatic staffing-cap math?
 - What are the exact triggers, priority rules, cleanup rules, and unread model for in-app notifications?
 - How much leave summary should appear directly on `/attendance`?
-- What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and revision-requested waiting states?
 - Should any future product phase support exceptional administrative revocation of already approved requests under tightly audited conditions, or should that remain unsupported? See `#53`.
 - Should any future product phase support approved manual-attendance rollback or follow-up change/cancel flows after canonical attendance facts have already been written back?
-- What concrete writing rules should encode the desired collaborative tone and Toss-like microcopy style?
 - When should SLA, external notification channels, or persisted approval-override rationale graduate into formal contract documents?
 
 ## Raw Conversation Archive

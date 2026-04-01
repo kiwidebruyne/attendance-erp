@@ -6,8 +6,9 @@ This document is the implementation-level UI authority for the project.
 When implementing or modifying any UI component, page, or layout, agents **must**:
 
 1. Read `DESIGN.md` first to load the project's design system - color tokens, typography scale, spacing primitives, and visual guardrails. All UI code must conform to these tokens; never hard-code values that the design system already defines.
-2. Run the `web-design-guidelines` skill (`.agents/skills/web-design-guidelines/SKILL.md`) against the affected files before marking the task complete. This ensures every UI change is validated against the [Vercel Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines) for accessibility, usability, and interface quality.
-3. Always consider using the shadcn mcp and shadcn skills first when creating components or UI. Follow the mcp and skill's CLI and registry workflow, prefer shadcn components over hand-rolled UI, and only build custom UI after checking the existing shadcn options.
+2. Read `docs/ux-writing-guidelines.md` before introducing or changing product copy, CTA labels, or state messaging.
+3. Run the `web-design-guidelines` skill (`.agents/skills/web-design-guidelines/SKILL.md`) against the affected files before marking the task complete. This ensures every UI change is validated against the [Vercel Web Interface Guidelines](https://github.com/vercel-labs/web-interface-guidelines) for accessibility, usability, and interface quality.
+4. Always consider using the shadcn mcp and shadcn skills first when creating components or UI. Follow the mcp and skill's CLI and registry workflow, prefer shadcn components over hand-rolled UI, and only build custom UI after checking the existing shadcn options.
 
 The originating reference image is stored at `docs/assets/erp-reference-dashboard.webp` and is cataloged from `docs/raw-assignment.md`.
 
@@ -29,17 +30,34 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Narrow-width behavior should preserve the same information architecture through a drawer or sheet version of the sidebar instead of inventing a second mobile IA.
 - Keep the shell visually calm. Avoid decorative dashboards or icon clutter that does not support a real assignment workflow.
 
+## Employee Attendance First View
+
+- `/attendance` should use a stable today card plus a separate active-exception stack before any history table or secondary summary.
+- Keep the today card visible even when multiple critical exceptions are active. The card provides the user's current context; exception surfaces should not replace it.
+- The today card should summarize the adjusted expected work window, current phase, next action, and current active exceptions.
+- Treat active exceptions as independent surfaces rather than a single combined warning area.
+- Keep every current active exception visible in the stack. Do not collapse lower-priority active exceptions into a badge count, overflow menu, or hidden secondary area while they still matter operationally.
+- Each active exception surface should own its own CTA and explanation.
+- Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
+- History rows may expose the same recovery or review flows, but row actions should be compact re-entry points that stay less prominent than the top-of-screen surfaces.
+- Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
+- If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
+- If the relevant carry-over manual request already exists, replace duplicate-request CTA language with status, rationale, or resubmission CTA language. For example, a `pending` request should move to status visibility, while a `rejected` or `revision_requested` request should move to review-reason and resubmission language.
+- If a `leave-work conflict` is active on the employee screen, prefer a conflict-review CTA over immediate correction wording.
+- Only show a beacon-range hint on page load when the product can actually detect that condition at that moment. Otherwise, explain the condition after the related attendance attempt fails.
+
 ## Exception Surface Rules
 
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
+- If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
-- Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active manual request state, same-day expected-but-missing check-in, and then lower-risk history states.
+- Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
 - Admin attendance views should prioritize exceptions over aggregate comfort metrics. The exception queue should make unresolved operational risk easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
@@ -48,6 +66,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Every important state should communicate the current state, the reason, and the next action.
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
+- Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
 - Employee leave-conflict warnings should communicate operational sensitivity without exposing peer identities or exact staffing counts.
 - Leave approvals that proceed despite a company-event or staffing-cap warning must use explicit confirmation rather than a blind single-click action.
@@ -69,5 +88,6 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 - `DESIGN.md` should carry tokens, typography choices, and visual guardrails for design agents.
 - This file should carry implementation guidance for layout, component usage, density, exception priority, and responsive behavior.
+- `docs/ux-writing-guidelines.md` should carry copy tone, CTA wording, and question-versus-fact rules for in-product text.
 - `docs/leave-conflict-policy.md` should carry leave-specific conflict severity, staffing-cap policy, and approval-warning defaults.
 - If a rule belongs equally to both documents, keep the token-level statement in `DESIGN.md` and the usage rule here.
