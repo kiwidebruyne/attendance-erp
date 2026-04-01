@@ -61,6 +61,7 @@ Edge cases to keep visible during implementation:
 - the user sees a previous-day missing checkout and should be led into correction without needing to decode the history table first
 - the previous day's record is still open because checkout is missing
 - the user has a rejected or `revision_requested` manual request and should see the review reason plus a resubmission path above history
+- the user should be told that a reviewed non-approved manual request is no longer admin-writable on the same request record and now awaits employee resubmission
 - the user has both an unresolved failed attendance attempt and a same-day expected-but-missing check-in state and should see those causes as separate exception surfaces
 - an approved leave day later conflicts with an actual attendance fact and must surface as a visible conflict instead of silently rewriting either fact
 
@@ -72,6 +73,7 @@ Required UI:
 - a request form for annual leave, half-day AM, half-day PM, and hourly leave
 - a list of the current user's leave request chains with date, type, reason, current request status, and latest review timing
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
+- reviewed non-approved leave requests should read as completed admin review awaiting employee resubmission; `revision_requested` should emphasize correction guidance, while `rejected` should emphasize refusal of the current version without removing the linked resubmission path
 - a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
 - visible pre-submit conflict guidance for company-event-sensitive or staffing-sensitive dates without exposing team-private details; see `docs/leave-conflict-policy.md`
 
@@ -123,6 +125,7 @@ Required UI:
 - approve, reject, and request-revision actions with confirmation UI
 - explicit review-comment input when rejecting a request or requesting revision
 - visible request-chain context that shows the active request, the effective status, and any earlier review comment that still explains the current state
+- reviewed non-approved requests should be described as completed admin review awaiting employee resubmission rather than as admin-writable pending work on the same request record
 - post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval
 - approved-state follow-up `change` and `cancel` flows are in current scope for leave requests only; approved manual-attendance follow-up changes remain out of current scope
 - visible company-event, effective approved leave, pending leave context, and staffing-cap risk before approving a leave request; see `docs/leave-conflict-policy.md`
@@ -147,6 +150,7 @@ Decision points for later issue planning:
 - Every important state should include the current state, the reason, and the next action.
 - Warning, badge, and CTA cleanup after approvals, rejections, or successful corrections must happen consistently across employee and admin surfaces.
 - Request surfaces should expose the same active request, effective status, review comment, and next action to both employees and admins.
+- Employee and admin surfaces must interpret `rejected` and `revision_requested` as locked non-approved reviewed states whose next action remains employee resubmission until a linked follow-up exists.
 
 ## Out Of Scope
 

@@ -225,7 +225,8 @@ Fields:
 
 `activeRequestId` and `activeStatus` are `null` when a chain has no active work.
 `effectiveStatus` uses `Request Status`.
-`governingReviewComment` stays populated when a prior non-approved review rationale must remain visible alongside the current chain state.
+`effectiveRequestId` and `effectiveStatus` point to the current non-approved reviewed request while no employee follow-up exists. After an employee submits a linked `resubmission`, they move to the new pending follow-up while the earlier review rationale remains visible through linked chain history or parent-request context.
+`governingReviewComment` stays populated only while the employee still owes a response to the latest non-approved review rationale; otherwise it is `null`.
 `nextAction` uses `Request Next Action`.
 
 ### `Request Relation Fields`
@@ -411,6 +412,7 @@ Current-scope rules:
 
 - Omit `parentRequestId` and `followUpKind` for a new root request.
 - `followUpKind = resubmission` is valid only when the parent manual request currently has `status = rejected` or `revision_requested`.
+- `followUpKind = resubmission` creates a new pending follow-up and does not reopen the parent reviewed request in place.
 - Approved manual-attendance requests do not support follow-up `change` or `cancel` in the current product.
 
 Example request body:
@@ -534,7 +536,7 @@ Response notes:
 
 - each request item uses `Request Status` and includes relation fields plus the shared `Request Chain Projection`
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
-- `governingReviewComment` stays populated when a prior non-approved review rationale must remain visible while a resubmission is still pending
+- a prior non-approved review rationale may remain visible through linked request history or parent-request context even after a resubmission is pending
 - approved leave may later surface in attendance endpoints as `leaveCoverage`
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
@@ -593,6 +595,7 @@ Current-scope rules:
 
 - Omit `parentRequestId` and `followUpKind` for a new root leave request.
 - `followUpKind = resubmission` is valid only when the parent request currently has `status = rejected` or `revision_requested`.
+- `followUpKind = resubmission` creates a new pending follow-up and does not reopen the parent reviewed request in place.
 - `followUpKind = change` or `cancel` is valid only when the parent request itself currently has `status = approved` and `supersededByRequestId = null`.
 - A chain may have at most one active employee-submitted follow-up at a time.
 
@@ -911,7 +914,7 @@ Response:
 
 ### `PATCH /api/admin/requests/[id]`
 
-Writes a new review event for a request.
+Writes the review event for the current pending active request in a chain.
 
 Request body:
 
@@ -923,8 +926,10 @@ Response notes:
 - `status` uses `Request Status`
 - `reviewComment` is `null` when `status` is `approved`; required non-empty string when `status` is `rejected` or `revision_requested`
 - `reviewedAt` is the timestamp of the latest review event
+- only the current pending active unsuperseded request in a chain is writable
+- once a request is `rejected` or `revision_requested`, that same request record is locked until the employee submits a linked `resubmission` follow-up
 - approved manual attendance requests should write back into the relevant attendance record and clear stale attendance warnings in employee and admin views
-- the endpoint may append a revised non-approved decision on the same request, but it must reject writes to `approved`, `withdrawn`, or superseded requests with `409 conflict`
+- the endpoint must reject writes to `rejected`, `revision_requested`, `approved`, `withdrawn`, or superseded requests with `409 conflict`
 
 ```json
 {
@@ -956,7 +961,8 @@ Typical error cases:
 
 - `400 validation_error` for invalid decision payloads
 - `404 not_found` when the request id does not exist
-- `409 conflict` when the request is `approved`, `withdrawn`, superseded, or otherwise not writable under the current request-lifecycle rules
+- `409 conflict` when the request is `rejected`, `revision_requested`, `approved`, `withdrawn`, superseded, or otherwise not writable under the current request-lifecycle rules
+- `409 conflict` should explain when a reviewed request is locked and that employee resubmission is required before the chain becomes writable again
 
 ## Change Triggers
 

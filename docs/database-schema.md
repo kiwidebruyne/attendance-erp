@@ -244,6 +244,7 @@ Approved manual-attendance requests currently do not support post-approval follo
 ### Request Review Event
 
 Represents one append-only admin review record for either a leave request or a manual attendance request.
+In the current product, a request record gets at most one review event because reviewed non-approved requests stay locked and approved requests are not administratively reopened.
 
 | Field           | Type           | Notes                                                                         |
 | --------------- | -------------- | ----------------------------------------------------------------------------- |
@@ -293,6 +294,11 @@ Expected fields:
 - `governingReviewComment`
 - `hasActiveFollowUp`
 - `nextAction`
+
+Important rules:
+
+- When a chain is `rejected` or `revision_requested` with no active follow-up, `effectiveRequestId` and `effectiveStatus` point to that reviewed request and `nextAction = employee_resubmit`.
+- When an employee submits a linked `resubmission`, `activeRequestId`, `activeStatus`, `effectiveRequestId`, and `effectiveStatus` move to the new pending follow-up while the earlier non-approved rationale may remain visible through linked request history or parent-request context.
 
 ### Attendance Display
 
@@ -351,6 +357,8 @@ The admin review action itself is an API command rather than a persisted entity 
 - `reject` moves a request into the `rejected` status and stores a non-empty `reviewComment`
 - `request_revision` moves a request into the `revision_requested` status and stores a non-empty `reviewComment`
 
+In the current product, an admin review action is valid only for the current pending active unsuperseded request in a chain.
+
 Expected fields:
 
 - request id
@@ -375,8 +383,8 @@ Expected fields:
 - One `Employee` has many derived `Leave Coverage` intervals from approved leave requests.
 - One `Employee` has many `Manual Attendance Request` rows.
 - One `Employee` acting as an admin may author many `Request Review Event` rows.
-- One `Leave Request` may have many `Request Review Event` rows over time.
-- One `Manual Attendance Request` may have many `Request Review Event` rows over time.
+- One `Leave Request` may have zero or one `Request Review Event` in the current product.
+- One `Manual Attendance Request` may have zero or one `Request Review Event` in the current product.
 - `rootRequestId`, `parentRequestId`, and `followUpKind` link requests into a chain without a separate `chainId`.
 - `supersededByRequestId` links an older request to the later approved follow-up that replaced it.
 - A `Manual Attendance Request` may be linked back to one `Attendance Record` after approval.
