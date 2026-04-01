@@ -12,6 +12,11 @@ It focuses on routing, layout, rendering boundaries, state placement, and the lo
 - Keep mock REST endpoints under `app/api/**`.
 - Keep the current root-level `app/` structure instead of introducing `src/` during the assignment unless a later change creates a clear need.
 
+## Root Entry Behavior
+
+- In the first pass, `/` should perform a server redirect to `/attendance`.
+- Do not introduce a separate ERP launcher or dashboard home for the current assignment scope.
+
 ## Route Map
 
 ### Employee Routes
@@ -38,26 +43,34 @@ It focuses on routing, layout, rendering boundaries, state placement, and the lo
 
 ## Recommended Route Organization
 
-- Use route groups to separate employee and admin layout concerns without affecting the URL.
+- Use a shared ERP shell layout to host both employee and admin route groups without affecting the URL.
 - A recommended layout shape is:
 
 ```txt
 app/
-  (employee)/
-    attendance/
-      page.tsx
-      leave/
-        page.tsx
-  (admin)/
-    admin/
+  page.tsx
+  (erp)/
+    layout.tsx
+    (employee)/
       attendance/
         page.tsx
-        requests/
+        leave/
           page.tsx
+    (admin)/
+      admin/
+        attendance/
+          page.tsx
+          requests/
+            page.tsx
   api/
     ...
 ```
 
+- `app/page.tsx` should own only the root redirect behavior.
+- `app/(erp)/layout.tsx` should own the shared shell chrome such as the sidebar, restrained top bar, and page frame.
+- The global sidebar should own only the four assignment routes.
+- Keep page-local tabs and filters inside their route UI. Queue views such as `needs_review`, `waiting_for_employee`, `completed`, and `all`, plus attendance history toggles such as week and month, must not become global navigation items.
+- Narrow-width fallback should preserve the same information architecture through a collapsible drawer or sheet pattern instead of a separate mobile route tree.
 - Use private folders such as `_components`, `_lib`, or `_constants` for colocated implementation files that should never become routes.
 
 ## Rendering Boundaries
