@@ -777,11 +777,14 @@ Response:
 
 Response notes:
 
+- This endpoint is the default same-day operations surface for `/admin/attendance`, not a general-purpose historical ledger.
 - `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
 - When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape, and its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open.
 - `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for that employee's current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
-- No-record employees must still appear if they count toward today's expected workday.
+- Consumers should treat `manualRequest` as a compact row-level projection for the today operations surface rather than a full request detail payload. If its `date` points at the prior workday during carry-over handling, the row should show that target date explicitly.
+- If an employee edits or withdraws a pending manual request before review, the row should refresh from the latest projection. Approved manual requests should disappear from this embedded surface once canonical attendance writeback completes.
+- No-record employees must still appear when they count toward today's expected workday and their current operational state already needs attention, such as after the adjusted expected start or when a failed attempt, carry-over issue, or current manual request is still active.
 
 ### `GET /api/admin/attendance/list?from=&to=&name=`
 
@@ -843,6 +846,11 @@ Response:
   ]
 }
 ```
+
+Response notes:
+
+- This endpoint backs the secondary history review mode for `/admin/attendance`, not the default today-first operations surface.
+- Historical rows stay date-scoped and do not embed the compact `manualRequest` projection used by `GET /api/admin/attendance/today`.
 
 ## Request Review Endpoints
 
