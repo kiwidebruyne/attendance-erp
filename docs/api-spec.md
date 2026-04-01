@@ -28,6 +28,7 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 
 ### Attendance Phase
 
+- `non_workday`
 - `before_check_in`
 - `working`
 - `checked_out`
@@ -121,10 +122,14 @@ Represents one append-only user attempt to clock in or clock out.
 Fields:
 
 - `id`
+- `date`
 - `action`
 - `attemptedAt`
 - `status`
 - `failureReason`
+
+`date` is the target workday for the attempt.
+It may differ from the calendar date portion of `attemptedAt` when a next-day checkout still closes the prior workday.
 
 ### `Attendance Record`
 
@@ -145,6 +150,23 @@ Allowed source values:
 - `beacon`
 - `manual`
 
+### `Manual Attendance Request Summary`
+
+Represents the date-scoped manual attendance request that still matters to the current attendance state, including prior-workday carry-over corrections.
+
+Fields:
+
+- `id`
+- `action`
+- `date`
+- `requestedAt`
+- `status`
+- `rejectionReason`
+
+`status` uses `Approval Status`.
+`rejectionReason` is `null` unless `status` is `rejected`.
+Approved manual requests do not remain embedded here after their changes are written back into the canonical attendance record.
+
 ### `Attendance Display`
 
 Represents derived presentation state rather than canonical stored state.
@@ -161,6 +183,8 @@ Fields:
 - `type`
 - `relatedRequestId`
 
+`phase` is derived in precedence order: `checked_out` when the requested date already has a same-day checkout fact, `working` when the requested date has a same-day check-in fact without checkout, `non_workday` when no same-day attendance fact exists and `expectedWorkday.isWorkday` is `false`, and `before_check_in` otherwise.
+
 ### `Previous Day Open Record`
 
 Represents the still-open prior workday when checkout is missing.
@@ -176,7 +200,7 @@ Fields:
 
 ### `GET /api/attendance/me`
 
-Returns the current employee context, today's expected work window, current-day facts, failed attempts, and the derived display state for today.
+Returns the current employee context, today's expected work window, current-day facts, operationally relevant attempts, and the derived display state for today.
 
 Response:
 
@@ -210,6 +234,7 @@ Response:
   "attempts": [
     {
       "id": "attempt_001",
+      "date": "2026-03-30",
       "action": "clock_in",
       "attemptedAt": "2026-03-30T09:03:00+09:00",
       "status": "success",
@@ -233,8 +258,10 @@ Response notes:
 
 - `todayRecord` is `null` until a successful attendance fact exists or an approved manual correction writes one back.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
-- `attempts` covers only the current date.
+- `attempts` may include any attempt that still matters for the current card state; each attempt's `date` identifies the target workday.
+- `manualRequest` is `null` unless a pending or rejected manual attendance request still matters for the current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
 - `display.activeExceptions` may contain multiple values at once.
+- `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 
 ### `GET /api/attendance/me/history?from=&to=`
@@ -464,8 +491,10 @@ Response:
 
 Response notes:
 
-- `latestFailedAttempt` is `null` unless the employee has a same-day failed attempt that still matters operationally.
+- `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
+- When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape, and its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open.
+- `manualRequest` is `null` unless a pending or rejected manual attendance request still matters for that employee's current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
 - No-record employees must still appear if they count toward today's expected workday.
 
 ### `GET /api/admin/attendance/list?from=&to=&name=`
