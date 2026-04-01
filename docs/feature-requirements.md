@@ -20,6 +20,18 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 - The product should behave like a trust product rather than a passive ledger: the user should be able to understand the current state, the reason for that state, and the next action without decoding tables first.
 - Employee and admin views must stay synchronized on the same facts for the same date. A date or request must not look resolved on one screen and exceptional on another.
 
+## Shared Shell Contract
+
+- In the first pass, `/` redirects to `/attendance`.
+- The four assignment routes live inside one shared ERP shell rather than separate page-level layouts.
+- The global sidebar contains exactly two route groups:
+  - `Employee`: `/attendance`, `/attendance/leave`
+  - `Admin`: `/admin/attendance`, `/admin/attendance/requests`
+- Global navigation is limited to the four assignment routes in the current scope. Do not expand it into a broader ERP module launcher.
+- `/admin/attendance/requests` owns the queue views `needs_review`, `waiting_for_employee`, `completed`, and `all` as in-page tabs, not as global navigation items.
+- `/attendance` owns week and month history switching as in-page controls, not as global navigation items.
+- Each route inside the shared shell should expose a consistent page header with a page title and brief context line.
+
 ## Employee Flow Requirements
 
 ### Attendance Overview: `/attendance`
@@ -104,6 +116,7 @@ Decision points for later issue planning:
 - Tables and filters should preserve clarity over decoration.
 - Mutations should provide immediate feedback for success and failure.
 - Desktop is the primary experience, but mobile and narrow widths must remain functional.
+- Narrow widths should preserve the same route information architecture by collapsing the shared sidebar into a drawer or sheet instead of introducing a separate mobile navigation tree.
 - Top-of-screen warnings should take priority over buried table-only states when the user needs immediate action.
 - Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, previous-day missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
 - Every important state should include the current state, the reason, and the next action.

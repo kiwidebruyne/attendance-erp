@@ -20,6 +20,15 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - If a form has a single critical input, that input must receive focus when the form is shown.
 - Dialog UIs must support closing with the `Esc` key.
 
+## Shared Shell Interpretation
+
+- Treat `docs/assets/erp-reference-dashboard.webp` as a reference for the shared ERP chrome, not as a literal module-launcher layout to duplicate.
+- Reuse the reference image's persistent dark sidebar, light content canvas, restrained top utility bar, and white card surfaces.
+- Keep the shared page chrome consistent: each route should present a page title and one brief context line near the top of the content area.
+- Global navigation should stay limited to the four assignment routes. Do not promote request queue views or attendance history view toggles into the sidebar.
+- Narrow-width behavior should preserve the same information architecture through a drawer or sheet version of the sidebar instead of inventing a second mobile IA.
+- Keep the shell visually calm. Avoid decorative dashboards or icon clutter that does not support a real assignment workflow.
+
 ## Exception Surface Rules
 
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
@@ -39,6 +48,12 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
+
+## Shell Ownership Rules
+
+- The shared shell owns navigation, overall page framing, and the ERP tone of the application chrome.
+- Attendance and request pages own the active exception state, review state, and next-action messaging that appears inside the shell.
+- Do not use the shell to collapse distinct attendance or request states into one vague global status indicator. Keep those states in each page's top-priority content area.
 
 ## Employee And Admin Tone
 
