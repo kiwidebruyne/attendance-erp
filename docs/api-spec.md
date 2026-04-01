@@ -225,8 +225,8 @@ Fields:
 
 `activeRequestId` and `activeStatus` are `null` when a chain has no active work.
 `effectiveStatus` uses `Request Status`.
-`effectiveRequestId` and `effectiveStatus` point to the current non-approved reviewed request while no employee follow-up exists. After an employee submits a linked `resubmission`, they move to the new pending follow-up while the earlier review rationale remains visible through `governingReviewComment`.
-`governingReviewComment` stays populated when a prior non-approved review rationale must remain visible alongside the current chain state.
+`effectiveRequestId` and `effectiveStatus` point to the current non-approved reviewed request while no employee follow-up exists. After an employee submits a linked `resubmission`, they move to the new pending follow-up while the earlier review rationale remains visible through linked chain history or parent-request context.
+`governingReviewComment` stays populated only while the employee still owes a response to the latest non-approved review rationale; otherwise it is `null`.
 `nextAction` uses `Request Next Action`.
 
 ### `Request Relation Fields`
@@ -536,7 +536,7 @@ Response notes:
 
 - each request item uses `Request Status` and includes relation fields plus the shared `Request Chain Projection`
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
-- `governingReviewComment` stays populated when a prior non-approved review rationale must remain visible while a resubmission is still pending
+- a prior non-approved review rationale may remain visible through linked request history or parent-request context even after a resubmission is pending
 - approved leave may later surface in attendance endpoints as `leaveCoverage`
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it

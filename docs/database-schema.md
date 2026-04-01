@@ -298,7 +298,7 @@ Expected fields:
 Important rules:
 
 - When a chain is `rejected` or `revision_requested` with no active follow-up, `effectiveRequestId` and `effectiveStatus` point to that reviewed request and `nextAction = employee_resubmit`.
-- When an employee submits a linked `resubmission`, `activeRequestId`, `activeStatus`, `effectiveRequestId`, and `effectiveStatus` move to the new pending follow-up while `governingReviewComment` may continue surfacing the earlier non-approved rationale as chain context.
+- When an employee submits a linked `resubmission`, `activeRequestId`, `activeStatus`, `effectiveRequestId`, and `effectiveStatus` move to the new pending follow-up while the earlier non-approved rationale may remain visible through linked request history or parent-request context.
 
 ### Attendance Display
 
