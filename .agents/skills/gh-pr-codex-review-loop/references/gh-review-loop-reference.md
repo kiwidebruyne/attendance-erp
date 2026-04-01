@@ -29,6 +29,14 @@ Interpretation:
 - If at least one matching actor appears, treat the PR as Codex-approved.
 - If no matching actor appears, continue the loop.
 
+## Continuous Polling Cadence
+
+- Re-check approval every 30 seconds after each push.
+- Emit a short status update on each polling pass so the user sees active monitoring.
+- If approval is absent, collect feedback on that pass before deciding whether new work exists.
+- If approval is absent and no actionable feedback exists yet, wait 30 seconds and continue polling without exiting.
+- The only stop condition is a matching Codex `:+1:` reaction.
+
 ## Review-Thread Listing (GraphQL)
 
 Use this query to list unresolved review threads and their latest comment metadata:
@@ -82,4 +90,5 @@ gh api graphql \
 
 - Do not resolve threads preemptively.
 - Do not stop the loop on `APPROVED` review state alone; use the `:+1:` reaction as the stop condition.
+- Do not stop the loop when approval is absent but no new feedback has appeared yet; keep polling every 30 seconds.
 - Keep iteration commits focused so each review round remains explainable.
