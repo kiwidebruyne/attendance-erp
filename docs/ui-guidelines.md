@@ -35,7 +35,6 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
-- Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
@@ -49,8 +48,6 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
-- Employee leave-conflict warnings should communicate operational sensitivity without exposing peer identities or exact staffing counts.
-- Leave approvals that proceed despite a company-event or staffing-cap warning must use explicit confirmation rather than a blind single-click action.
 
 ## Shell Ownership Rules
 
@@ -69,5 +66,4 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 - `DESIGN.md` should carry tokens, typography choices, and visual guardrails for design agents.
 - This file should carry implementation guidance for layout, component usage, density, exception priority, and responsive behavior.
-- `docs/leave-conflict-policy.md` should carry leave-specific conflict severity, staffing-cap policy, and approval-warning defaults.
 - If a rule belongs equally to both documents, keep the token-level statement in `DESIGN.md` and the usage rule here.

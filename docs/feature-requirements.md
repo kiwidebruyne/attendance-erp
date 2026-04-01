@@ -64,15 +64,13 @@ Required UI:
 - a list of the current user's leave request chains with date, type, reason, current request status, and latest review timing
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
 - a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
-- visible pre-submit conflict guidance for company-event-sensitive or staffing-sensitive dates without exposing team-private details; see `docs/leave-conflict-policy.md`
 
-Validation and policy topics that must stay aligned with narrower contract documents:
+Validation and policy topics that must be handled explicitly in later issues:
 
 - whether past-date leave requests are allowed
 - how same-day duplicate requests are prevented
 - how hourly leave should be represented in the UI and payload
 - how approved leave should surface later attendance conflicts without silently overwriting the original leave decision
-- company-event conflict policy and staffing-cap warning behavior should follow `docs/leave-conflict-policy.md`
 
 ## Admin Flow Requirements
 
@@ -104,8 +102,6 @@ Required UI:
 - visible request-chain context that shows the active request, the effective status, and any earlier review comment that still explains the current state
 - post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval
 - approved-state follow-up `change` and `cancel` flows are in current scope for leave requests only; approved manual-attendance follow-up changes remain out of current scope
-- visible company-event, effective approved leave, pending leave context, and staffing-cap risk before approving a leave request; see `docs/leave-conflict-policy.md`
-- explicit confirmation UI when approving a leave request that still carries a company-event or staffing-cap warning
 
 Decision points for later issue planning:
 

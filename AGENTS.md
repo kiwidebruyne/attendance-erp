@@ -116,7 +116,6 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - `docs/product-spec-context.md`: living raw product-spec discussion log and cross-screen decision context.
 - `docs/attendance-operating-model.md`: attendance runtime model, time-sequenced fact lifecycle, and shared exception semantics.
 - `docs/request-lifecycle-model.md`: request workflow model, follow-up-chain semantics, and shared employee/admin request synchronization rules.
-- `docs/leave-conflict-policy.md`: leave operational conflict policy, staffing-cap defaults, and company-event warning behavior.
 - `docs/feature-requirements.md`: user-visible scope, roles, screens, and edge cases.
 - `docs/ui-guidelines.md`: implementation-oriented UI guidance that bridges the ERP reference and `DESIGN.md`.
 - `docs/app-architecture.md`: route map, layout boundaries, rendering boundaries, and code organization rules.
@@ -150,7 +149,6 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - Treat `docs/raw-assignment.md` as a reference input, not as the place to define interpreted contracts.
 - If attendance fact lifecycle, derived exception timing, or cross-screen attendance synchronization rules change, update `docs/attendance-operating-model.md` and any impacted feature/API/schema documents together.
 - If reviewed-request changes, follow-up-chain rules, or shared employee/admin request synchronization rules change, update `docs/request-lifecycle-model.md` and any impacted feature/API/schema documents together.
-- If company-event conflict policy, staffing-cap rules, or leave approval warning behavior changes, update `docs/leave-conflict-policy.md` and any affected feature or UI documents together.
 - If visual direction changes, update both `DESIGN.md` and `docs/ui-guidelines.md`.
 - If route structure or rendering boundaries change, update `docs/app-architecture.md` and any affected user-facing requirements.
 - If payloads, query parameters, or status values change, update `docs/api-spec.md` and `docs/database-schema.md` together.

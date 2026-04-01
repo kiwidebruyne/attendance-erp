@@ -48,23 +48,17 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Use that document for reviewed-request immutability, follow-up request chains, revision/change/cancel flows, and shared employee/admin request synchronization rules.
 - Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
-## Promoted Leave Conflict Policy
-
-- The promoted leave operational conflict policy now lives in `docs/leave-conflict-policy.md`.
-- Use that document for company-event conflicts, staffing-cap warning-versus-block defaults, employee pre-submit conflict guidance, and admin approval-side conflict visibility.
-- Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
-
 ## Open Questions for Future Interviews
 
-- How far should future company-event ownership go beyond the current read-only seeded inputs defined in `docs/leave-conflict-policy.md`?
-- When should half-day or hourly leave graduate from admin-reviewed context into formal automatic staffing-cap math?
+- How far should company-event calendars go in the first product scope, and who owns them?
+- Should per-day leave-capacity policy be automatic blocking or warning-plus-manual-approval?
 - What are the exact triggers, priority rules, cleanup rules, and unread model for in-app notifications?
 - How much leave summary should appear directly on `/attendance`?
 - What is the priority order for exceptions such as previous-day missing checkout, same-day missing check-in, lateness, and revision-requested waiting states?
 - Should any future product phase support exceptional administrative revocation of already approved requests under tightly audited conditions, or should that remain unsupported? See `#53`.
 - Should any future product phase support approved manual-attendance rollback or follow-up change/cancel flows after canonical attendance facts have already been written back?
 - What concrete writing rules should encode the desired collaborative tone and Toss-like microcopy style?
-- When should SLA, external notification channels, or persisted approval-override rationale graduate into formal contract documents?
+- When should SLA, company-event conflict warnings, staffing caps, and external notification channels graduate into formal contract documents?
 
 ## Raw Conversation Archive
 
