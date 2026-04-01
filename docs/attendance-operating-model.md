@@ -165,9 +165,9 @@ This document owns attendance flow semantics, not every downstream contract deta
 - `docs/api-spec.md` owns request and response shapes.
 - `docs/database-schema.md` owns the conceptual entity and enum vocabulary.
 - `docs/request-lifecycle-model.md` owns reviewed-request changes, follow-up-chain semantics, and shared request-state synchronization.
+- `docs/leave-conflict-policy.md` owns company-event conflicts, staffing-cap policy, and leave approval warning defaults before attendance facts are interpreted.
 - `docs/product-spec-context.md` keeps raw discussion history and unresolved product questions.
 
 Open questions that remain outside this document:
 
-- staffing-cap policy and company-event calendar policy
 - notification unread, priority, and cleanup rules beyond the attendance flow defaults defined here
