@@ -319,6 +319,19 @@ export function validateRequestChainProjection(
     });
   }
 
+  if (
+    (value.effectiveStatus === "rejected" ||
+      value.effectiveStatus === "revision_requested") &&
+    value.governingReviewComment === null
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["governingReviewComment"],
+      message:
+        'Invalid input: "governingReviewComment" is required when "effectiveStatus" is "rejected" or "revision_requested"',
+    });
+  }
+
   if (hasActiveRequest && value.nextAction !== "admin_review") {
     ctx.addIssue({
       code: "custom",
@@ -406,6 +419,15 @@ export function validateRequestRelations(
       path: ["parentRequestId"],
       message:
         'Invalid input: "parentRequestId" is required when "followUpKind" is present',
+    });
+  }
+
+  if (hasParentRequestId && value.parentRequestId === value.id) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["parentRequestId"],
+      message:
+        'Invalid input: "parentRequestId" must not reference the current request',
     });
   }
 

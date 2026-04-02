@@ -336,6 +336,20 @@ describe("shared contract schemas", () => {
     ).toThrow();
   });
 
+  it("requires governing review comments for unresolved non-approved chains", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
   it("requires nextAction to match whether active work exists", () => {
     expect(() =>
       requestChainProjectionSchema.parse({
@@ -1098,6 +1112,36 @@ describe("leave contracts", () => {
         date: "2026-04-03",
         reason: "Medical appointment",
         parentRequestId: "req_leave_001",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects self-referential leave follow-up parent links", () => {
+    expect(() =>
+      leaveRequestResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        leaveType: "hourly",
+        date: "2026-04-03",
+        startAt: "2026-04-03T13:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
+        hours: 2,
+        reason: "Medical appointment moved later.",
+        status: "pending",
+        requestedAt: "2026-03-30T11:25:00+09:00",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_leave_001",
+        parentRequestId: "req_leave_002",
+        followUpKind: "change",
+        supersededByRequestId: null,
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
       }),
     ).toThrow();
   });
