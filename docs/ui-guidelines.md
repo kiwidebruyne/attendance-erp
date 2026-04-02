@@ -72,16 +72,19 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - On employee `/attendance`, if a pending or review-state manual request already covers a rail target date, let that request-status surface replace duplicate generic correction surfaces for the same target in the rail. Keep unrelated exception meanings such as leave-work conflict visible.
 - Historical `정정 요청됨` rail cards should use a yellow warning treatment, action-specific titles such as `출근 시간 정정 요청을 확인하고 있어요`, `퇴근 시간 정정 요청을 확인하고 있어요`, or `근무 기록 정정 요청을 확인하고 있어요`, visible target-date meta, and the CTA `요청 보기`.
 - Keep destructive historical issue cards such as `정정 필요` or `결근` above yellow pending-request cards in the rail ordering.
-- Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
-- Contextual admin summary cards such as checked-in and on-leave should reuse the same fact set, but they must not be turned into queue-driving pseudo-exceptions just to force 1:1 row parity on the default today surface.
-- No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.
+- Do not use a left exception rail on `/admin/attendance`; aggregate unresolved employee-surface exceptions in the top exception table instead.
+- Use one horizontal summary row on `/admin/attendance` with `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`; these cards are context, not queue entries.
+- Keep the `/admin/attendance` top exception table focused on unresolved operational exceptions. Do not promote routine historical `지각` or `조퇴` rows into that table when they no longer drive current action.
+- The `/admin/attendance` ledger should expose `기본`, `근무상태별`, and `근태상태별` view toggles, and each grouping must come from the same underlying facts.
+- No-record employees should enter the top exception table only when their current operational state needs attention, not as all-day placeholder rows.
+- Use the same danger-family row tint for `/admin/attendance` top-table `결근` rows that you use for other missing-record rows such as `출근 누락` or `퇴근 누락`.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
 - Employee attendance views should prioritize: unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
-- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The default today queue should group unresolved failed attempts, request-related exceptions, and then simpler missing or late cases so unresolved operational risk is easier to notice than nominal counts.
+- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The top exception table should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or absence cases so unresolved operational risk is easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
 ## Notification Surface Taxonomy

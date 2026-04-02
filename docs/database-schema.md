@@ -44,6 +44,7 @@ The runtime meaning of those concepts over time lives in `docs/attendance-operat
 - `attempt_failed`
 - `not_checked_in`
 - `absent`
+- `previous_day_checkout_missing`
 - `leave_work_conflict`
 - `manual_request_pending`
 - `manual_request_rejected`
@@ -53,6 +54,7 @@ The runtime meaning of those concepts over time lives in `docs/attendance-operat
 - `clock_in`
 - `clock_out`
 - `submit_manual_request`
+- `resolve_previous_day_checkout`
 - `review_request_status`
 - `review_leave_conflict`
 - `wait`
@@ -397,6 +399,24 @@ Important rules:
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 - `absent` is a finalized derived interpretation after day-close.
 - Once `absent` is finalized for a still-missing workday, the next employee attendance action becomes `submit_manual_request` instead of `clock_in`.
+- `previous_day_checkout_missing` uses the `09:00` carry-over cutoff in the workday timezone carried by the attendance facts.
+- `previous_day_checkout_missing` applies only while the prior workday still has no `clockOutAt`.
+
+### Previous Day Open Record Summary
+
+Represents the prior workday that remains open because checkout is still missing.
+This summary is derived from `Attendance Record` and `Expected Workday`, then surfaced as a high-priority operational exception.
+
+Expected fields:
+
+- previous work date
+- prior clock-in fact
+- missing checkout state
+- expected checkout time
+
+Important rule:
+
+- This summary only drives `previous_day_checkout_missing` while the prior workday remains open, meaning `clockOutAt` is still `null`.
 - An unresolved missing checkout from an earlier workday remains a row-local issue on that workday instead of becoming a later-day exception type.
 
 ### Admin Attendance Summary
@@ -410,6 +430,7 @@ Expected fields:
 - `lateCount`
 - `onLeaveCount`
 - `failedAttemptCount`
+- `previousDayOpenCount`
 
 ### Admin Request Queue Item
 

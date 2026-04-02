@@ -74,6 +74,7 @@ function makeTodayItem(
       },
     },
     latestFailedAttempt: null,
+    previousDayOpenRecord: null,
     manualRequest: null,
     ...overrides,
   };
@@ -161,6 +162,30 @@ describe("groupAdminAttendanceTodayRows", () => {
     const grouped = groupAdminAttendanceTodayRows([
       makeTodayItem({
         employee: {
+          id: "emp_101",
+          name: "Prev Day Open",
+          department: "Operations",
+        },
+        previousDayOpenRecord: {
+          date: "2026-04-12",
+          clockInAt: "2026-04-12T09:00:00+09:00",
+          clockOutAt: null,
+          expectedClockOutAt: "2026-04-12T18:00:00+09:00",
+        },
+        latestFailedAttempt: {
+          id: "failed_attempt",
+          date: "2026-04-13",
+          action: "clock_in",
+          attemptedAt: "2026-04-13T09:05:00+09:00",
+          status: "failed",
+          failureReason: "Beacon not found",
+        },
+        manualRequest: makeManualRequestFixture({
+          id: "manual_request",
+        }),
+      }),
+      makeTodayItem({
+        employee: {
           id: "emp_102",
           name: "Failed Attempt",
           department: "Operations",
@@ -200,6 +225,9 @@ describe("groupAdminAttendanceTodayRows", () => {
       }),
     ]);
 
+    expect(grouped.previousDayOpen.map((item) => item.employee.id)).toEqual([
+      "emp_101",
+    ]);
     expect(grouped.failedAttempts.map((item) => item.employee.id)).toEqual([
       "emp_102",
     ]);

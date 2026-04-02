@@ -6,6 +6,7 @@ import {
   type AdminAttendanceUrlState,
   normalizeAdminAttendanceUrlState,
 } from "@/app/(erp)/(admin)/admin/attendance/_lib/page-state";
+import { buildAdminAttendanceTodayExceptionRows } from "@/app/(erp)/(admin)/admin/attendance/_lib/today-exception-rows";
 import { createSeedRepository } from "@/lib/repositories";
 import { canonicalSeedWorld } from "@/lib/seed/world";
 
@@ -26,11 +27,9 @@ function createState(search = ""): AdminAttendanceUrlState {
   return normalizeAdminAttendanceUrlState(new URLSearchParams(search));
 }
 
-function getRowByEmployeeNameAndDate(name: string, date: string) {
-  const cell = screen
-    .getAllByText(name)
-    .find((candidate) => candidate.closest("tr")?.textContent?.includes(date));
-  const row = cell?.closest("tr");
+function getRowByEmployeeName(name: string) {
+  const cell = screen.getByText(name);
+  const row = cell.closest("tr");
 
   expect(row).not.toBeNull();
 
@@ -41,6 +40,12 @@ const repository = createSeedRepository({
   world: canonicalSeedWorld,
 });
 
+function createTodayResponse() {
+  return repository.getAdminAttendanceToday({
+    date: canonicalSeedWorld.baselineDate,
+  });
+}
+
 describe("AdminAttendanceWorkspace", () => {
   beforeEach(() => {
     pathnameValue = "/admin/attendance";
@@ -48,72 +53,84 @@ describe("AdminAttendanceWorkspace", () => {
     replaceMock.mockReset();
   });
 
-  it("renders today summary cards and the grouped exception-first queue", () => {
-    const neutralOnTimeEmployee = repository
-      .getAdminAttendanceToday({
-        date: canonicalSeedWorld.baselineDate,
-      })
-      .items.find(
-        (item) =>
-          item.todayRecord !== null &&
-          item.latestFailedAttempt === null &&
-          item.manualRequest === null &&
-          item.display.activeExceptions.length === 0 &&
-          item.display.flags.length === 0,
-      )?.employee.name;
+  it("renders the exception table, one-row summary cards, and full team ledger", () => {
+    const todayResponse = createTodayResponse();
 
     render(
       <AdminAttendanceWorkspace
         state={createState()}
-        todayResponse={repository.getAdminAttendanceToday({
-          date: canonicalSeedWorld.baselineDate,
-        })}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
       />,
     );
 
-    expect(screen.getByText("출근 완료")).toBeInTheDocument();
-    expect(screen.getByText("출근 전")).toBeInTheDocument();
+    expect(screen.getByText("누적 예외")).toBeInTheDocument();
+    expect(screen.getAllByText("근무중").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("출근 전").length).toBeGreaterThan(0);
     expect(screen.getAllByText("지각").length).toBeGreaterThan(0);
-    expect(screen.getByText("휴가")).toBeInTheDocument();
-    expect(screen.getByText("출결 시도 실패")).toBeInTheDocument();
-
-    expect(screen.getByText("실패한 시도")).toBeInTheDocument();
-    expect(screen.getByText("오늘 확인 필요")).toBeInTheDocument();
-    const noRecordRow = screen.getAllByText("출근 기록 없음")[0]?.closest("li");
+    expect(screen.getAllByText("조퇴").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("연차").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("반차").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("시간차").length).toBeGreaterThan(0);
+    expect(screen.getByText("전체 팀 장부")).toBeInTheDocument();
+    expect(screen.getAllByText("전날 미퇴근").length).toBeGreaterThan(0);
+    const noRecordRow = screen.getAllByText("Nari Oh")[0]?.closest("tr");
     expect(noRecordRow).not.toBeNull();
     expect(noRecordRow).toHaveTextContent("출근 기록 없음");
-    expect(noRecordRow).toHaveTextContent("기록 없음");
-
-    if (neutralOnTimeEmployee !== undefined) {
-      expect(screen.queryByText(neutralOnTimeEmployee)).not.toBeInTheDocument();
-    }
+    expect(noRecordRow).toHaveTextContent("Finance");
+    expect(screen.getAllByText("Minji Park").length).toBeGreaterThan(0);
   });
 
-  it("shows the governing review comment for the pending manual-request projection", () => {
+  it("shows the prior-workday target date for the carry-over row", () => {
+    const todayResponse = createTodayResponse();
+
     render(
       <AdminAttendanceWorkspace
         state={createState()}
-        todayResponse={repository.getAdminAttendanceToday({
-          date: canonicalSeedWorld.baselineDate,
-        })}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
       />,
     );
 
-    expect(screen.getByText("Hyunwoo Baek")).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        "Please submit a follow-up if the beacon issue continues.",
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getAllByText("Minji Park").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-04-10").length).toBeGreaterThan(0);
+  });
+
+  it("keeps failed-attempt rows visible in the exception table", () => {
+    const todayResponse = createTodayResponse();
+
+    render(
+      <AdminAttendanceWorkspace
+        state={createState()}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
+      />,
+    );
+
+    const pendingRequestRow = screen
+      .getAllByText("Hyunwoo Baek")[0]
+      ?.closest("tr");
+
+    expect(pendingRequestRow).not.toBeNull();
+    expect(pendingRequestRow).toHaveTextContent("시도 실패");
   });
 
   it("switches to history mode with the default date range in the URL", () => {
+    const todayResponse = createTodayResponse();
+
     render(
       <AdminAttendanceWorkspace
         state={createState()}
-        todayResponse={repository.getAdminAttendanceToday({
-          date: canonicalSeedWorld.baselineDate,
-        })}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
       />,
     );
 
@@ -126,12 +143,15 @@ describe("AdminAttendanceWorkspace", () => {
   });
 
   it("switches tabs from the keyboard through a single replace path", () => {
+    const todayResponse = createTodayResponse();
+
     render(
       <AdminAttendanceWorkspace
         state={createState()}
-        todayResponse={repository.getAdminAttendanceToday({
-          date: canonicalSeedWorld.baselineDate,
-        })}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
       />,
     );
 
@@ -199,27 +219,23 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getByDisplayValue("2026-04-07")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-13")).toBeInTheDocument();
     expect(
-      screen.getByText("조건에 맞는 근태 이력이 없어요."),
+      screen.getByText("조건에 맞는 근태 이력이 없어요"),
     ).toBeInTheDocument();
   });
 
   it("renders explicit seeded history exception labels without today-copy phrasing", () => {
     render(
       <AdminAttendanceWorkspace
-        state={createState("?mode=history&from=2026-04-10&to=2026-04-13")}
+        state={createState("?mode=history&from=2026-04-13&to=2026-04-13")}
         historyResponse={repository.getAdminAttendanceList({
-          from: "2026-04-10",
+          from: "2026-04-13",
           to: "2026-04-13",
         })}
       />,
     );
 
-    expect(
-      getRowByEmployeeNameAndDate("Minji Park", "2026-04-10"),
-    ).toHaveTextContent("퇴근 누락");
-    expect(
-      getRowByEmployeeNameAndDate("Hyunwoo Baek", "2026-04-13"),
-    ).toHaveTextContent("시도 실패");
+    expect(getRowByEmployeeName("Minji Park")).toHaveTextContent("전날 미퇴근");
+    expect(getRowByEmployeeName("Hyunwoo Baek")).toHaveTextContent("시도 실패");
     expect(
       screen.queryByText("오늘 지각으로 기록됐어요."),
     ).not.toBeInTheDocument();
@@ -229,6 +245,7 @@ describe("AdminAttendanceWorkspace", () => {
     render(
       <AdminAttendanceWorkspace
         state={createState()}
+        todayExceptionRows={[]}
         todayResponse={{
           date: canonicalSeedWorld.baselineDate,
           summary: {
@@ -237,14 +254,50 @@ describe("AdminAttendanceWorkspace", () => {
             lateCount: 0,
             onLeaveCount: 0,
             failedAttemptCount: 0,
+            previousDayOpenCount: 0,
           },
           items: [],
         }}
       />,
     );
 
-    expect(
-      screen.getByText("오늘 바로 확인할 근태가 없어요."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("지금 누적 예외가 없어요")).toBeInTheDocument();
+    expect(screen.getByText("검색 결과가 없어요")).toBeInTheDocument();
+  });
+
+  it("uses the danger tint for absent rows in the exception table", () => {
+    render(
+      <AdminAttendanceWorkspace
+        state={createState()}
+        todayExceptionRows={[
+          {
+            department: "Operations",
+            detail: "결근 상태가 남아 있어요",
+            employeeId: "emp_absent",
+            employeeName: "Absent Employee",
+            exceptionType: "결근",
+            id: "exception-absent-row",
+            referenceDate: "2026-04-10",
+            specialNote: "-",
+          },
+        ]}
+        todayResponse={{
+          date: canonicalSeedWorld.baselineDate,
+          summary: {
+            checkedInCount: 0,
+            notCheckedInCount: 0,
+            lateCount: 0,
+            onLeaveCount: 0,
+            failedAttemptCount: 0,
+            previousDayOpenCount: 0,
+          },
+          items: [],
+        }}
+      />,
+    );
+
+    expect(getRowByEmployeeName("Absent Employee")).toHaveClass(
+      "bg-status-danger-soft/28",
+    );
   });
 });
