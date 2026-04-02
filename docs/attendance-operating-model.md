@@ -78,11 +78,11 @@ Important rule:
 
 ### No Successful Check-In After Expected Start
 
-| Moment                                                           | Canonical Fact Changes                    | Derived Result                                        | Required Surface Behavior                                                                      |
-| ---------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `09:00` passes with no successful check-in and no covering leave | no fact change                            | `activeExceptions` includes `not_checked_in`          | employee sees a missing-record warning with the next action; admin queue includes the employee |
-| The employee has failed attempts but still no success            | failed `attendanceAttempt` rows may exist | `attempt_failed` and `not_checked_in` may both matter | show failure context first, then the unresolved missing attendance fact                        |
-| Day closes with no successful check-in                           | still no `attendanceRecord`               | `absent` may be derived                               | use finalized absence only after the real-time operating window has ended                      |
+| Moment                                                           | Canonical Fact Changes                    | Derived Result                                        | Required Surface Behavior                                                                                    |
+| ---------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `09:00` passes with no successful check-in and no covering leave | no fact change                            | `activeExceptions` includes `not_checked_in`          | employee sees a missing-record warning with the next action; admin top exception table includes the employee |
+| The employee has failed attempts but still no success            | failed `attendanceAttempt` rows may exist | `attempt_failed` and `not_checked_in` may both matter | show failure context first, then the unresolved missing attendance fact                                      |
+| Day closes with no successful check-in                           | still no `attendanceRecord`               | `absent` may be derived                               | use finalized absence only after the real-time operating window has ended                                    |
 
 ### Previous-Day Missing Checkout and Overnight Work
 
@@ -129,7 +129,7 @@ Additional history-ledger rule:
 | Admin requests revision           | update `manualAttendanceRequest.status=revision_requested` and store `reviewComment` | `activeExceptions` may include `manual_request_rejected` and `nextAction` may shift to request review                         | show the review comment and a resubmission path; the canonical attendance fact remains unchanged                |
 | Admin approves the manual request | update the target `attendanceRecord`; link the approved request when needed          | the attendance fact is corrected, the embedded `manualRequest` projection disappears, and stale request warnings should clear | approval is the point that mutates canonical attendance facts and stale warnings, badges, and CTAs should clear |
 
-### Admin Summary And Exception Queue Derivation
+### Admin Summary, Exception Table, And Ledger Derivation
 
 | Output                 | Derived From                                       | Rule                                                                                                                                                      |
 | ---------------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -137,8 +137,15 @@ Additional history-ledger rule:
 | `notCheckedInCount`    | expected workdays plus records plus leave coverage | count employees whose adjusted expected start has passed, who have no successful same-day check-in fact, and who are not covered by leave for that period |
 | `lateCount`            | expected workdays plus records                     | count employees whose successful check-in happened after the adjusted expected start                                                                      |
 | `onLeaveCount`         | leave coverage                                     | count employees with approved leave coverage for the date                                                                                                 |
-| `failedAttemptCount`   | attendance attempts in the active admin queue      | count unresolved failed attempts that still matter operationally, even when their target workday is the previous date during carry-over handling          |
+| `failedAttemptCount`   | attendance attempts in the active admin today view | count unresolved failed attempts that still matter operationally, even when their target workday is the previous date during carry-over handling          |
 | `previousDayOpenCount` | prior-day attendance records                       | count prior workdays that remain open after the overnight close window                                                                                    |
+
+Additional `/admin/attendance` today-mode projections:
+
+- `todayExceptionTable` aggregates unresolved employee-surface exceptions for the current date from the same fact set used by the counts above.
+- `todaySummaryCards` render as `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차` from the same date-level facts.
+- `ledgerViewMode` is a presentation-only grouping over the same ledger rows and must support `기본`, `근무상태별`, and `근태상태별`.
+- These projections do not change the public API contract; they only reorganize the same underlying data for the admin today view.
 
 Priority guidance for same-day admin exception review:
 
