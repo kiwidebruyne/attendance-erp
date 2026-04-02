@@ -10,9 +10,9 @@ const {
 } = require("./lib/codex-review-loop");
 
 function printHelp() {
-  console.log(`Usage: check_codex_thumbs_up.js <pr_number> [options]
+  console.log(`Usage: check_codex_review_trigger.js <pr_number> [options]
 
-Check whether a PR has a Codex :+1: reaction.
+Check whether a PR has a Codex :eyes: reaction.
 
 Options:
   --repo <owner/repo>       Repository override
@@ -31,6 +31,7 @@ function parseArgs(argv) {
     noDefaultActors: false,
     exitZero: false,
     prNumber: null,
+    help: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -88,7 +89,7 @@ function parseArgs(argv) {
   return options;
 }
 
-function checkCodexThumbsUp(options) {
+function checkCodexReviewTrigger(options) {
   const actorMatcher = createActorMatcher({
     actors: options.actors,
     actorRegex: options.actorRegex,
@@ -98,12 +99,12 @@ function checkCodexThumbsUp(options) {
   const reactions = fetchReactions(repo, options.prNumber);
   const matches = findReactionMatches({
     reactions,
-    content: "+1",
+    content: "eyes",
     actorMatcher,
   });
 
   return {
-    approved: matches.length > 0,
+    triggered: matches.length > 0,
     repo,
     pr_number: options.prNumber,
     reaction_count: reactions.length,
@@ -119,7 +120,7 @@ function main(argv = process.argv.slice(2)) {
   try {
     args = parseArgs(argv);
   } catch (error) {
-    console.log(JSON.stringify({ error: String(error.message || error), approved: false }));
+    console.log(JSON.stringify({ error: String(error.message || error), triggered: false }));
     return 2;
   }
 
@@ -132,7 +133,7 @@ function main(argv = process.argv.slice(2)) {
     console.log(
       JSON.stringify({
         error: "Missing required argument: <pr_number>",
-        approved: false,
+        triggered: false,
       }),
     );
     return 2;
@@ -140,9 +141,9 @@ function main(argv = process.argv.slice(2)) {
 
   let result;
   try {
-    result = checkCodexThumbsUp(args);
+    result = checkCodexReviewTrigger(args);
   } catch (error) {
-    console.log(JSON.stringify({ error: String(error.message || error), approved: false }));
+    console.log(JSON.stringify({ error: String(error.message || error), triggered: false }));
     return 2;
   }
 
@@ -151,10 +152,10 @@ function main(argv = process.argv.slice(2)) {
     return 0;
   }
 
-  return result.approved ? 0 : 1;
+  return result.triggered ? 0 : 1;
 }
 
-exports.checkCodexThumbsUp = checkCodexThumbsUp;
+exports.checkCodexReviewTrigger = checkCodexReviewTrigger;
 exports.main = main;
 exports.parseArgs = parseArgs;
 
