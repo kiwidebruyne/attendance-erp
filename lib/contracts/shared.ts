@@ -237,7 +237,7 @@ const manualAttendanceRequestResourceBaseSchema = z
     reviewComment: z.string().trim().min(1).nullable(),
     rootRequestId: z.string().min(1),
     parentRequestId: z.string().min(1).nullable(),
-    followUpKind: followUpKindSchema.nullable(),
+    followUpKind: followUpKindSchema.extract(["resubmission"]).nullable(),
     supersededByRequestId: z.string().min(1).nullable(),
   })
   .merge(requestChainProjectionBaseSchema);

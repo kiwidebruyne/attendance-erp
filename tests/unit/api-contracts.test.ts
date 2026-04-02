@@ -527,6 +527,33 @@ describe("employee attendance contracts", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects unsupported manual-attendance follow-up kinds", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T12:00:00+09:00",
+        reason: "Updated request after approval.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: "req_manual_001",
+        followUpKind: "change",
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("leave contracts", () => {
