@@ -561,7 +561,7 @@ Response notes:
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
 - hourly leave request items expose `startAt` and `endAt` as the authoritative interval fields, with `hours` derived for display/output only
-- leave request items may also carry `leaveConflict` using the shared `Leave Conflict Projection` when they are in active pending review or approved-state `change`/`cancel` follow-up review
+- leave request items may also carry `leaveConflict` using the shared `Leave Conflict Projection` when employee pre-submit warnings, active pending review, or approved-state `change`/`cancel` follow-up review need the same conflict context
 - each leave request item in this `GET /api/leave/me` employee aggregate also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
 - `isTopSurfaceSuppressed` is not a guaranteed field on every leave-request response shape; it is part of this employee aggregate response because this endpoint backs the leave page's history plus top-correction projection
 - when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and date-relevant selected-date context surfaces but is excluded from top correction auto-surfacing until restored

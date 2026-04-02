@@ -369,8 +369,8 @@ Expected fields:
 Important rules:
 
 - API resources that expose this projection use the field name `leaveConflict`.
-- The projection is derived from read-only seeded company-event inputs plus the current leave-chain state.
-- It applies only to active pending review and approved-state `change`/`cancel` follow-up review.
+- The projection is derived from read-only seeded company-event inputs plus the current leave-chain state, and it is shared by employee leave entry pre-submit warnings and admin leave review surfaces.
+- It applies to employee pre-submit warning flow and to active pending review and approved-state `change`/`cancel` follow-up review.
 - `pendingLeaveContext` stays context only and does not become automatic blocking math.
 - `staffingRisk = warning` means manual admin approval is required; employee-facing surfaces still allow submission.
 - The projection does not include employee-only top-surface suppression metadata.
