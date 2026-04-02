@@ -393,6 +393,38 @@ describe("attendance derivation", () => {
     });
   });
 
+  it("treats revision_requested manual requests as request-owned top state", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T18:05:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: null,
+        manualRequest: createManualRequest({
+          id: "req_manual_003",
+          status: "revision_requested",
+          reviewedAt: "2026-03-30T17:45:00+09:00",
+          reviewComment: "퇴근 시간을 조금 더 구체적으로 적어 주세요.",
+          activeRequestId: null,
+          activeStatus: null,
+          effectiveRequestId: "req_manual_003",
+          effectiveStatus: "revision_requested",
+          governingReviewComment: "퇴근 시간을 조금 더 구체적으로 적어 주세요.",
+          nextAction: "none",
+        }),
+      }),
+    ).toEqual({
+      phase: "before_check_in",
+      flags: [],
+      activeExceptions: ["manual_request_rejected", "absent"],
+      nextAction: {
+        type: "review_request_status",
+        relatedRequestId: null,
+      },
+    });
+  });
+
   it("does not surface previous_day_checkout_missing for an already closed prior day", () => {
     expect(
       deriveAttendanceDisplay({

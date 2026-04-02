@@ -44,6 +44,7 @@ It focuses on routing, layout, rendering boundaries, state placement, and the lo
 ## Recommended Route Organization
 
 - Use a shared ERP shell layout to host both employee and admin route groups without affecting the URL.
+- Keep known app routes as literal strings at `Link`, `redirect`, and shared nav data call sites so `typedRoutes` can validate them; if a route must be assembled dynamically, cast only the final validated value to `Route` instead of introducing wrapper helpers.
 - A recommended layout shape is:
 
 ```txt
@@ -81,12 +82,16 @@ app/
 
 - Prefer Server Components for route-level data reads and initial page composition.
 - Use Client Components only for browser-driven interactivity such as filters, tabs, forms, modal state, and optimistic UI.
+- Keep route `page.tsx` files server-first even when a screen later adopts React Query. Move interactive data consumption into nested Client Components instead of converting the route entry itself into a Client Component by default.
+- Mount shared client-only providers such as `QueryClientProvider` at the narrowest shared route-group boundary that needs them. For the ERP assignment shell, that boundary lives under `app/(erp)/layout.tsx`, not the document root layout.
 - Keep shared table formatting, validation helpers, and mock repositories outside route files so they can be reused by both pages and Route Handlers.
 - Do not colocate `page.tsx` and `route.ts` in the same route segment.
 
 ## State Placement
 
 - Use the URL for shareable screen state such as date ranges, search text, and view tabs when that state affects data queries.
+- `/attendance` should keep `view=week|month` in the URL because that state changes the employee history query window.
+- `/attendance` should default `view=week` and interpret `week` and `month` as rolling `7` and `30` day windows ending at the current route date.
 - `/admin/attendance` should keep its mode (`today` or `history`), date-range state, and search text in the URL because those values change the active admin attendance query.
 - `/admin/attendance` should default to `today` mode, and entering history mode without explicit URL state should initialize the range to the last 7 days including today.
 - Use local client state for ephemeral UI concerns such as open modals, draft form values, and inline filter widgets.
@@ -117,7 +122,8 @@ Recommended conventions inside `lib/`:
 ## Mock API Boundary
 
 - Route Handlers are the public contract for the assignment's REST API.
-- UI routes should consume the mock API contract or shared mock repositories, but they should not import handler files directly.
+- Interactive client screens should read from `/api/**`, validate responses with the existing shared contracts in `lib/contracts/**`, and avoid importing Route Handler files directly.
+- Server-first route pages may still read shared mock repositories for initial composition when a task explicitly requires server-side reads, but client React Query consumers should stay on the `/api/**` boundary.
 - Keep request and response shapes aligned with `docs/api-spec.md`.
 - Keep shared vocabulary aligned with `docs/database-schema.md`.
 - Default to the Node.js runtime unless a specific issue documents an Edge runtime need.

@@ -13,15 +13,31 @@ type ParseFailure = {
 export type ParseResult<TData> = ParseSuccess<TData> | ParseFailure;
 
 export function validationErrorResponse(message: string): Response {
+  return errorResponse("validation_error", message, 400);
+}
+
+export function conflictErrorResponse(message: string): Response {
+  return errorResponse("conflict", message, 409);
+}
+
+export function notFoundErrorResponse(message: string): Response {
+  return errorResponse("not_found", message, 404);
+}
+
+function errorResponse(
+  code: "validation_error" | "conflict" | "not_found",
+  message: string,
+  status: number,
+): Response {
   return Response.json(
     {
       error: {
-        code: "validation_error",
+        code,
         message,
       },
     },
     {
-      status: 400,
+      status,
     },
   );
 }

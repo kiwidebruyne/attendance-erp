@@ -41,11 +41,13 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Each active exception surface should own its own CTA and explanation.
 - Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
 - History rows may expose the same recovery or review flows, but row actions should be compact re-entry points that stay less prominent than the top-of-screen surfaces.
+- On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
 - If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
 - If the relevant carry-over manual request already exists, replace duplicate-request CTA language with status, rationale, or resubmission CTA language. For example, a `pending` request should move to status visibility, while a `rejected` or `revision_requested` request should move to review-reason and resubmission language.
 - If a `leave-work conflict` is active on the employee screen, prefer a conflict-review CTA over immediate correction wording.
 - Only show a beacon-range hint on page load when the product can actually detect that condition at that moment. Otherwise, explain the condition after the related attendance attempt fails.
+- Default `/attendance` history switching to rolling `7` and `30` day windows ending at the route's current page date rather than calendar weeks or calendar months.
 
 ## Exception Surface Rules
 

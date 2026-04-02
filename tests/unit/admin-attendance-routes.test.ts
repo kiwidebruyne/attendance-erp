@@ -6,6 +6,7 @@ import {
 } from "@/lib/contracts/admin-attendance";
 import { createSeedRepository } from "@/lib/repositories";
 import { canonicalSeedWorld } from "@/lib/seed/world";
+import { resetMockSeedWorldForTests } from "@/lib/server/mock-state";
 
 const repositoryModulePath = "@/app/api/admin/attendance/_lib/repository";
 const todayRouteModulePath = "@/app/api/admin/attendance/today/route";
@@ -38,10 +39,11 @@ async function loadTodayRoute(world = canonicalSeedWorld) {
 
   if (world !== canonicalSeedWorld) {
     vi.doMock(repositoryModulePath, () => ({
-      adminAttendanceBaselineDate: world.baselineDate,
-      adminAttendanceRepository: createSeedRepository({
-        world,
-      }),
+      getAdminAttendanceBaselineDate: () => world.baselineDate,
+      createAdminAttendanceRepository: () =>
+        createSeedRepository({
+          world,
+        }),
     }));
   }
 
@@ -56,10 +58,11 @@ async function loadListRoute(world = canonicalSeedWorld) {
 
   if (world !== canonicalSeedWorld) {
     vi.doMock(repositoryModulePath, () => ({
-      adminAttendanceBaselineDate: world.baselineDate,
-      adminAttendanceRepository: createSeedRepository({
-        world,
-      }),
+      getAdminAttendanceBaselineDate: () => world.baselineDate,
+      createAdminAttendanceRepository: () =>
+        createSeedRepository({
+          world,
+        }),
     }));
   }
 
@@ -69,12 +72,14 @@ async function loadListRoute(world = canonicalSeedWorld) {
 }
 
 beforeEach(() => {
+  resetMockSeedWorldForTests();
   mocks.requestLogger.info.mockClear();
   mocks.requestLogger.warn.mockClear();
   mocks.createRequestLoggerMock.mockClear();
 });
 
 afterEach(() => {
+  resetMockSeedWorldForTests();
   vi.doUnmock(repositoryModulePath);
   vi.resetModules();
 });
