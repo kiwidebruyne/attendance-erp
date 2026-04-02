@@ -599,6 +599,19 @@ export function reviewAdminRequest(
   });
 
   if (
+    request.requestType === "leave" &&
+    nextStatus === "approved" &&
+    request.parentRequestId !== null &&
+    (request.followUpKind === "change" || request.followUpKind === "cancel")
+  ) {
+    const parentRequest = getRequestById(world, request.parentRequestId);
+
+    if (parentRequest?.requestType === "leave") {
+      parentRequest.supersededByRequestId = request.id;
+    }
+  }
+
+  if (
     request.requestType === "manual_attendance" &&
     nextStatus === "approved"
   ) {

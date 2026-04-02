@@ -5,6 +5,10 @@ import {
   adminRequestsResponseSchema,
 } from "@/lib/contracts/requests";
 import { createSeedRepository } from "@/lib/repositories";
+import {
+  createLeaveRequest,
+  LeaveRequestConflictError,
+} from "@/lib/repositories/leave";
 import { buildFixedSeoulDateTime } from "@/lib/seed/seoul-clock";
 import { type CanonicalSeedWorld, canonicalSeedWorld } from "@/lib/seed/world";
 import {
@@ -292,6 +296,50 @@ describe("admin request route handlers", () => {
       effectiveStatus: "revision_requested",
       nextAction: "none",
     });
+  });
+
+  it("supersedes the previously approved leave request after approving a follow-up change", async () => {
+    const response = await patchAdminRequestRoute(
+      "leave_request_emp_004_2026-04-16_change",
+      {
+        decision: "approve",
+      },
+    );
+    const body = adminRequestDecisionResponseSchema.parse(
+      await response.json(),
+    );
+    const world = getMockSeedWorld();
+    const parentRequest = world.leaveRequests.find(
+      (request) => request.id === "leave_request_emp_004_2026-04-16_root",
+    );
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      id: "leave_request_emp_004_2026-04-16_change",
+      status: "approved",
+      activeRequestId: null,
+      activeStatus: null,
+      effectiveRequestId: "leave_request_emp_004_2026-04-16_change",
+      effectiveStatus: "approved",
+      nextAction: "none",
+    });
+    expect(parentRequest?.supersededByRequestId).toBe(
+      "leave_request_emp_004_2026-04-16_change",
+    );
+    expect(() =>
+      createLeaveRequest(
+        world,
+        "emp_004",
+        {
+          leaveType: "annual",
+          date: "2026-04-16",
+          reason: "A superseded approval must not accept another follow-up.",
+          parentRequestId: "leave_request_emp_004_2026-04-16_root",
+          followUpKind: "cancel",
+        },
+        buildFixedSeoulDateTime("2026-04-15", "13:00:00"),
+      ),
+    ).toThrowError(LeaveRequestConflictError);
   });
 
   it("returns 404 for missing admin review targets", async () => {
