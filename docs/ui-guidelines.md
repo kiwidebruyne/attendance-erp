@@ -74,7 +74,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - On `/admin/attendance/requests`, treat reviewed `rejected` and `revision_requested` items as completed review history/context inside `completed` and `all`, not as a separate employee-waiting queue.
 - Default the route to `needs_review`; initial load should not invent extra text or date filters beyond the selected tab.
 - In `needs_review`, order actionable rows newest pending request first.
-- In `completed`, keep approved or withdrawn results before reviewed non-approved history. Within the approved or withdrawn section, sort approved rows by latest review activity descending and withdrawn rows by their original submission timestamp because they have no review timestamp. Within the reviewed non-approved section, sort rows by latest review activity descending.
+- In `completed`, keep approved or withdrawn results before reviewed non-approved history. Within the approved or withdrawn section, place approved rows before withdrawn rows, sort approved rows by latest review activity descending, and sort withdrawn rows by their original submission timestamp because they have no review timestamp. Within the reviewed non-approved section, sort rows by latest review activity descending.
 - In the completed-history section of `all`, keep the same per-section sort keys used by `completed`.
 - Give reviewed non-approved history lower visual emphasis than actionable `needs_review` work.
 - Do not frame reviewed non-approved admin rows or detail surfaces as "waiting for employee".
