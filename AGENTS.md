@@ -21,7 +21,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - **Screen 2 — Leave Request** (`app/attendance/leave`): remaining leave balance card, leave application form (annual/half-day AM/PM/hourly), personal request history list.
 - **Screen 3 — Team Attendance Dashboard** (`app/admin/attendance`): today's summary card (checked-in / not-yet / late / on-leave counts), team attendance table with search/filter, date-range filter.
 - **Screen 4 — Request Management** (`app/admin/attendance/requests`): pending/approved/rejected request table, approve/reject buttons with confirmation modal, rejection reason input.
-- **Mock API**: 9 endpoints (5 employee, 4 admin) implemented as Next.js Route Handlers under `app/api/**`. See `docs/api-spec.md` for the full contract.
+- **Mock API**: implemented as Next.js Route Handlers under `app/api/**`. Treat `docs/api-spec.md` as the canonical contract instead of relying on a fixed endpoint count in this overview.
 
 ### Stack
 
@@ -49,7 +49,7 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - All repository-wide rules must be defined in the appropriate AGENTS.md.
 - Update the relevant source-of-truth documents in the same change whenever routes, API payloads, data vocabulary, or UI rules change.
 - Write code and code comments in English.
-- Maintain source-of-truth documents in English by default, except `docs/ux-writing-guidelines.md`, which is intentionally maintained in Korean because it defines Korean UX copy.
+- Maintain repository documentation in English by default, except `README.md` and `docs/ux-writing-guidelines.md`, which are intentionally maintained in Korean.
 - Treat Korean as the shipped in-product language for the current assignment scope. Do not infer English UI copy from the repository's default documentation language.
 - Store repository text files with LF line endings. Reserve CRLF only for Windows-only scripts such as `.bat` and `.cmd`.
 - When introducing a workaround, leave sufficient comments that explain why it exists, its scope, and the conditions for removing it.
@@ -111,6 +111,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 
 ### Source Of Truth Map
 
+- `README.md`: human-readable Korean project overview, setup guide, architecture summary, and implementation rationale for this repository.
 - `AGENTS.md`: repository rules, project overview, and documentation workflow for coding agents.
 - `DESIGN.md`: design-agent-readable visual system and component styling rules.
 - `docs/AGENTS.md`: documentation catalog, ownership matrix, and update triggers.
