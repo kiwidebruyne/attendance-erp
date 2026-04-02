@@ -813,6 +813,35 @@ describe("employee attendance contracts", () => {
     ).toThrow();
   });
 
+  it("rejects manual-attendance responses with approved effective state during active work", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        submittedAt: "2026-03-30T12:10:00+09:00",
+        requestedClockInAt: "2026-03-30T12:00:00+09:00",
+        requestedClockOutAt: null,
+        reason: "Resubmitting the corrected clock-in time.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: "req_manual_001",
+        followUpKind: "resubmission",
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "approved",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
   it("requires manual-attendance relation fields to be paired", () => {
     expect(() =>
       manualAttendanceRequestResponseSchema.parse({

@@ -492,6 +492,23 @@ function validateManualAttendanceRequestedClockFields(
   }
 }
 
+function validateManualAttendanceChainProjection(
+  value: {
+    activeRequestId: string | null;
+    effectiveStatus: z.infer<typeof requestStatusSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.activeRequestId !== null && value.effectiveStatus === "approved") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["effectiveStatus"],
+      message:
+        "Invalid input: manual attendance requests cannot keep approved work effective while active work exists",
+    });
+  }
+}
+
 function validateLeaveRequestTiming(
   value: {
     leaveType: z.infer<typeof leaveTypeSchema>;
@@ -591,6 +608,7 @@ export const manualAttendanceRequestResourceSchema =
     validateRequestReviewState(value, ctx, "manual attendance request");
     validateRequestRelations(value, ctx, "manual attendance request");
     validateRequestChainProjection(value, ctx);
+    validateManualAttendanceChainProjection(value, ctx);
   });
 
 const attendanceSurfaceManualRequestStatusSchema = requestStatusSchema.extract([
@@ -611,6 +629,7 @@ export const attendanceSurfaceManualRequestResourceSchema =
       validateRequestReviewState(value, ctx, "manual attendance request");
       validateRequestRelations(value, ctx, "manual attendance request");
       validateRequestChainProjection(value, ctx);
+      validateManualAttendanceChainProjection(value, ctx);
     });
 
 const leaveRequestResourceBaseSchema = z
