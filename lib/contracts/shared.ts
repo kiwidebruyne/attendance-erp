@@ -688,6 +688,7 @@ export const errorResponseSchema = z.object({
   error: z.object({
     code: errorCodeSchema,
     message: z.string().min(1),
+    activeRequestId: z.string().min(1).optional(),
   }),
 });
 

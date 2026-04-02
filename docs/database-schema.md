@@ -210,6 +210,7 @@ Important rules:
 - In the first pass, leave requests may target only today or a future workday.
 - Duplicate prevention is overlap-based, not type-label-based: the same employee cannot create a second unsuperseded root leave chain whose effective leave interval overlaps another unsuperseded root chain.
 - When `leaveType = hourly`, `startAt` and `endAt` are the authoritative interval fields and `hours` is derived output only.
+- When the API rejects a second active employee-submitted follow-up on the same leave chain, the conflict payload may echo the existing `activeRequestId` so the client can reopen the already-active follow-up instead of creating a parallel branch.
 
 ### Employee Leave Top Surface Suppression
 

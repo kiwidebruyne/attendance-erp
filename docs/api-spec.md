@@ -24,6 +24,8 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 }
 ```
 
+- Some endpoint-specific error cases may append extra documented fields inside `error`, such as `activeRequestId` when a leave follow-up conflict needs to point at the already-active request.
+
 ## Shared Enums
 
 ### Attendance Phase
@@ -723,6 +725,18 @@ Typical error cases:
 - `409 conflict` when an overlapping leave request already exists for the same employee
 - `409 conflict` when the same chain already has another active employee follow-up; include the existing active follow-up request id in the error payload
 - `409 conflict` when `followUpKind` does not match the parent request's current lifecycle state
+
+Example follow-up conflict payload:
+
+```json
+{
+  "error": {
+    "code": "conflict",
+    "message": "Leave request chain \"req_leave_001\" already has an active follow-up request",
+    "activeRequestId": "req_leave_002"
+  }
+}
+```
 
 ### `PATCH /api/leave/request/[id]`
 

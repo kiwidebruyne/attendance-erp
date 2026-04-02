@@ -111,6 +111,24 @@ describe("shared contract schemas", () => {
     });
   });
 
+  it("parses the documented error envelope extension for duplicate leave follow-ups", () => {
+    expect(
+      errorResponseSchema.parse({
+        error: {
+          code: "conflict",
+          message: "Active follow-up already exists.",
+          activeRequestId: "leave_request_emp_001_2026-04-14_change",
+        },
+      }),
+    ).toEqual({
+      error: {
+        code: "conflict",
+        message: "Active follow-up already exists.",
+        activeRequestId: "leave_request_emp_001_2026-04-14_change",
+      },
+    });
+  });
+
   it("requires failureReason to match attendance attempt status", () => {
     expect(() =>
       attendanceTodayResponseSchema.parse({

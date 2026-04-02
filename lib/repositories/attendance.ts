@@ -20,6 +20,7 @@ import type {
   PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 import { resolveEffectiveApprovedLeaveRequests } from "@/lib/repositories/leave-conflicts";
+import { buildLeaveInterval } from "@/lib/repositories/leave-intervals";
 import { resolveAttendanceSurfaceManualRequest } from "@/lib/repositories/manual-attendance";
 import type { CanonicalSeedWorld } from "@/lib/seed/world";
 
@@ -178,7 +179,7 @@ function resolveExpectedWorkday(
     return baseWorkday;
   }
 
-  const leaveCoverage = buildLeaveCoverage(approvedLeave, baseWorkday, now);
+  const leaveCoverage = buildLeaveCoverage(approvedLeave, baseWorkday);
   const nextWorkday: ExpectedWorkday = {
     ...baseWorkday,
     leaveCoverage,
@@ -233,47 +234,13 @@ function resolveApprovedLeaveRequest(
 function buildLeaveCoverage(
   request: NonNullable<ReturnType<typeof resolveApprovedLeaveRequest>>,
   workday: ExpectedWorkday,
-  now: string,
 ): LeaveCoverage {
-  if (request.leaveType === "hourly") {
-    return {
-      requestId: request.id,
-      leaveType: request.leaveType,
-      startAt: request.startAt ?? buildDateTime(request.date, "09:00:00", now),
-      endAt: request.endAt ?? buildDateTime(request.date, "18:00:00", now),
-    };
-  }
-
-  if (request.leaveType === "half_am") {
-    return {
-      requestId: request.id,
-      leaveType: request.leaveType,
-      startAt:
-        workday.expectedClockInAt ??
-        buildDateTime(request.date, "09:00:00", now),
-      endAt: buildDateTime(request.date, "13:00:00", now),
-    };
-  }
-
-  if (request.leaveType === "half_pm") {
-    return {
-      requestId: request.id,
-      leaveType: request.leaveType,
-      startAt: buildDateTime(request.date, "13:00:00", now),
-      endAt:
-        workday.expectedClockOutAt ??
-        buildDateTime(request.date, "18:00:00", now),
-    };
-  }
+  const interval = buildLeaveInterval(request, workday);
 
   return {
     requestId: request.id,
     leaveType: request.leaveType,
-    startAt:
-      workday.expectedClockInAt ?? buildDateTime(request.date, "09:00:00", now),
-    endAt:
-      workday.expectedClockOutAt ??
-      buildDateTime(request.date, "18:00:00", now),
+    ...interval,
   };
 }
 
