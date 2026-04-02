@@ -74,7 +74,7 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a stable top summary tier that always shows one combined summary card with calm current-state counts for `revision_requested`, `approved`, `pending`, and `rejected` chains rather than escalating plain pending requests into the top correction surface
+- a stable top summary tier that always shows one combined summary card led by the current leave balance plus calm current-state counts for `revision_requested`, `approved`, `pending`, and `rejected` chains rather than escalating plain pending requests into the top correction surface
 - a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state, rendered as a table-style recovery surface rather than an expanded detail card
 - a full-width leave history row below the planning workspace so planning stays calendar-first while history remains the required recovery surface
 - a lower planning workspace that keeps the leave-only calendar, selected-date context, and inline composer adjacent on desktop and stacked in the same order on narrow widths

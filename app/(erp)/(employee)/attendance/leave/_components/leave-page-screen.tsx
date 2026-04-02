@@ -12,6 +12,7 @@ import {
   formatHourlyDurationHours,
   formatLeaveDateLabel,
   formatLeaveDateTimeLabel,
+  formatLeaveDayCount,
   formatLeaveRequestSummary,
   formatLeaveTimeLabel,
   formatLeaveTypeLabel,
@@ -291,45 +292,66 @@ function DetailField({
 }
 
 function SummaryTier({
+  data,
   viewModel,
 }: Readonly<{
+  data: LeavePageData;
   viewModel: LeavePageViewModel;
 }>) {
   return (
     <section>
       <Card>
-        <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="space-y-1.5">
+        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
+          <div className="min-w-[184px] space-y-2">
             <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-              다시 제출 필요
+              남은 연차
             </p>
-            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-              {viewModel.revisionRequestedCount}건
-            </p>
+            <div className="space-y-1">
+              <p className="text-[30px] font-semibold tracking-[-0.03em] text-[#162847]">
+                {formatLeaveDayCount(data.overview.balance.remainingDays)}
+              </p>
+              <p className="text-sm text-secondary">
+                총 {formatLeaveDayCount(data.overview.balance.totalDays)} 중{" "}
+                {formatLeaveDayCount(data.overview.balance.usedDays)} 사용했어요
+              </p>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-              승인됨
-            </p>
-            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-              {viewModel.approvedCount}건
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-              검토중
-            </p>
-            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-              {viewModel.pendingCount}건
-            </p>
-          </div>
-          <div className="space-y-1.5">
-            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-              반려됨
-            </p>
-            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-              {viewModel.rejectedCount}건
-            </p>
+
+          <div className="hidden h-10 w-px bg-border xl:block" />
+
+          <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                다시 제출 필요
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.revisionRequestedCount}건
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                승인됨
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.approvedCount}건
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                검토중
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.pendingCount}건
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                반려됨
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.rejectedCount}건
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1233,7 +1255,7 @@ export function LeavePageScreen({
         </p>
       </header>
 
-      <SummaryTier viewModel={viewModel} />
+      <SummaryTier data={data} viewModel={viewModel} />
 
       <TopCorrectionTier
         data={data}
