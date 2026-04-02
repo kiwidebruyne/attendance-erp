@@ -8,6 +8,7 @@ import {
   buildManualAttendanceRequestResource,
   createManualAttendanceRequest,
   ManualAttendanceConflictError,
+  ManualAttendanceValidationError,
   resolveAttendanceSurfaceManualRequest,
   updateManualAttendanceRequest,
 } from "@/lib/repositories/manual-attendance";
@@ -448,6 +449,69 @@ describe("manual attendance repository helpers", () => {
       requestedClockInAt: null,
       requestedClockOutAt: "2026-04-10T18:10:00+09:00",
     });
+  });
+
+  it("rejects opposite-side clock fields when a patch keeps the existing one-sided action", () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push({
+      id: "manual_request_emp_001_2026-04-10_root",
+      employeeId: "emp_001",
+      requestType: "manual_attendance",
+      action: "clock_in",
+      date: "2026-04-10",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+
+    expect(() =>
+      updateManualAttendanceRequest(
+        world,
+        "emp_001",
+        "manual_request_emp_001_2026-04-10_root",
+        {
+          requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+        },
+      ),
+    ).toThrowError(ManualAttendanceValidationError);
+  });
+
+  it("rejects repository-level create and withdraw shapes that the route contract disallows", () => {
+    expect(() =>
+      createManualAttendanceRequest(
+        createResubmissionWorld(),
+        "emp_009",
+        {
+          date: "2026-04-08",
+          action: "clock_in",
+          requestedClockInAt: "2026-04-08T09:08:00+09:00",
+          reason: "Missing follow-up kind should still fail in the repository.",
+          parentRequestId: "manual_request_emp_009_2026-04-08_root",
+        },
+        "2026-04-08T16:20:00+09:00",
+      ),
+    ).toThrowError(ManualAttendanceValidationError);
+
+    expect(() =>
+      updateManualAttendanceRequest(
+        createWorld(),
+        "emp_011",
+        "manual_request_emp_011_2026-04-07_root",
+        {
+          status: "withdrawn",
+          reason: "Withdrawal should not be combined with edits.",
+        },
+      ),
+    ).toThrowError(ManualAttendanceValidationError);
   });
 
   it("rejects a pending patch that moves the request onto a date already governed by another chain", () => {

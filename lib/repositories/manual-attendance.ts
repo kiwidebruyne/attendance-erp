@@ -219,6 +219,66 @@ function validateManualAttendanceFields(
   }
 }
 
+function validateManualAttendanceFollowUpFields(
+  input: ManualAttendanceRequestBody,
+) {
+  const hasParentRequestId = input.parentRequestId !== undefined;
+  const hasFollowUpKind = input.followUpKind !== undefined;
+
+  if (hasParentRequestId && !hasFollowUpKind) {
+    throw new ManualAttendanceValidationError(
+      'Manual attendance "followUpKind" is required when "parentRequestId" is provided',
+    );
+  }
+
+  if (hasFollowUpKind && !hasParentRequestId) {
+    throw new ManualAttendanceValidationError(
+      'Manual attendance "parentRequestId" is required when "followUpKind" is provided',
+    );
+  }
+}
+
+function validateManualAttendancePatchBody(
+  request: SeedManualAttendanceRequest,
+  input: ManualAttendanceRequestPatchBody,
+) {
+  const editableFieldNames = [
+    "date",
+    "action",
+    "requestedClockInAt",
+    "requestedClockOutAt",
+    "reason",
+  ] as const;
+  const hasEditableFields = editableFieldNames.some(
+    (fieldName) => input[fieldName] !== undefined,
+  );
+  const effectiveAction = input.action ?? request.action;
+
+  if (input.status === "withdrawn" && hasEditableFields) {
+    throw new ManualAttendanceValidationError(
+      "Manual attendance withdrawal cannot include editable fields",
+    );
+  }
+
+  if (
+    effectiveAction === "clock_in" &&
+    input.requestedClockOutAt !== undefined
+  ) {
+    throw new ManualAttendanceValidationError(
+      'Manual attendance "clock_in" does not accept "requestedClockOutAt"',
+    );
+  }
+
+  if (
+    effectiveAction === "clock_out" &&
+    input.requestedClockInAt !== undefined
+  ) {
+    throw new ManualAttendanceValidationError(
+      'Manual attendance "clock_out" does not accept "requestedClockInAt"',
+    );
+  }
+}
+
 function resolvePatchedClockFields(
   request: SeedManualAttendanceRequest,
   input: ManualAttendanceRequestPatchBody,
@@ -392,6 +452,7 @@ export function createManualAttendanceRequest(
   input: ManualAttendanceRequestBody,
   submittedAt: string,
 ) {
+  validateManualAttendanceFollowUpFields(input);
   validateManualAttendanceFields(
     input.action,
     input.requestedClockInAt ?? null,
@@ -513,6 +574,8 @@ export function updateManualAttendanceRequest(
       `Manual attendance request "${requestId}" is no longer pending`,
     );
   }
+
+  validateManualAttendancePatchBody(request, input);
 
   if (input.status === "withdrawn") {
     request.status = "withdrawn";
