@@ -321,6 +321,21 @@ describe("shared contract schemas", () => {
     ).toThrow();
   });
 
+  it("rejects governing review comments on completed approved chains", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_leave_001",
+        effectiveStatus: "approved",
+        governingReviewComment:
+          "This review comment should no longer govern the chain.",
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
   it("requires nextAction to match whether active work exists", () => {
     expect(() =>
       requestChainProjectionSchema.parse({

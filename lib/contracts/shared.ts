@@ -296,15 +296,6 @@ export function validateRequestChainProjection(
           'Invalid input: "effectiveRequestId" must differ from "activeRequestId" when approved work remains effective during an active request',
       });
     }
-
-    if (value.governingReviewComment !== null) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["governingReviewComment"],
-        message:
-          'Invalid input: "governingReviewComment" must be null when approved work remains effective during an active request',
-      });
-    }
   }
 
   if (!hasActiveRequest && value.effectiveStatus === "pending") {
@@ -313,6 +304,18 @@ export function validateRequestChainProjection(
       path: ["effectiveStatus"],
       message:
         'Invalid input: "effectiveStatus" cannot be "pending" when no active work exists',
+    });
+  }
+
+  if (
+    value.effectiveStatus === "approved" &&
+    value.governingReviewComment !== null
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["governingReviewComment"],
+      message:
+        'Invalid input: "governingReviewComment" must be null when "effectiveStatus" is "approved"',
     });
   }
 
