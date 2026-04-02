@@ -369,6 +369,7 @@ Expected fields:
 Important rules:
 
 - API resources that expose this projection use the field name `leaveConflict`.
+- Employee pre-submit warning flow may expose the same projection through selected-date entry context before a leave-request record exists.
 - The projection is derived from read-only seeded company-event inputs plus the current leave-chain state, and it is shared by employee leave entry pre-submit warnings and admin leave review surfaces.
 - It applies to employee pre-submit warning flow and to active pending review and approved-state `change`/`cancel` follow-up review.
 - `pendingLeaveContext` stays context only and does not become automatic blocking math.
