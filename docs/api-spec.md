@@ -1015,6 +1015,7 @@ Query parameters:
 Response notes:
 
 - each item uses `Request Status` plus relation fields and the shared `Request Chain Projection`
+- leave request items also expose nullable `startAt` and `endAt` interval fields; hourly leave items populate them and non-hourly leave items keep them `null`
 - leave request items may also carry `leaveConflict` using the shared `Leave Conflict Projection` when the active review still has company-event or staffing-risk context; employee-only suppression metadata must not appear in admin items
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
 - `governingReviewComment` stays populated while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up
