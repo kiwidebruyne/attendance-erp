@@ -13,6 +13,7 @@ import {
   manualAttendanceActionSchema,
   manualAttendanceRequestResourceSchema,
   previousDayOpenRecordSchema,
+  requestStatusSchema,
 } from "@/lib/contracts/shared";
 
 const attendanceHistoryRecordSchema = z.object({
@@ -44,34 +45,187 @@ export const attendanceHistoryResponseSchema = z.object({
   records: z.array(attendanceHistoryRecordSchema),
 });
 
+function validateManualAttendanceClockFields(
+  value: {
+    action: z.infer<typeof manualAttendanceActionSchema>;
+    requestedClockInAt?: z.infer<typeof apiDateTimeSchema>;
+    requestedClockOutAt?: z.infer<typeof apiDateTimeSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  const hasRequestedClockInAt = value.requestedClockInAt !== undefined;
+  const hasRequestedClockOutAt = value.requestedClockOutAt !== undefined;
+
+  if (value.action === "clock_in") {
+    if (!hasRequestedClockInAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockInAt"],
+        message:
+          'Invalid input: "requestedClockInAt" is required when "action" is "clock_in"',
+      });
+    }
+
+    if (hasRequestedClockOutAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockOutAt"],
+        message:
+          'Invalid input: "requestedClockOutAt" is not allowed when "action" is "clock_in"',
+      });
+    }
+  }
+
+  if (value.action === "clock_out") {
+    if (!hasRequestedClockOutAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockOutAt"],
+        message:
+          'Invalid input: "requestedClockOutAt" is required when "action" is "clock_out"',
+      });
+    }
+
+    if (hasRequestedClockInAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockInAt"],
+        message:
+          'Invalid input: "requestedClockInAt" is not allowed when "action" is "clock_out"',
+      });
+    }
+  }
+
+  if (value.action === "both") {
+    if (!hasRequestedClockInAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockInAt"],
+        message:
+          'Invalid input: "requestedClockInAt" is required when "action" is "both"',
+      });
+    }
+
+    if (!hasRequestedClockOutAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockOutAt"],
+        message:
+          'Invalid input: "requestedClockOutAt" is required when "action" is "both"',
+      });
+    }
+  }
+}
+
+function validateManualAttendancePatchClockFields(
+  value: {
+    action?: z.infer<typeof manualAttendanceActionSchema>;
+    requestedClockInAt?: z.infer<typeof apiDateTimeSchema>;
+    requestedClockOutAt?: z.infer<typeof apiDateTimeSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.action === "clock_in" && value.requestedClockOutAt !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["requestedClockOutAt"],
+      message:
+        'Invalid input: "requestedClockOutAt" is not allowed when "action" is "clock_in"',
+    });
+  }
+
+  if (value.action === "clock_out" && value.requestedClockInAt !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["requestedClockInAt"],
+      message:
+        'Invalid input: "requestedClockInAt" is not allowed when "action" is "clock_out"',
+    });
+  }
+}
+
+function validateManualAttendanceFollowUpFields(
+  value: {
+    parentRequestId?: string;
+    followUpKind?: z.infer<typeof followUpKindSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  const hasParentRequestId = value.parentRequestId !== undefined;
+  const hasFollowUpKind = value.followUpKind !== undefined;
+
+  if (hasParentRequestId && !hasFollowUpKind) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["followUpKind"],
+      message:
+        'Invalid input: "followUpKind" is required when "parentRequestId" is provided',
+    });
+  }
+
+  if (hasFollowUpKind && !hasParentRequestId) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["parentRequestId"],
+      message:
+        'Invalid input: "parentRequestId" is required when "followUpKind" is provided',
+    });
+  }
+}
+
 export const manualAttendanceRequestBodySchema = z
-  .object({
+  .strictObject({
     date: apiDateSchema,
     action: manualAttendanceActionSchema,
-    requestedAt: apiDateTimeSchema,
+    requestedClockInAt: apiDateTimeSchema.optional(),
+    requestedClockOutAt: apiDateTimeSchema.optional(),
     reason: z.string().min(1),
     parentRequestId: z.string().min(1).optional(),
     followUpKind: followUpKindSchema.extract(["resubmission"]).optional(),
   })
   .superRefine((value, ctx) => {
-    const hasParentRequestId = value.parentRequestId !== undefined;
-    const hasFollowUpKind = value.followUpKind !== undefined;
+    validateManualAttendanceClockFields(value, ctx);
+    validateManualAttendanceFollowUpFields(value, ctx);
+  });
 
-    if (hasParentRequestId && !hasFollowUpKind) {
+export const manualAttendanceRequestPatchBodySchema = z
+  .strictObject({
+    date: apiDateSchema.optional(),
+    action: manualAttendanceActionSchema.optional(),
+    requestedClockInAt: apiDateTimeSchema.optional(),
+    requestedClockOutAt: apiDateTimeSchema.optional(),
+    reason: z.string().min(1).optional(),
+    status: requestStatusSchema.extract(["withdrawn"]).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const editableFieldNames = [
+      "date",
+      "action",
+      "requestedClockInAt",
+      "requestedClockOutAt",
+      "reason",
+    ] as const;
+    const hasEditableFields = editableFieldNames.some(
+      (fieldName) => value[fieldName] !== undefined,
+    );
+
+    if (value.status === "withdrawn" && hasEditableFields) {
       ctx.addIssue({
         code: "custom",
-        path: ["followUpKind"],
+        path: ["status"],
         message:
-          'Invalid input: "followUpKind" is required when "parentRequestId" is provided',
+          'Invalid input: "status" cannot be combined with editable fields when withdrawing a manual attendance request',
       });
     }
 
-    if (hasFollowUpKind && !hasParentRequestId) {
+    validateManualAttendancePatchClockFields(value, ctx);
+
+    if (value.status === undefined && !hasEditableFields) {
       ctx.addIssue({
         code: "custom",
-        path: ["parentRequestId"],
+        path: ["status"],
         message:
-          'Invalid input: "parentRequestId" is required when "followUpKind" is provided',
+          'Invalid input: provide at least one editable field or set "status" to "withdrawn"',
       });
     }
   });
@@ -90,6 +244,9 @@ export type AttendanceHistoryResponse = z.infer<
 >;
 export type ManualAttendanceRequestBody = z.infer<
   typeof manualAttendanceRequestBodySchema
+>;
+export type ManualAttendanceRequestPatchBody = z.infer<
+  typeof manualAttendanceRequestPatchBodySchema
 >;
 export type ManualAttendanceRequestResponse = z.infer<
   typeof manualAttendanceRequestResponseSchema
