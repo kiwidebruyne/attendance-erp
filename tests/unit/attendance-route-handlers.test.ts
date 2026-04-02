@@ -320,6 +320,52 @@ describe("employee attendance route handlers", () => {
     expect(todayAfterWithdraw.manualRequest).toBeNull();
   });
 
+  it("allows action edits that switch one-sided requests to the opposite action", async () => {
+    const world = createWorld();
+    addPendingManualRequest(world, {
+      id: "manual_request_emp_001_2026-04-10_root",
+      date: "2026-04-10",
+      action: "clock_in",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+    });
+    setMockSeedWorldForTests(world);
+
+    const response = await patchManualAttendance(
+      new Request(
+        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-10_root",
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "clock_out",
+            requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+          }),
+        },
+      ),
+      {
+        params: Promise.resolve({
+          id: "manual_request_emp_001_2026-04-10_root",
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(
+      manualAttendanceRequestResponseSchema.parse(await response.json()),
+    ).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+    });
+  });
+
   it("returns not-found and lifecycle conflicts for invalid patch targets", async () => {
     const missingResponse = await patchManualAttendance(
       new Request("https://example.com/api/attendance/manual/req_missing", {

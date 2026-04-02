@@ -219,6 +219,34 @@ function validateManualAttendanceFields(
   }
 }
 
+function resolvePatchedClockFields(
+  request: SeedManualAttendanceRequest,
+  input: ManualAttendanceRequestPatchBody,
+  nextAction: SeedManualAttendanceRequest["action"],
+) {
+  if (nextAction === "clock_in") {
+    return {
+      requestedClockInAt:
+        input.requestedClockInAt ?? request.requestedClockInAt,
+      requestedClockOutAt: null,
+    };
+  }
+
+  if (nextAction === "clock_out") {
+    return {
+      requestedClockInAt: null,
+      requestedClockOutAt:
+        input.requestedClockOutAt ?? request.requestedClockOutAt,
+    };
+  }
+
+  return {
+    requestedClockInAt: input.requestedClockInAt ?? request.requestedClockInAt,
+    requestedClockOutAt:
+      input.requestedClockOutAt ?? request.requestedClockOutAt,
+  };
+}
+
 function validateClockOutOpenRecordRule(
   world: CanonicalSeedWorld,
   employeeId: string,
@@ -493,10 +521,7 @@ export function updateManualAttendanceRequest(
 
   const nextDate = input.date ?? request.date;
   const nextAction = input.action ?? request.action;
-  const nextRequestedClockInAt =
-    input.requestedClockInAt ?? request.requestedClockInAt;
-  const nextRequestedClockOutAt =
-    input.requestedClockOutAt ?? request.requestedClockOutAt;
+  const nextClockFields = resolvePatchedClockFields(request, input, nextAction);
   const parentRequest =
     request.parentRequestId === null
       ? null
@@ -518,8 +543,8 @@ export function updateManualAttendanceRequest(
 
   validateManualAttendanceFields(
     nextAction,
-    nextRequestedClockInAt,
-    nextRequestedClockOutAt,
+    nextClockFields.requestedClockInAt,
+    nextClockFields.requestedClockOutAt,
   );
   validateClockOutOpenRecordRule(world, employeeId, nextDate, nextAction);
 
@@ -534,8 +559,8 @@ export function updateManualAttendanceRequest(
 
   request.date = nextDate;
   request.action = nextAction;
-  request.requestedClockInAt = nextRequestedClockInAt;
-  request.requestedClockOutAt = nextRequestedClockOutAt;
+  request.requestedClockInAt = nextClockFields.requestedClockInAt;
+  request.requestedClockOutAt = nextClockFields.requestedClockOutAt;
   request.reason = input.reason ?? request.reason;
 
   return request;

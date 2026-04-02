@@ -410,6 +410,46 @@ describe("manual attendance repository helpers", () => {
     ).toThrowError(ManualAttendanceConflictError);
   });
 
+  it("allows action edits to replace incompatible clock fields on one-sided pending requests", () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push({
+      id: "manual_request_emp_001_2026-04-10_root",
+      employeeId: "emp_001",
+      requestType: "manual_attendance",
+      action: "clock_in",
+      date: "2026-04-10",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+
+    const updated = updateManualAttendanceRequest(
+      world,
+      "emp_001",
+      "manual_request_emp_001_2026-04-10_root",
+      {
+        action: "clock_out",
+        requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+      },
+    );
+
+    expect(manualAttendanceRequestEntitySchema.parse(updated)).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+    });
+  });
+
   it("rejects a pending patch that moves the request onto a date already governed by another chain", () => {
     expect(() =>
       updateManualAttendanceRequest(
