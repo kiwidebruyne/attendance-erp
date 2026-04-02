@@ -115,6 +115,73 @@ describe("admin attendance route handlers", () => {
     expect(approvedWritebackRow?.manualRequest).toBeNull();
   });
 
+  it("preserves a prior-workday manual request date on the carry-over row when the prior workday still governs the today surface", async () => {
+    const carryOverRow = seededRepository
+      .getAdminAttendanceToday({
+        date: baselineDate,
+      })
+      .items.find((item) => item.previousDayOpenRecord !== null);
+
+    expect(carryOverRow).toBeDefined();
+    expect(carryOverRow?.employee.id).toBe("emp_001");
+    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
+
+    const modifiedWorld = structuredClone(canonicalSeedWorld);
+
+    modifiedWorld.manualAttendanceRequests.push({
+      id: "manual_request_emp_001_2026-04-10_root",
+      employeeId: "emp_001",
+      requestType: "manual_attendance",
+      action: "clock_in",
+      date: "2026-04-10",
+      submittedAt: "2026-04-10T12:30:00+09:00",
+      requestedClockInAt: "2026-04-10T09:04:00+09:00",
+      requestedClockOutAt: null,
+      reason: "Prior-day checkout is still being resolved.",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+
+    vi.resetModules();
+    vi.doMock("@/app/api/admin/attendance/_lib/repository", () => ({
+      adminAttendanceRepository: createSeedRepository({
+        world: modifiedWorld,
+      }),
+    }));
+
+    const { GET } = await import("@/app/api/admin/attendance/today/route");
+    const response = await GET(
+      new Request("https://example.com/api/admin/attendance/today"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(() => adminAttendanceTodayResponseSchema.parse(body)).not.toThrow();
+    expect(mocks.createRequestLoggerMock).toHaveBeenCalledTimes(1);
+    expect(mocks.requestLogger.info).toHaveBeenCalledTimes(1);
+    expect(mocks.requestLogger.info).toHaveBeenCalledWith(
+      {
+        event: "admin.attendance.today.fetch",
+        date: baselineDate,
+      },
+      "Fetched admin attendance today",
+    );
+
+    const updatedCarryOverRow = body.items.find(
+      (item) => item.employee.id === "emp_001",
+    );
+
+    expect(updatedCarryOverRow).toBeDefined();
+    expect(updatedCarryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
+    expect(updatedCarryOverRow?.manualRequest?.date).toBe("2026-04-10");
+    expect(updatedCarryOverRow?.manualRequest?.status).toBe("pending");
+  });
+
   it("returns the seeded admin list payload for a valid name filter, logs one fetch event, and keeps attendance-history rows free of embedded carry-over projections", async () => {
     const expectedBody = seededRepository.getAdminAttendanceList({
       from: "2026-04-10",
