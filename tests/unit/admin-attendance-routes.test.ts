@@ -14,6 +14,7 @@ const listRouteModulePath = "@/app/api/admin/attendance/list/route";
 const mocks = vi.hoisted(() => {
   const requestLogger = {
     info: vi.fn(),
+    warn: vi.fn(),
   };
 
   return {
@@ -69,6 +70,7 @@ async function loadListRoute(world = canonicalSeedWorld) {
 
 beforeEach(() => {
   mocks.requestLogger.info.mockClear();
+  mocks.requestLogger.warn.mockClear();
   mocks.createRequestLoggerMock.mockClear();
 });
 
@@ -282,8 +284,13 @@ describe("admin attendance route handlers", () => {
       "https://example.com/api/admin/attendance/list?from=2026-04-10&to=2026-04-13&name=",
       "name",
     ],
+    [
+      "whitespace-only name",
+      "https://example.com/api/admin/attendance/list?from=2026-04-10&to=2026-04-13&name=%20%20%20",
+      "name",
+    ],
   ])(
-    "returns the shared validation envelope for %s and does not log",
+    "returns the shared validation envelope for %s and logs the invalid query",
     async (_label, url, paramName) => {
       const GET = await loadListRoute();
       const response = await GET(new Request(url));
@@ -292,8 +299,21 @@ describe("admin attendance route handlers", () => {
       expect(response.status).toBe(400);
       expect(body.error.code).toBe("validation_error");
       expect(body.error.message).toContain(paramName);
-      expect(mocks.createRequestLoggerMock).not.toHaveBeenCalled();
+      expect(mocks.createRequestLoggerMock).toHaveBeenCalledTimes(1);
+      expect(mocks.createRequestLoggerMock).toHaveBeenCalledWith(
+        expect.any(Request),
+        {
+          bindings: expect.any(Object),
+        },
+      );
       expect(mocks.requestLogger.info).not.toHaveBeenCalled();
+      expect(mocks.requestLogger.warn).toHaveBeenCalledTimes(1);
+      expect(mocks.requestLogger.warn).toHaveBeenCalledWith(
+        {
+          event: "admin.attendance.list.validation_failed",
+        },
+        "Rejected invalid admin attendance list query",
+      );
     },
   );
 });
