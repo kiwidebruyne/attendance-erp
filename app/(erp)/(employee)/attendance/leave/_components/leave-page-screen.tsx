@@ -1039,7 +1039,7 @@ function ComposerPanel({
             autoComplete="off"
             disabled={isSubmitting}
             name="reason"
-            placeholder="관리자가 빠르게 이해할 수 있게 필요한 맥락을 적어 주세요"
+            placeholder="예: 병원 진료 일정이 있어 연차가 필요해요…"
             value={composerDraft.reason}
             onChange={(event) =>
               onComposerFieldChange({
