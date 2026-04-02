@@ -1,10 +1,10 @@
-import type { LeavePageData } from "@/app/(erp)/(employee)/attendance/leave/_lib/page-data";
 import {
   formatLeaveRequestSummary,
   formatLeaveStatusDescription,
   formatLeaveStatusLabel,
   formatLeaveTypeLabel,
 } from "@/app/(erp)/(employee)/attendance/leave/_lib/format";
+import type { LeavePageData } from "@/app/(erp)/(employee)/attendance/leave/_lib/page-data";
 import type { LeaveType } from "@/lib/contracts/shared";
 
 type LeaveRequestItem = LeavePageData["overview"]["requests"][number];
@@ -57,12 +57,13 @@ export type LeaveChainModel = Readonly<{
 
 export type LeavePageViewModel = Readonly<{
   attentionCount: number;
+  approvedCount: number;
   correctionCandidates: readonly LeaveChainModel[];
-  monthPlannedCount: number;
   pendingCount: number;
+  rejectedCount: number;
+  revisionRequestedCount: number;
   selectedDateChains: readonly LeaveChainModel[];
   totalChains: number;
-  upcomingApprovedCount: number;
   visibleChains: readonly LeaveChainModel[];
 }>;
 
@@ -71,7 +72,9 @@ function getRequestTimestamp(request: LeaveRequestItem) {
 }
 
 function getReviewTimestamp(request: LeaveRequestItem) {
-  return request.reviewedAt === null ? 0 : new Date(request.reviewedAt).getTime();
+  return request.reviewedAt === null
+    ? 0
+    : new Date(request.reviewedAt).getTime();
 }
 
 function toStatusTone(
@@ -276,15 +279,12 @@ function toChainModel(requests: readonly LeaveRequestItem[]): LeaveChainModel {
     correctionHeadline: buildCorrectionHeadline(latestRequest),
     currentSummary: buildCurrentSummary(effectiveRequest, activeRequest),
     effectiveRequest,
-    latestActivityAt:
-      latestRequest.reviewedAt ?? latestRequest.requestedAt,
+    latestActivityAt: latestRequest.reviewedAt ?? latestRequest.requestedAt,
     latestActivityLabel: buildLatestActivityLabel(latestRequest, activeRequest),
     latestRequest,
     primaryAction: buildPrimaryAction(effectiveRequest, activeRequest),
     reasonSummary:
-      activeRequest?.reason ??
-      latestRequest.reason ??
-      effectiveRequest.reason,
+      activeRequest?.reason ?? latestRequest.reason ?? effectiveRequest.reason,
     requests: orderedRequests,
     reviewComment,
     rootRequestId: latestRequest.rootRequestId,
@@ -303,11 +303,9 @@ function toChainModel(requests: readonly LeaveRequestItem[]): LeaveChainModel {
   };
 }
 
-function getMonthKey(date: string) {
-  return date.slice(0, 7);
-}
-
-export function buildLeavePageViewModel(data: LeavePageData): LeavePageViewModel {
+export function buildLeavePageViewModel(
+  data: LeavePageData,
+): LeavePageViewModel {
   const requestsByRootId = new Map<string, LeaveRequestItem[]>();
 
   for (const request of data.overview.requests) {
@@ -330,28 +328,37 @@ export function buildLeavePageViewModel(data: LeavePageData): LeavePageViewModel
     .filter((chain) => chain.topCorrectionEligible)
     .sort(
       (left, right) =>
-        getReviewTimestamp(right.latestRequest) - getReviewTimestamp(left.latestRequest),
+        getReviewTimestamp(right.latestRequest) -
+        getReviewTimestamp(left.latestRequest),
     );
-  const monthKey = getMonthKey(data.selectedDate);
-  const monthPlannedCount = visibleChains.filter((chain) =>
-    chain.requests.some((request) => getMonthKey(request.date) === monthKey),
-  ).length;
   const pendingCount = visibleChains.filter(
     (chain) => chain.activeRequest !== null,
   ).length;
-  const upcomingApprovedCount = visibleChains.filter(
+  const approvedCount = visibleChains.filter(
     (chain) =>
-      chain.activeRequest === null && chain.effectiveRequest.status === "approved",
+      chain.activeRequest === null &&
+      chain.effectiveRequest.status === "approved",
+  ).length;
+  const rejectedCount = visibleChains.filter(
+    (chain) =>
+      chain.activeRequest === null &&
+      chain.effectiveRequest.status === "rejected",
+  ).length;
+  const revisionRequestedCount = visibleChains.filter(
+    (chain) =>
+      chain.activeRequest === null &&
+      chain.effectiveRequest.status === "revision_requested",
   ).length;
 
   return {
     attentionCount: correctionCandidates.length,
+    approvedCount,
     correctionCandidates,
-    monthPlannedCount,
     pendingCount,
+    rejectedCount,
+    revisionRequestedCount,
     selectedDateChains,
     totalChains: visibleChains.length,
-    upcomingApprovedCount,
     visibleChains,
   };
 }
@@ -380,7 +387,9 @@ function toBaseDraft(input: {
   };
 }
 
-export function createNewComposerDraft(selectedDate: string): LeaveComposerDraft {
+export function createNewComposerDraft(
+  selectedDate: string,
+): LeaveComposerDraft {
   return toBaseDraft({
     date: selectedDate,
     leaveType: "annual",

@@ -74,10 +74,11 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a stable top summary tier that always shows leave balance plus calm current-state context rather than escalating plain pending requests into the top correction surface
+- a stable top summary tier that always shows leave balance plus calm current-state counts for `approved`, `pending`, `rejected`, and `revision_requested` chains rather than escalating plain pending requests into the top correction surface
 - a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state
-- a leave-only planning calendar with selected-date context directly below it
-- one inline leave composer below the calendar that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
+- a full-width leave history row above the planning workspace so recovery actions remain history-led before calendar planning
+- a lower planning workspace that keeps the leave-only calendar, selected-date context, and inline composer adjacent on desktop and stacked in the same order on narrow widths
+- one inline leave composer in that planning workspace that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
 - a flat list of the current user's leave request chains, ordered by latest activity, with each row representing the current governing chain context rather than every request record as a separate top-level row
 - each leave-chain history row should summarize the governed date or date range, leave type, employee reason summary, current governing status, and latest review timing while earlier chain steps remain secondary chain detail rather than separate top-level rows
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`

@@ -18,15 +18,15 @@ import {
   type LeaveChainModel,
   type LeaveComposerDraft,
 } from "@/app/(erp)/(employee)/attendance/leave/_lib/view-model";
-import {
-  LeaveApiError,
-  createLeaveRequest,
-  updateLeaveRequest,
-} from "@/lib/leave/api-client";
 import type {
   LeaveRequestBody,
   LeaveRequestPatchBody,
 } from "@/lib/contracts/leave";
+import {
+  createLeaveRequest,
+  LeaveApiError,
+  updateLeaveRequest,
+} from "@/lib/leave/api-client";
 
 function getErrorMessage(error: unknown) {
   if (error instanceof LeaveApiError) {
@@ -51,8 +51,24 @@ function addMonths(month: string, delta: number) {
   return cursor.toISOString().slice(0, 10);
 }
 
-function getDefaultCorrectionCandidateId(viewModel: ReturnType<typeof buildLeavePageViewModel>) {
+function getDefaultCorrectionCandidateId(
+  viewModel: ReturnType<typeof buildLeavePageViewModel>,
+) {
   return viewModel.correctionCandidates[0]?.rootRequestId ?? null;
+}
+
+function upsertLeaveRequestOverview(
+  overview: LeavePageData["overview"],
+  request: LeavePageData["overview"]["requests"][number],
+) {
+  const requests = overview.requests.some((item) => item.id === request.id)
+    ? overview.requests.map((item) => (item.id === request.id ? request : item))
+    : [...overview.requests, request];
+
+  return {
+    ...overview,
+    requests,
+  };
 }
 
 function getTargetRequest(chain: LeaveChainModel, action: LeaveChainAction) {
@@ -62,9 +78,13 @@ function getTargetRequest(chain: LeaveChainModel, action: LeaveChainAction) {
   );
 }
 
-function buildDraftFromAction(chain: LeaveChainModel, action: LeaveChainAction) {
+function buildDraftFromAction(
+  chain: LeaveChainModel,
+  action: LeaveChainAction,
+) {
   const request = getTargetRequest(chain, action);
-  const startTime = request.startAt === null ? "" : request.startAt.slice(11, 16);
+  const startTime =
+    request.startAt === null ? "" : request.startAt.slice(11, 16);
   const endTime = request.endAt === null ? "" : request.endAt.slice(11, 16);
 
   switch (action.kind) {
@@ -159,13 +179,25 @@ export function LeavePageClient({
   const [isRouting, startRoutingTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
-  const viewModel = buildLeavePageViewModel(initialData);
-  const [visibleMonth, setVisibleMonth] = useState(startOfMonth(initialData.selectedDate));
-  const [correctionCandidateId, setCorrectionCandidateId] = useState<string | null>(
-    getDefaultCorrectionCandidateId(viewModel),
+  const [optimisticOverview, setOptimisticOverview] = useState(
+    initialData.overview,
   );
-  const [composerDraft, setComposerDraft] = useState<LeaveComposerDraft | null>(null);
-  const [composerChainRootId, setComposerChainRootId] = useState<string | null>(null);
+  const viewModel = buildLeavePageViewModel({
+    ...initialData,
+    overview: optimisticOverview,
+  });
+  const [visibleMonth, setVisibleMonth] = useState(
+    startOfMonth(initialData.selectedDate),
+  );
+  const [correctionCandidateId, setCorrectionCandidateId] = useState<
+    string | null
+  >(getDefaultCorrectionCandidateId(viewModel));
+  const [composerDraft, setComposerDraft] = useState<LeaveComposerDraft | null>(
+    null,
+  );
+  const [composerChainRootId, setComposerChainRootId] = useState<string | null>(
+    null,
+  );
   const correctionCandidateKey = viewModel.correctionCandidates
     .map((candidate) => candidate.rootRequestId)
     .join("|");
@@ -176,33 +208,40 @@ export function LeavePageClient({
   const composerChain =
     composerChainRootId === null
       ? null
-      : viewModel.visibleChains.find(
+      : (viewModel.visibleChains.find(
           (chain) => chain.rootRequestId === composerChainRootId,
-        ) ?? null;
+        ) ?? null);
 
   useEffect(() => {
     setVisibleMonth(startOfMonth(initialData.selectedDate));
   }, [initialData.selectedDate]);
 
   useEffect(() => {
+    setOptimisticOverview(initialData.overview);
+  }, [initialData.overview]);
+
+  useEffect(() => {
+    const correctionCandidateIds =
+      correctionCandidateKey.length === 0
+        ? []
+        : correctionCandidateKey.split("|");
+
     setCorrectionCandidateId((current) => {
-      if (
-        current !== null &&
-        viewModel.correctionCandidates.some(
-          (candidate) => candidate.rootRequestId === current,
-        )
-      ) {
+      if (current !== null && correctionCandidateIds.includes(current)) {
         return current;
       }
 
-      return getDefaultCorrectionCandidateId(viewModel);
+      return correctionCandidateIds[0] ?? null;
     });
   }, [correctionCandidateKey]);
 
   useEffect(() => {
+    const visibleChainIds =
+      visibleChainKey.length === 0 ? [] : visibleChainKey.split("|");
+
     if (
       composerChainRootId !== null &&
-      !viewModel.visibleChains.some((chain) => chain.rootRequestId === composerChainRootId)
+      !visibleChainIds.includes(composerChainRootId)
     ) {
       setComposerChainRootId(null);
     }
@@ -244,7 +283,12 @@ export function LeavePageClient({
       setMutationError(null);
 
       try {
-        await updateLeaveRequest(action.requestId, { status: "withdrawn" });
+        const request = await updateLeaveRequest(action.requestId, {
+          status: "withdrawn",
+        });
+        setOptimisticOverview((current) =>
+          upsertLeaveRequestOverview(current, request),
+        );
         setComposerDraft(null);
         setComposerChainRootId(null);
         startRoutingTransition(() => {
@@ -275,7 +319,9 @@ export function LeavePageClient({
     }
 
     if (!hasValidHourlyRange(composerDraft)) {
-      setMutationError("시간차는 시작 시간과 종료 시간을 올바르게 입력해 주세요");
+      setMutationError(
+        "시간차는 시작 시간과 종료 시간을 올바르게 입력해 주세요",
+      );
       return;
     }
 
@@ -288,9 +334,18 @@ export function LeavePageClient({
           throw new Error("수정할 요청을 찾지 못했어요");
         }
 
-        await updateLeaveRequest(composerDraft.requestId, toPatchBody(composerDraft));
+        const request = await updateLeaveRequest(
+          composerDraft.requestId,
+          toPatchBody(composerDraft),
+        );
+        setOptimisticOverview((current) =>
+          upsertLeaveRequestOverview(current, request),
+        );
       } else {
-        await createLeaveRequest(toCreateBody(composerDraft));
+        const request = await createLeaveRequest(toCreateBody(composerDraft));
+        setOptimisticOverview((current) =>
+          upsertLeaveRequestOverview(current, request),
+        );
       }
 
       setComposerDraft(null);
@@ -320,7 +375,9 @@ export function LeavePageClient({
       }}
       onComposerFieldChange={(patch) => {
         setMutationError(null);
-        setComposerDraft((current) => (current === null ? current : { ...current, ...patch }));
+        setComposerDraft((current) =>
+          current === null ? current : { ...current, ...patch },
+        );
       }}
       onCorrectionCandidateChange={setCorrectionCandidateId}
       onMonthChange={(delta) => {

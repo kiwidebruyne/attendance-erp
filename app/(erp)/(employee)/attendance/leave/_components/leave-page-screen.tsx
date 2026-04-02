@@ -1,5 +1,4 @@
 import {
-  CalendarDaysIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CircleAlertIcon,
@@ -93,13 +92,6 @@ function addDays(date: string, delta: number) {
   return cursor.toISOString().slice(0, 10);
 }
 
-function addMonths(month: string, delta: number) {
-  const cursor = toDate(month);
-  cursor.setUTCDate(1);
-  cursor.setUTCMonth(cursor.getUTCMonth() + delta);
-  return cursor.toISOString().slice(0, 10);
-}
-
 function isWeekendDate(date: string) {
   const day = toDate(date).getUTCDay();
   return day === 0 || day === 6;
@@ -167,7 +159,8 @@ function getCalendarToneClass(chains: readonly LeaveChainModel[]) {
   if (
     chains.some(
       (chain) =>
-        chain.activeRequest === null && chain.effectiveRequest.status === "approved",
+        chain.activeRequest === null &&
+        chain.effectiveRequest.status === "approved",
     )
   ) {
     return "bg-status-success";
@@ -183,7 +176,9 @@ function getRelatedChainsByDate(viewModel: LeavePageViewModel) {
     for (const request of chain.requests) {
       const existing = chainsByDate.get(request.date) ?? [];
 
-      if (!existing.some((item) => item.rootRequestId === chain.rootRequestId)) {
+      if (
+        !existing.some((item) => item.rootRequestId === chain.rootRequestId)
+      ) {
         existing.push(chain);
         chainsByDate.set(request.date, existing);
       }
@@ -214,7 +209,10 @@ function getSelectionState(data: LeavePageData) {
   };
 }
 
-function getConflictContext(chain: LeaveChainModel | null, data: LeavePageData) {
+function getConflictContext(
+  chain: LeaveChainModel | null,
+  data: LeavePageData,
+) {
   return (
     chain?.activeRequest?.leaveConflict ??
     chain?.latestRequest.leaveConflict ??
@@ -223,15 +221,24 @@ function getConflictContext(chain: LeaveChainModel | null, data: LeavePageData) 
   );
 }
 
-function getConflictMessages(chain: LeaveChainModel | null, data: LeavePageData) {
+function getConflictMessages(
+  chain: LeaveChainModel | null,
+  data: LeavePageData,
+) {
   const leaveConflict = getConflictContext(chain, data);
   return leaveConflict === null ? [] : getLeaveConflictMessages(leaveConflict);
 }
 
-function getCompanyEventLabel(chain: LeaveChainModel | null, data: LeavePageData) {
+function getCompanyEventLabel(
+  chain: LeaveChainModel | null,
+  data: LeavePageData,
+) {
   const leaveConflict = getConflictContext(chain, data);
 
-  if (leaveConflict === null || leaveConflict.companyEventContext.length === 0) {
+  if (
+    leaveConflict === null ||
+    leaveConflict.companyEventContext.length === 0
+  ) {
     return null;
   }
 
@@ -246,83 +253,71 @@ function SummaryTier({
   viewModel: LeavePageViewModel;
 }>) {
   return (
-    <section className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
+    <section className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,4fr)]">
       <Card>
         <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center">
-          <div className="flex flex-1 flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
-            <div className="min-w-[184px] space-y-2">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                남은 연차
+          <div className="min-w-[184px] space-y-2">
+            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+              남은 연차
+            </p>
+            <div className="space-y-1">
+              <p className="text-[30px] font-semibold tracking-[-0.03em] text-[#162847]">
+                {formatLeaveDayCount(data.overview.balance.remainingDays)}
               </p>
-              <div className="space-y-1">
-                <p className="text-[30px] font-semibold tracking-[-0.03em] text-[#162847]">
-                  {formatLeaveDayCount(data.overview.balance.remainingDays)}
-                </p>
-                <p className="text-sm text-secondary">
-                  총 {formatLeaveDayCount(data.overview.balance.totalDays)} 중{" "}
-                  {formatLeaveDayCount(data.overview.balance.usedDays)} 사용했어요
-                </p>
-              </div>
-            </div>
-
-            <div className="hidden h-10 w-px bg-border xl:block" />
-
-            <div className="grid flex-1 gap-4 sm:grid-cols-3">
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                  검토 중
-                </p>
-                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                  {viewModel.pendingCount}건
-                </p>
-                <p className="text-sm text-secondary">
-                  수정하거나 상태를 바로 확인할 수 있어요
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                  다시 제출 필요
-                </p>
-                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                  {viewModel.attentionCount}건
-                </p>
-                <p className="text-sm text-secondary">
-                  검토 사유를 보고 바로 이어서 정리해요
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                  승인 일정
-                </p>
-                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                  {viewModel.upcomingApprovedCount}건
-                </p>
-                <p className="text-sm text-secondary">
-                  이미 승인된 휴가와 후속 요청을 함께 볼 수 있어요
-                </p>
-              </div>
+              <p className="text-sm text-secondary">
+                총 {formatLeaveDayCount(data.overview.balance.totalDays)} 중{" "}
+                {formatLeaveDayCount(data.overview.balance.usedDays)} 사용했어요
+              </p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="flex min-h-[145px] flex-col justify-between rounded-[16px] bg-primary p-6 text-white shadow-[0_12px_24px_rgba(79,70,229,0.24)]">
-        <div className="flex items-start justify-between">
-          <div className="flex size-8 items-center justify-center rounded-full bg-white/12">
-            <CalendarDaysIcon aria-hidden="true" className="size-4" />
-          </div>
-          <Badge className="bg-white/10 text-white" variant="outline">
-            이번 달 계획
-          </Badge>
-        </div>
-        <div className="space-y-1">
-          <p className="text-[11px] text-white/70">선택한 달에 잡힌 휴가 체인</p>
-          <p className="text-[32px] font-bold tracking-[-0.04em] text-white tabular-nums">
-            {viewModel.monthPlannedCount}건
-          </p>
-        </div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <SummaryMetric
+          description="승인된 휴가를 바로 확인할 수 있어요"
+          label="승인됨"
+          value={viewModel.approvedCount}
+        />
+        <SummaryMetric
+          description="지금 검토 중인 요청이에요"
+          label="검토중"
+          value={viewModel.pendingCount}
+        />
+        <SummaryMetric
+          description="검토 결과를 확인하고 다시 정리해요"
+          label="반려됨"
+          value={viewModel.rejectedCount}
+        />
+        <SummaryMetric
+          description="보완 후 다시 제출해야 해요"
+          label="다시 제출 필요"
+          value={viewModel.revisionRequestedCount}
+        />
       </div>
     </section>
+  );
+}
+
+function SummaryMetric({
+  description,
+  label,
+  value,
+}: Readonly<{
+  description: string;
+  label: string;
+  value: number;
+}>) {
+  return (
+    <div className="rounded-[16px] border border-border/80 bg-surface-subtle p-4">
+      <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+        {label}
+      </p>
+      <p className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+        {value}건
+      </p>
+      <p className="mt-2 text-sm leading-6 text-secondary">{description}</p>
+    </div>
   );
 }
 
@@ -402,13 +397,16 @@ function TopCorrectionTier({
               {activeCandidate.statusLabel}
             </Badge>
             <span className="text-sm text-secondary">
-              {formatLeaveDateTimeLabel(activeCandidate.latestRequest.reviewedAt)}
+              {formatLeaveDateTimeLabel(
+                activeCandidate.latestRequest.reviewedAt,
+              )}
             </span>
           </div>
 
           <div className="space-y-2">
             <p className="text-lg font-medium tracking-[-0.03em] text-foreground">
-              {activeCandidate.correctionHeadline ?? "사유를 다시 확인해 주세요"}
+              {activeCandidate.correctionHeadline ??
+                "사유를 다시 확인해 주세요"}
             </p>
             <p className="text-sm leading-6 text-secondary">
               {activeCandidate.currentSummary}
@@ -417,13 +415,19 @@ function TopCorrectionTier({
 
           {activeCandidate.reviewComment === null ? null : (
             <Alert className="border-status-danger-soft bg-status-danger-soft/40">
-              <CircleAlertIcon aria-hidden="true" className="size-4 text-status-danger" />
+              <CircleAlertIcon
+                aria-hidden="true"
+                className="size-4 text-status-danger"
+              />
               <AlertTitle className="text-status-danger">검토 사유</AlertTitle>
-              <AlertDescription>{activeCandidate.reviewComment}</AlertDescription>
+              <AlertDescription>
+                {activeCandidate.reviewComment}
+              </AlertDescription>
             </Alert>
           )}
 
-          {companyEventLabel === null && conflictMessages.length === 0 ? null : (
+          {companyEventLabel === null &&
+          conflictMessages.length === 0 ? null : (
             <div className="rounded-[14px] border border-border/80 bg-muted/55 p-4">
               <p className="text-sm font-medium text-foreground">
                 다시 제출 전에 함께 볼 내용
@@ -465,11 +469,10 @@ function TopCorrectionTier({
   );
 }
 
-function CalendarAndSelectionColumn({
+function CalendarPanel({
   data,
   onMonthChange,
   onOpenNewComposer,
-  onRunChainAction,
   onSelectDate,
   viewModel,
   visibleMonth,
@@ -477,287 +480,312 @@ function CalendarAndSelectionColumn({
   data: LeavePageData;
   onMonthChange: (delta: number) => void;
   onOpenNewComposer: () => void;
-  onRunChainAction: (action: LeaveChainAction) => void;
   onSelectDate: (date: string) => void;
   viewModel: LeavePageViewModel;
   visibleMonth: string;
 }>) {
   const relatedChainsByDate = getRelatedChainsByDate(viewModel);
   const selectionState = getSelectionState(data);
+
+  return (
+    <Card>
+      <CardHeader className="gap-4 border-b border-border/80 pb-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <CardTitle className="text-xl tracking-[-0.03em]">
+              휴가 계획 캘린더
+            </CardTitle>
+            <CardDescription className="text-sm leading-6">
+              날짜를 고르면 해당 일정과 새 요청 흐름을 바로 볼 수 있어요
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              aria-label="이전 달"
+              onClick={() => onMonthChange(-1)}
+              size="icon-sm"
+              variant="outline"
+            >
+              <ChevronLeftIcon aria-hidden="true" className="size-4" />
+            </Button>
+            <Button
+              aria-label="다음 달"
+              onClick={() => onMonthChange(1)}
+              size="icon-sm"
+              variant="outline"
+            >
+              <ChevronRightIcon aria-hidden="true" className="size-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-lg font-medium text-foreground">
+            {formatMonthTitle(visibleMonth)}
+          </p>
+          <Button
+            disabled={!selectionState.canCreate}
+            onClick={onOpenNewComposer}
+            size="sm"
+            variant="secondary"
+          >
+            새 요청 시작
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-5">
+        <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-medium text-muted-foreground">
+          {weekdayLabels.map((label) => (
+            <div key={label} className="py-1">
+              {label}
+            </div>
+          ))}
+        </div>
+        <div className="mt-3 grid grid-cols-7 gap-2">
+          {listCalendarDates(visibleMonth).map((item) => {
+            const relatedChains = relatedChainsByDate.get(item.date) ?? [];
+            const isSelected = item.date === data.selectedDate;
+
+            return (
+              <button
+                key={item.date}
+                className={cn(
+                  "flex min-h-[78px] flex-col items-start rounded-[14px] border border-border/70 px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/55",
+                  isSelected &&
+                    "border-primary bg-primary/7 shadow-[0_0_0_1px_rgba(79,70,229,0.12)]",
+                  !item.inMonth && "bg-muted/40 text-muted-foreground",
+                )}
+                type="button"
+                onClick={() => onSelectDate(item.date)}
+              >
+                <div className="flex w-full items-center justify-between gap-2">
+                  <span
+                    className={cn(
+                      "text-sm font-medium",
+                      isSelected ? "text-primary" : "text-foreground",
+                      !item.inMonth && "text-muted-foreground",
+                    )}
+                  >
+                    {item.dayOfMonth}
+                  </span>
+                  {relatedChains.length === 0 ? null : (
+                    <span className="text-[10px] text-secondary">
+                      {relatedChains.length}건
+                    </span>
+                  )}
+                </div>
+                {relatedChains.length === 0 ? null : (
+                  <div className="mt-auto flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full",
+                        getCalendarToneClass(relatedChains),
+                      )}
+                    />
+                    <span className="text-[10px] text-secondary">
+                      {relatedChains[0]?.statusLabel}
+                    </span>
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SelectedDateContextPanel({
+  data,
+  onOpenNewComposer,
+  onRunChainAction,
+  viewModel,
+}: Readonly<{
+  data: LeavePageData;
+  onOpenNewComposer: () => void;
+  onRunChainAction: (action: LeaveChainAction) => void;
+  viewModel: LeavePageViewModel;
+}>) {
+  const selectionState = getSelectionState(data);
   const primaryChain = viewModel.selectedDateChains[0] ?? null;
-  const selectedDateConflict = data.overview.selectedDateContext?.leaveConflict ?? null;
+  const selectedDateConflict =
+    data.overview.selectedDateContext?.leaveConflict ?? null;
   const selectedDateMessages =
     selectedDateConflict === null
       ? []
       : getLeaveConflictMessages(selectedDateConflict);
   const selectedDateEventLabel =
-    selectedDateConflict === null || selectedDateConflict.companyEventContext.length === 0
+    selectedDateConflict === null ||
+    selectedDateConflict.companyEventContext.length === 0
       ? null
-      : selectedDateConflict.companyEventContext[0]?.title ?? null;
+      : (selectedDateConflict.companyEventContext[0]?.title ?? null);
 
   return (
-    <div className="flex flex-col gap-8">
-      <Card>
-        <CardHeader className="gap-4 border-b border-border/80 pb-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="space-y-1">
-              <CardTitle className="text-xl tracking-[-0.03em]">
-                휴가 계획 캘린더
-              </CardTitle>
-              <CardDescription className="text-sm leading-6">
-                날짜를 고르면 해당 일정과 새 요청 흐름을 바로 볼 수 있어요
-              </CardDescription>
+    <Card>
+      <CardHeader className="gap-2 border-b border-border/80 pb-5">
+        <CardTitle className="text-xl tracking-[-0.03em]">
+          {formatLeaveDateLabel(data.selectedDate)}
+        </CardTitle>
+        <CardDescription className="text-sm leading-6">
+          선택한 날짜를 먼저 보고 필요한 흐름을 이어서 열어요
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 pt-5">
+        {primaryChain === null ? (
+          <div className="space-y-4">
+            <div className="rounded-[14px] border border-border/80 bg-surface-subtle p-4">
+              <p className="text-sm font-medium text-foreground">
+                연결된 휴가 체인이 아직 없어요
+              </p>
+              <p className="mt-2 text-sm leading-6 text-secondary">
+                {selectionState.message}
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                aria-label="이전 달"
-                onClick={() => onMonthChange(-1)}
-                size="icon-sm"
-                variant="outline"
-              >
-                <ChevronLeftIcon aria-hidden="true" className="size-4" />
-              </Button>
-              <Button
-                aria-label="다음 달"
-                onClick={() => onMonthChange(1)}
-                size="icon-sm"
-                variant="outline"
-              >
-                <ChevronRightIcon aria-hidden="true" className="size-4" />
-              </Button>
-            </div>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-lg font-medium text-foreground">
-              {formatMonthTitle(visibleMonth)}
-            </p>
+
+            {!hasMeaningfulLeaveConflict(selectedDateConflict) ? null : (
+              <Alert className="border-status-warning-soft bg-status-warning-soft/35">
+                <CircleAlertIcon
+                  aria-hidden="true"
+                  className="size-4 text-status-warning"
+                />
+                <AlertTitle className="text-status-warning">
+                  제출 전에 함께 볼 안내
+                </AlertTitle>
+                <AlertDescription>
+                  <div className="flex flex-col gap-2">
+                    {selectedDateEventLabel === null ? null : (
+                      <span>운영 일정: {selectedDateEventLabel}</span>
+                    )}
+                    {selectedDateMessages.map((message) => (
+                      <span key={message}>{message}</span>
+                    ))}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Button
+              className="w-full"
               disabled={!selectionState.canCreate}
               onClick={onOpenNewComposer}
-              size="sm"
               variant="secondary"
             >
-              새 요청 시작
+              새 휴가 요청 열기
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="pt-5">
-          <div className="grid grid-cols-7 gap-2 text-center text-[11px] font-medium text-muted-foreground">
-            {weekdayLabels.map((label) => (
-              <div key={label} className="py-1">
-                {label}
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-3 rounded-[14px] border border-border/80 bg-surface-subtle p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    {primaryChain.currentSummary}
+                  </p>
+                  <p className="text-sm leading-6 text-secondary">
+                    {primaryChain.selectedDateSummary}
+                  </p>
+                </div>
+                <Badge variant={getStatusBadgeVariant(primaryChain)}>
+                  {primaryChain.statusLabel}
+                </Badge>
               </div>
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-7 gap-2">
-            {listCalendarDates(visibleMonth).map((item) => {
-              const relatedChains = relatedChainsByDate.get(item.date) ?? [];
-              const isSelected = item.date === data.selectedDate;
+              {primaryChain.activeRequest !== null &&
+              primaryChain.effectiveRequest.status === "approved" ? (
+                <div className="rounded-[12px] border border-primary/15 bg-primary/6 p-3 text-sm text-secondary">
+                  <p className="font-medium text-foreground">
+                    현재 승인된 일정
+                  </p>
+                  <p className="mt-1">
+                    {formatLeaveRequestSummary(primaryChain.effectiveRequest)}
+                  </p>
+                  <p className="mt-2">
+                    후속 요청:{" "}
+                    {formatLeaveRequestSummary(primaryChain.activeRequest)}
+                  </p>
+                </div>
+              ) : null}
 
-              return (
-                <button
-                  key={item.date}
-                  className={cn(
-                    "flex min-h-[78px] flex-col items-start rounded-[14px] border border-border/70 px-3 py-2 text-left transition-colors hover:border-primary/40 hover:bg-muted/55",
-                    isSelected && "border-primary bg-primary/7 shadow-[0_0_0_1px_rgba(79,70,229,0.12)]",
-                    !item.inMonth && "bg-muted/40 text-muted-foreground",
-                  )}
-                  type="button"
-                  onClick={() => onSelectDate(item.date)}
-                >
-                  <div className="flex w-full items-center justify-between gap-2">
-                    <span
-                      className={cn(
-                        "text-sm font-medium",
-                        isSelected ? "text-primary" : "text-foreground",
-                        !item.inMonth && "text-muted-foreground",
-                      )}
-                    >
-                      {item.dayOfMonth}
-                    </span>
-                    {relatedChains.length === 0 ? null : (
-                      <span className="text-[10px] text-secondary">
-                        {relatedChains.length}건
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-auto flex items-center gap-2">
-                    <span
-                      className={cn(
-                        "size-1.5 rounded-full",
-                        relatedChains.length === 0
-                          ? "bg-muted-foreground/30"
-                          : getCalendarToneClass(relatedChains),
-                      )}
-                    />
-                    <span className="text-[10px] text-secondary">
-                      {relatedChains.length === 0
-                        ? "비어 있어요"
-                        : relatedChains[0]?.statusLabel}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="gap-2 border-b border-border/80 pb-5">
-          <CardTitle className="text-xl tracking-[-0.03em]">
-            {formatLeaveDateLabel(data.selectedDate)}
-          </CardTitle>
-          <CardDescription className="text-sm leading-6">
-            선택한 날짜를 먼저 보고 필요한 흐름을 이어서 열어요
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 pt-5">
-          {primaryChain === null ? (
-            <div className="space-y-4">
-              <div className="rounded-[14px] border border-border/80 bg-surface-subtle p-4">
-                <p className="text-sm font-medium text-foreground">
-                  연결된 휴가 체인이 아직 없어요
-                </p>
-                <p className="mt-2 text-sm leading-6 text-secondary">
-                  {selectionState.message}
-                </p>
-              </div>
-
-              {!hasMeaningfulLeaveConflict(selectedDateConflict) ? null : (
-                <Alert className="border-status-warning-soft bg-status-warning-soft/35">
-                  <CircleAlertIcon aria-hidden="true" className="size-4 text-status-warning" />
-                  <AlertTitle className="text-status-warning">
-                    제출 전에 함께 볼 안내
+              {primaryChain.reviewComment === null ? null : (
+                <Alert className="border-status-danger-soft bg-status-danger-soft/35">
+                  <CircleAlertIcon
+                    aria-hidden="true"
+                    className="size-4 text-status-danger"
+                  />
+                  <AlertTitle className="text-status-danger">
+                    검토 사유
                   </AlertTitle>
                   <AlertDescription>
-                    <div className="flex flex-col gap-2">
-                      {selectedDateEventLabel === null ? null : (
-                        <span>운영 일정: {selectedDateEventLabel}</span>
-                      )}
-                      {selectedDateMessages.map((message) => (
-                        <span key={message}>{message}</span>
-                      ))}
-                    </div>
+                    {primaryChain.reviewComment}
                   </AlertDescription>
                 </Alert>
               )}
 
-              <Button
-                className="w-full"
-                disabled={!selectionState.canCreate}
-                onClick={onOpenNewComposer}
-                variant="secondary"
-              >
-                새 휴가 요청 열기
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-3 rounded-[14px] border border-border/80 bg-surface-subtle p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {primaryChain.currentSummary}
-                    </p>
-                    <p className="text-sm leading-6 text-secondary">
-                      {primaryChain.selectedDateSummary}
-                    </p>
-                  </div>
-                  <Badge variant={getStatusBadgeVariant(primaryChain)}>
-                    {primaryChain.statusLabel}
-                  </Badge>
-                </div>
-                {primaryChain.activeRequest !== null &&
-                primaryChain.effectiveRequest.status === "approved" ? (
-                  <div className="rounded-[12px] border border-primary/15 bg-primary/6 p-3 text-sm text-secondary">
-                    <p className="font-medium text-foreground">
-                      현재 승인된 일정
-                    </p>
-                    <p className="mt-1">
-                      {formatLeaveRequestSummary(primaryChain.effectiveRequest)}
-                    </p>
-                    <p className="mt-2">
-                      후속 요청: {formatLeaveRequestSummary(primaryChain.activeRequest)}
-                    </p>
-                  </div>
-                ) : null}
-
-                {primaryChain.reviewComment === null ? null : (
-                  <Alert className="border-status-danger-soft bg-status-danger-soft/35">
-                    <CircleAlertIcon aria-hidden="true" className="size-4 text-status-danger" />
-                    <AlertTitle className="text-status-danger">
-                      검토 사유
-                    </AlertTitle>
-                    <AlertDescription>{primaryChain.reviewComment}</AlertDescription>
-                  </Alert>
-                )}
-
-                {getConflictMessages(primaryChain, data).length === 0 ? null : (
-                  <div className="flex flex-col gap-2 text-sm text-secondary">
-                    {getCompanyEventLabel(primaryChain, data) === null ? null : (
-                      <span>운영 일정: {getCompanyEventLabel(primaryChain, data)}</span>
-                    )}
-                    {getConflictMessages(primaryChain, data).map((message) => (
-                      <span key={message}>{message}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {primaryChain.primaryAction === null ? null : (
-                  <Button
-                    onClick={() => onRunChainAction(primaryChain.primaryAction)}
-                    size="sm"
-                    variant={getActionButtonVariant(primaryChain.primaryAction)}
-                  >
-                    {primaryChain.primaryAction.label}
-                  </Button>
-                )}
-                {primaryChain.secondaryAction === null ? null : (
-                  <Button
-                    onClick={() => onRunChainAction(primaryChain.secondaryAction)}
-                    size="sm"
-                    variant={getActionButtonVariant(primaryChain.secondaryAction)}
-                  >
-                    {primaryChain.secondaryAction.label}
-                  </Button>
-                )}
-              </div>
-
-              {viewModel.selectedDateChains.length < 2 ? null : (
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-foreground">
-                    같은 날짜의 다른 이력
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    {viewModel.selectedDateChains.slice(1).map((chain) => (
-                      <div
-                        key={chain.rootRequestId}
-                        className="flex items-center justify-between gap-3 rounded-[12px] border border-border/70 px-3 py-2.5"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-foreground">
-                            {chain.currentSummary}
-                          </p>
-                          <p className="truncate text-[12px] text-secondary">
-                            {chain.statusDescription}
-                          </p>
-                        </div>
-                        <Badge variant={getStatusBadgeVariant(chain)}>
-                          {chain.statusLabel}
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
+              {getConflictMessages(primaryChain, data).length === 0 ? null : (
+                <div className="flex flex-col gap-2 text-sm text-secondary">
+                  {getCompanyEventLabel(primaryChain, data) === null ? null : (
+                    <span>
+                      운영 일정: {getCompanyEventLabel(primaryChain, data)}
+                    </span>
+                  )}
+                  {getConflictMessages(primaryChain, data).map((message) => (
+                    <span key={message}>{message}</span>
+                  ))}
                 </div>
               )}
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+
+            <div className="flex flex-wrap gap-2">
+              {primaryChain.primaryAction === null ? null : (
+                <Button
+                  onClick={() => onRunChainAction(primaryChain.primaryAction)}
+                  size="sm"
+                  variant={getActionButtonVariant(primaryChain.primaryAction)}
+                >
+                  {primaryChain.primaryAction.label}
+                </Button>
+              )}
+              {primaryChain.secondaryAction === null ? null : (
+                <Button
+                  onClick={() => onRunChainAction(primaryChain.secondaryAction)}
+                  size="sm"
+                  variant={getActionButtonVariant(primaryChain.secondaryAction)}
+                >
+                  {primaryChain.secondaryAction.label}
+                </Button>
+              )}
+            </div>
+
+            {viewModel.selectedDateChains.length < 2 ? null : (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  같은 날짜의 다른 이력
+                </p>
+                <div className="flex flex-col gap-2">
+                  {viewModel.selectedDateChains.slice(1).map((chain) => (
+                    <div
+                      key={chain.rootRequestId}
+                      className="flex items-center justify-between gap-3 rounded-[12px] border border-border/70 px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {chain.currentSummary}
+                        </p>
+                        <p className="truncate text-[12px] text-secondary">
+                          {chain.statusDescription}
+                        </p>
+                      </div>
+                      <Badge variant={getStatusBadgeVariant(chain)}>
+                        {chain.statusLabel}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -929,7 +957,9 @@ function ComposerPanel({
         )}
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <label className="space-y-2">
-            <span className="text-sm font-medium text-foreground">휴가 날짜</span>
+            <span className="text-sm font-medium text-foreground">
+              휴가 날짜
+            </span>
             <Input
               autoComplete="off"
               disabled={isSubmitting || isCancelMode}
@@ -945,7 +975,9 @@ function ComposerPanel({
           </label>
 
           <div className="space-y-2">
-            <span className="text-sm font-medium text-foreground">휴가 유형</span>
+            <span className="text-sm font-medium text-foreground">
+              휴가 유형
+            </span>
             <ToggleGroup
               aria-label="휴가 유형"
               className="flex flex-wrap justify-start rounded-[12px] border border-border/80 bg-muted/70 p-1"
@@ -975,7 +1007,9 @@ function ComposerPanel({
         {!isHourly ? null : (
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_180px]">
             <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">시작 시간</span>
+              <span className="text-sm font-medium text-foreground">
+                시작 시간
+              </span>
               <Input
                 autoComplete="off"
                 disabled={isSubmitting || isCancelMode}
@@ -990,7 +1024,9 @@ function ComposerPanel({
               />
             </label>
             <label className="space-y-2">
-              <span className="text-sm font-medium text-foreground">종료 시간</span>
+              <span className="text-sm font-medium text-foreground">
+                종료 시간
+              </span>
               <Input
                 autoComplete="off"
                 disabled={isSubmitting || isCancelMode}
@@ -1005,7 +1041,9 @@ function ComposerPanel({
               />
             </label>
             <div className="space-y-2">
-              <span className="text-sm font-medium text-foreground">계산된 시간</span>
+              <span className="text-sm font-medium text-foreground">
+                계산된 시간
+              </span>
               <div className="flex h-10 items-center rounded-[12px] border border-border/80 bg-surface-subtle px-3 text-sm font-medium text-foreground">
                 {formatHourlyDurationHours(derivedHours)}
               </div>
@@ -1036,10 +1074,18 @@ function ComposerPanel({
         ) : null}
 
         <div className="flex flex-wrap justify-end gap-2">
-          <Button disabled={isSubmitting} onClick={onClearComposer} variant="outline">
+          <Button
+            disabled={isSubmitting}
+            onClick={onClearComposer}
+            variant="outline"
+          >
             닫기
           </Button>
-          <Button disabled={submitDisabled} onClick={onSubmitComposer} variant="secondary">
+          <Button
+            disabled={submitDisabled}
+            onClick={onSubmitComposer}
+            variant="secondary"
+          >
             {getComposerSubmitLabel(composerDraft.mode)}
           </Button>
         </div>
@@ -1099,8 +1145,8 @@ function HistorySection({
                         {chain.currentSummary}
                       </p>
                       <p className="text-sm text-secondary">
-                        {formatLeaveTypeLabel(chain.latestRequest.leaveType)} · 단계{" "}
-                        {chain.requests.length}개
+                        {formatLeaveTypeLabel(chain.latestRequest.leaveType)} ·
+                        단계 {chain.requests.length}개
                       </p>
                     </div>
                   </TableCell>
@@ -1145,9 +1191,13 @@ function HistorySection({
                       )}
                       {chain.secondaryAction === null ? null : (
                         <Button
-                          onClick={() => onRunChainAction(chain.secondaryAction)}
+                          onClick={() =>
+                            onRunChainAction(chain.secondaryAction)
+                          }
                           size="sm"
-                          variant={getActionButtonVariant(chain.secondaryAction)}
+                          variant={getActionButtonVariant(
+                            chain.secondaryAction,
+                          )}
                         >
                           {chain.secondaryAction.label}
                         </Button>
@@ -1206,28 +1256,35 @@ export function LeavePageScreen({
         viewModel={viewModel}
       />
 
-      <section className="grid gap-8 xl:items-start xl:grid-cols-[340px_minmax(0,1fr)]">
-        <CalendarAndSelectionColumn
+      <HistorySection
+        onRunChainAction={onRunChainAction}
+        viewModel={viewModel}
+      />
+
+      <section className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.95fr)_minmax(0,1fr)]">
+        <CalendarPanel
           data={data}
           onMonthChange={onMonthChange}
           onOpenNewComposer={onOpenNewComposer}
-          onRunChainAction={onRunChainAction}
           onSelectDate={onSelectDate}
           viewModel={viewModel}
           visibleMonth={visibleMonth}
         />
-        <div className="flex flex-col gap-8">
-          <ComposerPanel
-            composerChain={composerChain}
-            composerDraft={composerDraft}
-            isSubmitting={isSubmitting}
-            mutationError={mutationError}
-            onClearComposer={onClearComposer}
-            onComposerFieldChange={onComposerFieldChange}
-            onSubmitComposer={onSubmitComposer}
-          />
-          <HistorySection onRunChainAction={onRunChainAction} viewModel={viewModel} />
-        </div>
+        <SelectedDateContextPanel
+          data={data}
+          onOpenNewComposer={onOpenNewComposer}
+          onRunChainAction={onRunChainAction}
+          viewModel={viewModel}
+        />
+        <ComposerPanel
+          composerChain={composerChain}
+          composerDraft={composerDraft}
+          isSubmitting={isSubmitting}
+          mutationError={mutationError}
+          onClearComposer={onClearComposer}
+          onComposerFieldChange={onComposerFieldChange}
+          onSubmitComposer={onSubmitComposer}
+        />
       </section>
     </div>
   );
