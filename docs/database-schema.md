@@ -337,6 +337,8 @@ Important rules:
 - `late` and `early_leave` may coexist for the same date.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 - `absent` is a finalized derived interpretation after day-close.
+- Once `absent` is finalized for a still-missing workday, the next employee attendance action becomes `submit_manual_request` instead of `clock_in`.
+- `previous_day_checkout_missing` uses the `09:00` carry-over cutoff in the workday timezone carried by the attendance facts.
 
 ### Previous Day Open Record Summary
 

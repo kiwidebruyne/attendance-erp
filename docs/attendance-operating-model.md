@@ -38,12 +38,13 @@ Important model rule:
 
 - Normal expected check-in time is `09:00`.
 - Normal expected check-out time is `18:00`.
-- A previous-day open work record may still be closed by a next-day checkout until `08:59:59`.
+- A previous-day open work record may still be closed by a next-day checkout until `08:59:59` in the workday timezone carried by the attendance facts.
 - Opening the app alone creates no `attendanceAttempt` and no `attendanceRecord`.
 - Before the first successful same-day check-in, no `attendanceRecord` is required.
 - `phase` is derived in precedence order: `checked_out` when the requested date already has a same-day checkout fact, `working` when the requested date has a same-day check-in fact without checkout, `non_workday` when no same-day attendance fact exists and `expectedWorkday.isWorkday=false`, and `before_check_in` otherwise.
 - `not_checked_in` is a real-time expected-but-missing exception.
 - `absent` is derived only after day close or equivalent finalization logic.
+- Once `absent` is derived for a still-missing workday, the employee correction path shifts from `clock_in` to `submit_manual_request`.
 - Approved leave adjusts the effective expected work window for the covered period.
 - Actual attendance on a leave-covered day does not erase leave coverage. It surfaces as `leave_work_conflict`.
 - Failed attendance attempts remain distinct from lateness or absence and must not be collapsed into either concept.
@@ -80,12 +81,12 @@ Important model rule:
 
 ### Previous-Day Missing Checkout and Overnight Work
 
-| Moment                                                       | Canonical Fact Changes                                                                                                                                             | Derived Result                                              | Required Surface Behavior                                                |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Previous day stays open after `18:00`                        | previous-day `attendanceRecord` has `clockInAt` but no `clockOutAt`                                                                                                | no automatic error yet                                      | keep the prior workday open through the overnight close window           |
-| Next-day checkout before `09:00`                             | append `attendanceAttempt(success)` with `attemptedAt` on the next calendar day and `date` on the prior workday; update previous-day `attendanceRecord.clockOutAt` | previous day is closed normally                             | treat this as closing the prior workday, not as the new day's checkout   |
-| Next day reaches `09:00` and the prior workday is still open | no automatic writeback                                                                                                                                             | `activeExceptions` includes `previous_day_checkout_missing` | employee and admin must both see the carry-over exception prominently    |
-| Manual correction is approved later                          | update previous-day `attendanceRecord` from approved request                                                                                                       | carry-over exception clears                                 | today state and previous-day correction history must remain synchronized |
+| Moment                                                                                     | Canonical Fact Changes                                                                                                                                             | Derived Result                                              | Required Surface Behavior                                                |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Previous day stays open after `18:00`                                                      | previous-day `attendanceRecord` has `clockInAt` but no `clockOutAt`                                                                                                | no automatic error yet                                      | keep the prior workday open through the overnight close window           |
+| Next-day checkout before `09:00`                                                           | append `attendanceAttempt(success)` with `attemptedAt` on the next calendar day and `date` on the prior workday; update previous-day `attendanceRecord.clockOutAt` | previous day is closed normally                             | treat this as closing the prior workday, not as the new day's checkout   |
+| Next day reaches `09:00` in the prior workday timezone and the prior workday is still open | no automatic writeback                                                                                                                                             | `activeExceptions` includes `previous_day_checkout_missing` | employee and admin must both see the carry-over exception prominently    |
+| Manual correction is approved later                                                        | update previous-day `attendanceRecord` from approved request                                                                                                       | carry-over exception clears                                 | today state and previous-day correction history must remain synchronized |
 
 ### Approved Leave With No Attendance
 

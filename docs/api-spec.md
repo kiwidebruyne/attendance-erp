@@ -259,6 +259,8 @@ Fields:
 
 `phase` is derived in precedence order: `checked_out` when the requested date already has a same-day checkout fact, `working` when the requested date has a same-day check-in fact without checkout, `non_workday` when no same-day attendance fact exists and `expectedWorkday.isWorkday` is `false`, and `before_check_in` otherwise.
 
+`previous_day_checkout_missing` is evaluated against the `09:00` carry-over cutoff in the workday timezone carried by the attendance facts, not the transport timezone of the request itself.
+
 ### `Previous Day Open Record`
 
 Represents the still-open prior workday when checkout is missing.
@@ -337,6 +339,7 @@ Response notes:
 - `display.activeExceptions` may contain multiple values at once.
 - `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
+- When `display.activeExceptions` includes `absent` and no higher-priority carry-over or request-state override applies, `display.nextAction.type` must be `submit_manual_request` rather than `clock_in`.
 
 ### `GET /api/attendance/me/history?from=&to=`
 
@@ -393,6 +396,7 @@ Response notes:
 - Each row keeps facts and derived display separate.
 - `record` may be `null`.
 - `display.activeExceptions` may include `absent` only after day-close finalization.
+- `previous_day_checkout_missing` uses the carry-over cutoff in the workday timezone encoded by the attendance facts for that row.
 
 ### `POST /api/attendance/manual`
 

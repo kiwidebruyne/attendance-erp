@@ -31,12 +31,41 @@ function getOffset(isoDateTime: string): string {
   return isoDateTime.endsWith("Z") ? "Z" : isoDateTime.slice(-6);
 }
 
+function getOffsetMinutes(isoDateTime: string): number {
+  if (isoDateTime.endsWith("Z")) {
+    return 0;
+  }
+
+  const sign = isoDateTime.slice(-6, -5) === "-" ? -1 : 1;
+  const hours = Number.parseInt(isoDateTime.slice(-5, -3), 10);
+  const minutes = Number.parseInt(isoDateTime.slice(-2), 10);
+
+  return sign * (hours * 60 + minutes);
+}
+
 function buildDateTime(
   date: string,
   time: string,
   referenceDateTime: string,
 ): string {
   return `${date}T${time}${getOffset(referenceDateTime)}`;
+}
+
+function getDateInReferenceOffset(
+  isoDateTime: string,
+  referenceDateTime: string,
+): string {
+  const date = toDate(isoDateTime);
+
+  if (date === null) {
+    return isoDateTime.slice(0, 10);
+  }
+
+  const offsetMinutes = getOffsetMinutes(referenceDateTime);
+
+  return new Date(date.getTime() + offsetMinutes * 60_000)
+    .toISOString()
+    .slice(0, 10);
 }
 
 function getRequestedDate(
@@ -154,8 +183,14 @@ function deriveActiveExceptions({
     requestedDate,
     previousDayOpenRecord,
   );
-  const currentDate = now.slice(0, 10);
-  const carryOverCutoff = toDate(buildDateTime(currentDate, "09:00:00", now));
+  const carryOverReferenceDateTime =
+    previousDayOpenRecord?.expectedClockOutAt ??
+    previousDayOpenRecord?.clockInAt ??
+    now;
+  const currentDate = getDateInReferenceOffset(now, carryOverReferenceDateTime);
+  const carryOverCutoff = toDate(
+    buildDateTime(currentDate, "09:00:00", carryOverReferenceDateTime),
+  );
   const currentTime = toDate(now);
   const adjustedClockInAt = toDate(expectedWorkday.adjustedClockInAt);
   const adjustedClockOutAt = toDate(expectedWorkday.adjustedClockOutAt);
@@ -235,6 +270,13 @@ function deriveNextAction(
   if (activeExceptions.includes("leave_work_conflict")) {
     return {
       type: "review_leave_conflict",
+      relatedRequestId: null,
+    };
+  }
+
+  if (activeExceptions.includes("absent")) {
+    return {
+      type: "submit_manual_request",
       relatedRequestId: null,
     };
   }

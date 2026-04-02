@@ -209,6 +209,21 @@ describe("attendance derivation", () => {
     expect(display.activeExceptions).not.toContain("not_checked_in");
   });
 
+  it("returns submit_manual_request once absence is finalized", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T18:05:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: null,
+      }).nextAction,
+    ).toEqual({
+      type: "submit_manual_request",
+      relatedRequestId: null,
+    });
+  });
+
   it("keeps failed attempts distinct from missing check-in state", () => {
     expect(
       deriveAttendanceDisplay({
@@ -268,6 +283,18 @@ describe("attendance derivation", () => {
         relatedRequestId: null,
       },
     });
+  });
+
+  it("uses the attendance timezone when evaluating the carry-over cutoff", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T00:01:00Z",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: createPreviousDayOpenRecord(),
+      }).activeExceptions,
+    ).toEqual(["previous_day_checkout_missing", "not_checked_in"]);
   });
 
   it("keeps unresolved carry-over failed attempts visible after the cutoff", () => {
