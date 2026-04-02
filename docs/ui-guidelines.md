@@ -102,6 +102,22 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and request-context or selected-date context may add restore or resubmission entry points without replacing history.
 - A later resubmission or later reviewed outcome must be re-evaluated as a new top-correction candidate rather than inheriting an older request record's suppressed state.
 - Let issue `#66` own top-candidate filtering and persistence; keep ordering, default expansion, placement, and CTA hierarchy with issue `#41`.
+- On `/attendance/leave`, keep one stable top summary tier visible even when correction candidates exist. That tier should stay calm, lead with leave balance, and summarize the current leave state without pulling plain `pending` requests into the top correction surface.
+- Place the conditional top correction tier directly below the stable summary tier and above the calendar so reviewed non-approved leave context reads as page-local action guidance before planning context.
+- When multiple reviewed non-approved leave requests qualify for top correction surfacing, use a compact list plus one expanded detail instead of stacking multiple full correction cards. Expand the most recently reviewed eligible request by default.
+- The expanded top-correction detail should keep prior request summary, current reviewed outcome, latest review reason, next action, primary `resubmit`, and the hide/show-top affordance in one visible block.
+- Keep `/attendance/leave` history chain-first rather than record-first. Use one flat row per governing request chain, order rows by latest activity descending, and keep earlier chain steps as secondary timeline or detail instead of separate top-level rows by default.
+- `pending` leave rows should lead with `edit` and offer `withdraw` as the secondary action. `approved` leave rows should lead with `change` and offer `cancel`. `rejected` or `revision_requested` rows should lead with `resubmit`, while suppressed reviewed rows may add `show again at top` as a secondary recovery action.
+- `withdrawn` rows and fully superseded historical approvals should stay read-only in the history list and should not advertise fresh action CTAs.
+- Use the calendar on `/attendance/leave` as leave-only planning and context, not as a shared attendance correction launcher.
+- Keep one selected-date context area directly below the calendar. If the selected date already belongs to leave-request context, show that governing context before showing a blank new-request flow.
+- Selected-date context on `/attendance/leave` should be governing-context-first: show one primary governing chain card, and keep additional date-related items as compact secondary links rather than a stack of equal cards.
+- If the clicked date falls inside a multi-day leave request, show the governing full leave range in the primary context card rather than reducing it to the clicked day alone.
+- Keep one inline composer below the calendar as the only primary owner of new request, `resubmit`, `change`, and `cancel` flows on `/attendance/leave`.
+- Top-correction and history CTAs should sync the relevant date or range, update selected-date context, and open that inline composer with the right prefilled flow instead of opening separate modal or sheet owners.
+- New request flow should seed the inline composer from the selected date, while final date-range and leave-type refinement remain inside the composer itself.
+- Treat `pending` edit or withdraw and approved-state `change` or `cancel` as history-led actions. Selected-date context may mirror them as supporting actions, but history should remain the primary discovery surface.
+- When approved leave has a pending `change` or `cancel` follow-up, show the current effective approval first and the pending follow-up second so the employee reads the follow-up as requested-but-not-effective-yet.
 - If an employee edits or withdraws a pending request before review, the admin row summary should refresh promptly from the latest projection rather than lingering as stale request state.
 - Employee leave-conflict warnings should communicate operational sensitivity without exposing peer identities or exact staffing counts.
 - Leave approvals that proceed despite a company-event or staffing-cap warning must use explicit confirmation rather than a blind single-click action.

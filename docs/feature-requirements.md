@@ -70,16 +70,26 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a leave balance summary card showing total, used, and remaining leave
-- a request form for annual leave, half-day AM, half-day PM, and hourly leave
-- a list of the current user's leave request chains with date, type, reason, current request status, and latest review timing
+- a stable top summary tier that always shows leave balance plus calm current-state context rather than escalating plain pending requests into the top correction surface
+- a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state
+- a leave-only planning calendar with selected-date context directly below it
+- one inline leave composer below the calendar that owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
+- a flat list of the current user's leave request chains, ordered by latest activity, with each row representing the current governing chain context rather than every request record as a separate top-level row
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
 - reviewed non-approved leave requests should read as completed admin review with a clear employee-side resubmission path; `revision_requested` should emphasize correction guidance, while `rejected` should emphasize refusal of the current version without removing the linked resubmission path
 - a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
+- when multiple reviewed non-approved leave requests qualify for top correction surfacing, a compact candidate list plus one expanded detail that defaults to the most recently reviewed eligible request
+- top correction detail that keeps the prior request summary, reviewed outcome, review reason, next action, primary `resubmit`, and the hide/show-top affordance together
 - reviewed non-approved leave requests may be hidden from top correction auto-surfacing one reviewed request at a time without removing history, rationale, or linked resubmission context
 - history must remain the required recovery surface for a previously suppressed reviewed leave request, while request-context or selected-date context may add optional restore or resubmission entry points without replacing history
 - employees may restore a previously suppressed reviewed leave request from history or request-context surfaces when they want it back in the top correction tier
 - suppressing one reviewed leave request must not hide a different request that only shares the same date, leave type, or root chain history
+- selecting a date with existing leave context must show the governing chain context before offering a blank new-request flow
+- if a clicked date belongs to a multi-day leave range, the selected-date context must show the governing full range rather than only the clicked date
+- selected-date context should lead with one governing chain card and keep other date-related items as compact secondary links rather than a stack of equal full cards
+- pending leave actions should stay history-led with `edit` primary and `withdraw` secondary; approved leave actions should stay history-led with `change` primary and `cancel` secondary
+- suppressed reviewed non-approved rows should keep `resubmit` as the primary action and may add `show again at top` as a secondary recovery action where relevant
+- approved leave with a pending `change` or `cancel` follow-up must show both the current effective approval and the pending follow-up context together so the employee does not misread the follow-up as already effective
 - visible pre-submit conflict guidance for company-event-sensitive or staffing-sensitive dates without exposing team-private details; see `docs/leave-conflict-policy.md`
 
 Validation and policy topics that must stay aligned with narrower contract documents:
