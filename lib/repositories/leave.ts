@@ -131,6 +131,7 @@ function validateRequestableDate(
 }
 
 function validateLeaveTiming(
+  date: string,
   leaveType: SeedLeaveRequest["leaveType"],
   startAt: string | null,
   endAt: string | null,
@@ -148,6 +149,12 @@ function validateLeaveTiming(
   if (Date.parse(endAt) <= Date.parse(startAt)) {
     throw new LeaveRequestValidationError(
       'Hourly leave requests require "endAt" to be later than "startAt"',
+    );
+  }
+
+  if (startAt.slice(0, 10) !== date || endAt.slice(0, 10) !== date) {
+    throw new LeaveRequestValidationError(
+      `Hourly leave request timestamps must fall on target date "${date}"`,
     );
   }
 }
@@ -505,6 +512,7 @@ export function createLeaveRequest(
 ) {
   validateRequestableDate(world, employeeId, input.date);
   validateLeaveTiming(
+    input.date,
     input.leaveType,
     input.leaveType === "hourly" ? input.startAt : null,
     input.leaveType === "hourly" ? input.endAt : null,
@@ -664,6 +672,7 @@ export function updateLeaveRequest(
 
   validateRequestableDate(world, employeeId, nextDate);
   validateLeaveTiming(
+    nextDate,
     nextTiming.leaveType,
     nextTiming.startAt,
     nextTiming.endAt,

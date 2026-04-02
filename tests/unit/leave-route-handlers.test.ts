@@ -144,6 +144,33 @@ describe("leave route handlers", () => {
     });
   });
 
+  it("rejects hourly leave creation when timestamps do not match the target date", async () => {
+    const response = await createLeaveRequestRoute(
+      new Request("https://example.com/api/leave/request", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          leaveType: "hourly",
+          date: "2026-04-14",
+          startAt: "2026-04-15T09:00:00+09:00",
+          endAt: "2026-04-15T11:00:00+09:00",
+          reason: "Cross-date hourly timestamps must be rejected.",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "validation_error",
+        message:
+          'Hourly leave request timestamps must fall on target date "2026-04-14"',
+      },
+    });
+  });
+
   it("returns the documented duplicate active follow-up conflict payload for leave POST", async () => {
     const world = createWorld();
 
@@ -454,6 +481,60 @@ describe("leave route handlers", () => {
         code: "validation_error",
         message:
           'Leave request timing fields "startAt" and "endAt" require an hourly leave request',
+      },
+    });
+  });
+
+  it("rejects hourly leave PATCH payloads when timestamps do not match the target date", async () => {
+    const world = createWorld();
+
+    world.leaveRequests.push({
+      id: "leave_request_emp_001_2026-04-14_hourly",
+      employeeId: "emp_001",
+      requestType: "leave",
+      leaveType: "hourly",
+      date: "2026-04-14",
+      startAt: "2026-04-14T13:00:00+09:00",
+      endAt: "2026-04-14T15:00:00+09:00",
+      reason: "Pending hourly leave request for same-day timestamp validation.",
+      requestedAt: "2026-04-13T09:15:00+09:00",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "leave_request_emp_001_2026-04-14_hourly",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+    setMockSeedWorldForTests(world);
+
+    const response = await patchLeaveRequest(
+      new Request(
+        "https://example.com/api/leave/request/leave_request_emp_001_2026-04-14_hourly",
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            startAt: "2026-04-15T13:00:00+09:00",
+            endAt: "2026-04-15T15:00:00+09:00",
+          }),
+        },
+      ),
+      {
+        params: Promise.resolve({
+          id: "leave_request_emp_001_2026-04-14_hourly",
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "validation_error",
+        message:
+          'Hourly leave request timestamps must fall on target date "2026-04-14"',
       },
     });
   });

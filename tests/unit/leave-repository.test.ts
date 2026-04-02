@@ -475,7 +475,7 @@ describe("leave repository helpers", () => {
     });
   });
 
-  it("rejects invalid hourly intervals, reviewed-request patches, stray hourly fields, and overlap-causing edits", () => {
+  it("rejects invalid hourly intervals, cross-date hourly timestamps, reviewed-request patches, stray hourly fields, and overlap-causing edits", () => {
     expect(() =>
       createLeaveRequest(
         createWorld(),
@@ -486,6 +486,21 @@ describe("leave repository helpers", () => {
           startAt: "2026-04-13T15:00:00+09:00",
           endAt: "2026-04-13T13:00:00+09:00",
           reason: "Inverted hourly intervals must fail.",
+        },
+        buildFixedSeoulDateTime("2026-04-13", "12:00:00"),
+      ),
+    ).toThrowError(LeaveRequestValidationError);
+
+    expect(() =>
+      createLeaveRequest(
+        createWorld(),
+        "emp_001",
+        {
+          leaveType: "hourly",
+          date: fixedSeoulBaselineDate,
+          startAt: "2026-04-14T09:00:00+09:00",
+          endAt: "2026-04-14T11:00:00+09:00",
+          reason: "Hourly leave timestamps must stay on the target date.",
         },
         buildFixedSeoulDateTime("2026-04-13", "12:00:00"),
       ),
@@ -510,6 +525,18 @@ describe("leave repository helpers", () => {
         {
           startAt: "2026-04-14T13:00:00+09:00",
           endAt: "2026-04-14T15:00:00+09:00",
+        },
+      ),
+    ).toThrowError(LeaveRequestValidationError);
+
+    expect(() =>
+      updateLeaveRequest(
+        createPatchOverlapWorld(),
+        "emp_001",
+        "leave_request_emp_001_2026-04-14_root",
+        {
+          startAt: "2026-04-15T13:00:00+09:00",
+          endAt: "2026-04-15T15:00:00+09:00",
         },
       ),
     ).toThrowError(LeaveRequestValidationError);
