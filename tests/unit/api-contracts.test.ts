@@ -511,6 +511,60 @@ describe("admin attendance contracts", () => {
     });
   });
 
+  it("rejects admin today rows whose latestFailedAttempt is not failed", () => {
+    expect(() =>
+      adminAttendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        summary: {
+          checkedInCount: 8,
+          notCheckedInCount: 2,
+          lateCount: 1,
+          onLeaveCount: 1,
+          failedAttemptCount: 1,
+          previousDayOpenCount: 1,
+        },
+        items: [
+          {
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            todayRecord: null,
+            display: {
+              phase: "before_check_in",
+              flags: [],
+              activeExceptions: ["attempt_failed", "not_checked_in"],
+              nextAction: {
+                type: "clock_in",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: {
+              id: "attempt_001",
+              date: "2026-03-30",
+              action: "clock_in",
+              attemptedAt: "2026-03-30T09:03:00+09:00",
+              status: "success",
+              failureReason: null,
+            },
+            previousDayOpenRecord: null,
+            manualRequest: null,
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
   it("parses the documented admin attendance list response and optional name filter", () => {
     expect(
       adminAttendanceListQuerySchema.parse({

@@ -11,12 +11,17 @@ import {
   previousDayOpenRecordSchema,
 } from "@/lib/contracts/shared";
 
+const failedAttendanceAttemptSchema = attendanceAttemptSchema.extend({
+  status: z.literal("failed"),
+  failureReason: z.string().min(1),
+});
+
 const adminAttendanceTodayItemSchema = z.object({
   employee: employeeSummarySchema,
   expectedWorkday: expectedWorkdaySchema,
   todayRecord: attendanceRecordSchema.nullable(),
   display: attendanceDisplaySchema,
-  latestFailedAttempt: attendanceAttemptSchema.nullable(),
+  latestFailedAttempt: failedAttendanceAttemptSchema.nullable(),
   previousDayOpenRecord: previousDayOpenRecordSchema.nullable(),
   manualRequest: manualAttendanceRequestResourceSchema.nullable(),
 });
@@ -27,7 +32,7 @@ const adminAttendanceListRecordSchema = z.object({
   expectedWorkday: expectedWorkdaySchema,
   record: attendanceRecordSchema.nullable(),
   display: attendanceDisplaySchema,
-  latestFailedAttempt: attendanceAttemptSchema.nullable(),
+  latestFailedAttempt: failedAttendanceAttemptSchema.nullable(),
 });
 
 export const adminAttendanceTodayResponseSchema = z.object({

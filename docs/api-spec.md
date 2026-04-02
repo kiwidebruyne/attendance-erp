@@ -832,8 +832,8 @@ Response notes:
 
 - This endpoint is the default same-day operations surface for `/admin/attendance`, not a general-purpose historical ledger.
 - `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
-- When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape, and its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
-- `previousDayOpenRecord` is `null` unless the prior workday is still open.
+- When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape but must keep `status = failed` and a non-empty `failureReason`; its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
+- `previousDayOpenRecord` is `null` unless the prior workday is still open. A populated prior-day `clockOutAt` must not derive `previous_day_checkout_missing`.
 - `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for that employee's current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape and may target the requested workday or the prior workday during carry-over handling.
 - Consumers should treat `manualRequest` as a compact row-level projection for the today operations surface rather than a full request detail payload. If its `date` points at the prior workday during carry-over handling, the row should show that target date explicitly.
 - If an employee edits or withdraws a pending manual request before review, the row should refresh from the latest projection. Approved manual requests should disappear from this embedded surface once canonical attendance writeback completes.
@@ -903,6 +903,7 @@ Response:
 Response notes:
 
 - This endpoint backs the secondary history review mode for `/admin/attendance`, not the default today-first operations surface.
+- When present, `latestFailedAttempt` still represents a failed attempt only, so `status` must be `failed`.
 - Historical rows stay date-scoped and do not embed the compact `manualRequest` projection used by `GET /api/admin/attendance/today`.
 
 ## Request Review Endpoints

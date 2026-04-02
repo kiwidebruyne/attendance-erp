@@ -339,6 +339,7 @@ Important rules:
 - `absent` is a finalized derived interpretation after day-close.
 - Once `absent` is finalized for a still-missing workday, the next employee attendance action becomes `submit_manual_request` instead of `clock_in`.
 - `previous_day_checkout_missing` uses the `09:00` carry-over cutoff in the workday timezone carried by the attendance facts.
+- `previous_day_checkout_missing` applies only while the prior workday still has no `clockOutAt`.
 
 ### Previous Day Open Record Summary
 
@@ -351,6 +352,10 @@ Expected fields:
 - prior clock-in fact
 - missing checkout state
 - expected checkout time
+
+Important rule:
+
+- This summary only drives `previous_day_checkout_missing` while the prior workday remains open, meaning `clockOutAt` is still `null`.
 
 ### Admin Attendance Summary
 

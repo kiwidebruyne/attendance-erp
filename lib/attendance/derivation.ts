@@ -197,6 +197,7 @@ function deriveActiveExceptions({
 
   if (
     previousDayOpenRecord !== null &&
+    previousDayOpenRecord.clockOutAt === null &&
     currentTime !== null &&
     carryOverCutoff !== null &&
     currentTime.getTime() >= carryOverCutoff.getTime()

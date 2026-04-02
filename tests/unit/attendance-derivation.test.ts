@@ -285,6 +285,28 @@ describe("attendance derivation", () => {
     });
   });
 
+  it("does not surface previous_day_checkout_missing for an already closed prior day", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T09:01:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: createPreviousDayOpenRecord({
+          clockOutAt: "2026-03-29T18:05:00+09:00",
+        }),
+      }),
+    ).toEqual({
+      phase: "before_check_in",
+      flags: [],
+      activeExceptions: ["not_checked_in"],
+      nextAction: {
+        type: "clock_in",
+        relatedRequestId: null,
+      },
+    });
+  });
+
   it("uses the attendance timezone when evaluating the carry-over cutoff", () => {
     expect(
       deriveAttendanceDisplay({
