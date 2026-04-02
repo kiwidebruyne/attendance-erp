@@ -52,6 +52,37 @@ function validateLeaveFollowUpFields(
   }
 }
 
+function validateLeavePatchTimingFields(
+  value: {
+    leaveType?: z.infer<typeof leaveTypeSchema>;
+    startAt?: z.infer<typeof apiDateTimeSchema>;
+    endAt?: z.infer<typeof apiDateTimeSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.leaveType === undefined || value.leaveType === "hourly") {
+    return;
+  }
+
+  if (value.startAt !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["startAt"],
+      message:
+        'Invalid input: "startAt" is only allowed when "leaveType" is "hourly"',
+    });
+  }
+
+  if (value.endAt !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["endAt"],
+      message:
+        'Invalid input: "endAt" is only allowed when "leaveType" is "hourly"',
+    });
+  }
+}
+
 const hourlyLeaveRequestBodySchema = z.strictObject({
   leaveType: z.literal("hourly"),
   date: apiDateSchema,
@@ -116,6 +147,8 @@ export const leaveRequestPatchBodySchema = z
           'Invalid input: "status" cannot be combined with editable fields when withdrawing a leave request',
       });
     }
+
+    validateLeavePatchTimingFields(value, ctx);
 
     if (value.status === undefined && !hasEditableFields) {
       ctx.addIssue({

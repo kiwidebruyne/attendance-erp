@@ -112,6 +112,24 @@ export const adminRequestDecisionResponseSchema =
     validateRequestReviewState(value, ctx, "request decision response");
     validateRequestChainProjection(value, ctx);
 
+    if (value.activeRequestId !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["activeRequestId"],
+        message:
+          'Invalid input: "activeRequestId" must be null in a request decision response',
+      });
+    }
+
+    if (value.activeStatus !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["activeStatus"],
+        message:
+          'Invalid input: "activeStatus" must be null in a request decision response',
+      });
+    }
+
     if (value.effectiveRequestId !== value.id) {
       ctx.addIssue({
         code: "custom",

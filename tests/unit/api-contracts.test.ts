@@ -1053,6 +1053,24 @@ describe("leave contracts", () => {
     ).toThrow();
   });
 
+  it("rejects leave patch bodies that mix non-hourly leave types with hourly fields", () => {
+    expect(leaveContracts.leaveRequestPatchBodySchema).toBeDefined();
+
+    expect(() =>
+      leaveContracts.leaveRequestPatchBodySchema?.parse({
+        leaveType: "annual",
+        startAt: "2026-04-03T12:00:00+09:00",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      leaveContracts.leaveRequestPatchBodySchema?.parse({
+        leaveType: "half_day_am",
+        endAt: "2026-04-03T15:00:00+09:00",
+      }),
+    ).toThrow();
+  });
+
   it("parses the documented leave request response", () => {
     expect(
       leaveRequestResponseSchema.parse({
@@ -1734,6 +1752,25 @@ describe("admin request-review contracts", () => {
         effectiveStatus: "pending",
         hasActiveFollowUp: false,
         nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects decision responses that keep active request fields populated", () => {
+    expect(() =>
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        status: "approved",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        reviewComment: null,
+        governingReviewComment: null,
+        activeRequestId: "req_leave_003",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "approved",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
       }),
     ).toThrow();
   });
