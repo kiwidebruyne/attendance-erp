@@ -7,7 +7,11 @@ import type {
   AttendanceTodayResponse,
 } from "@/lib/contracts/attendance";
 import type { LeaveOverviewResponse } from "@/lib/contracts/leave";
-import type { AdminRequestsResponse } from "@/lib/contracts/requests";
+import type {
+  AdminRequestDecisionBody,
+  AdminRequestDecisionResponse,
+  AdminRequestsResponse,
+} from "@/lib/contracts/requests";
 import {
   getAdminAttendanceList,
   getAdminAttendanceToday,
@@ -19,6 +23,7 @@ import {
   findRequestChainByRequestId,
   getAdminRequests,
   type RequestChainLookup,
+  reviewAdminRequest,
 } from "@/lib/repositories/requests";
 import type { CanonicalSeedWorld } from "@/lib/seed/world";
 
@@ -54,6 +59,13 @@ type GetAdminRequestsInput = Readonly<{
   view?: "needs_review" | "completed" | "all";
 }>;
 
+type ReviewAdminRequestInput = Readonly<{
+  requestId: string;
+  decision: AdminRequestDecisionBody;
+  reviewedAt: string;
+  reviewerId: string;
+}>;
+
 export type SeedRepository = Readonly<{
   findEmployeeById: (employeeId: string) => EmployeeEntity | null;
   findRequestChainByRequestId: (requestId: string) => RequestChainLookup | null;
@@ -73,6 +85,9 @@ export type SeedRepository = Readonly<{
     input: GetAdminAttendanceListInput,
   ) => AdminAttendanceListResponse;
   getAdminRequests: (input?: GetAdminRequestsInput) => AdminRequestsResponse;
+  reviewAdminRequest: (
+    input: ReviewAdminRequestInput,
+  ) => AdminRequestDecisionResponse;
 }>;
 
 export type CreateSeedRepositoryOptions = Readonly<{
@@ -149,6 +164,18 @@ export function createSeedRepository(
     getAdminRequests(input = {}) {
       return getAdminRequests(options.world, input);
     },
+
+    reviewAdminRequest(input) {
+      return reviewAdminRequest(
+        options.world,
+        input.requestId,
+        input.decision,
+        {
+          reviewedAt: input.reviewedAt,
+          reviewerId: input.reviewerId,
+        },
+      );
+    },
   });
 }
 
@@ -163,4 +190,5 @@ export { getEmployeeLeaveOverview } from "@/lib/repositories/leave";
 export {
   buildRequestChainProjection,
   getAdminRequests,
+  reviewAdminRequest,
 } from "@/lib/repositories/requests";

@@ -1,4 +1,8 @@
-import type { AdminRequestsResponse } from "@/lib/contracts/requests";
+import type {
+  AdminRequestDecisionBody,
+  AdminRequestDecisionResponse,
+  AdminRequestsResponse,
+} from "@/lib/contracts/requests";
 import type {
   RequestChainProjection,
   RequestQueueView,
@@ -13,6 +17,10 @@ import type { CanonicalSeedWorld } from "@/lib/seed/world";
 type SeedLeaveRequest = CanonicalSeedWorld["leaveRequests"][number];
 type SeedManualRequest = CanonicalSeedWorld["manualAttendanceRequests"][number];
 type SeedRequest = SeedLeaveRequest | SeedManualRequest;
+type SeedAttendanceRecord = CanonicalSeedWorld["attendanceRecords"][number];
+
+export class AdminRequestNotFoundError extends Error {}
+export class AdminRequestConflictError extends Error {}
 
 export type RequestChainLookup = Readonly<{
   rootRequestId: string;
@@ -40,6 +48,10 @@ function getRequestById(
   return getAllRequests(world).find((request) => request.id === requestId);
 }
 
+function getAttendanceRecordId(employeeId: string, date: string) {
+  return `attendance_record_${employeeId}_${date}`;
+}
+
 function getChainRequests(
   world: CanonicalSeedWorld,
   rootRequestId: string,
@@ -55,6 +67,207 @@ function getRequestReviewTime(request: SeedRequest) {
   return request.reviewedAt === null
     ? 0
     : new Date(request.reviewedAt).getTime();
+}
+
+function shouldProjectAdminLeaveConflict(
+  request: SeedLeaveRequest,
+  projection: RequestChainProjection,
+) {
+  return (
+    request.id === projection.activeRequestId ||
+    (projection.activeRequestId !== null &&
+      projection.effectiveStatus === "approved" &&
+      projection.effectiveRequestId === request.id)
+  );
+}
+
+function ensureRequestIsWritable(world: CanonicalSeedWorld, requestId: string) {
+  const request = getRequestById(world, requestId);
+
+  if (request === undefined) {
+    throw new AdminRequestNotFoundError(`Request "${requestId}" was not found`);
+  }
+
+  if (request.supersededByRequestId !== null) {
+    throw new AdminRequestConflictError(
+      `Request "${requestId}" has been superseded and is no longer writable`,
+    );
+  }
+
+  const chain = findRequestChainByRequestId(world, requestId);
+
+  if (chain === null) {
+    throw new AdminRequestNotFoundError(`Request "${requestId}" was not found`);
+  }
+
+  if (chain.activeRequestId !== requestId) {
+    if (chain.activeRequestId !== null) {
+      throw new AdminRequestConflictError(
+        `Request "${requestId}" is not the current active request in its chain`,
+      );
+    }
+
+    if (
+      request.status === "rejected" ||
+      request.status === "revision_requested"
+    ) {
+      throw new AdminRequestConflictError(
+        `Request "${requestId}" is locked after review; submit a linked follow-up instead of reopening the same record`,
+      );
+    }
+  }
+
+  if (request.status !== "pending") {
+    throw new AdminRequestConflictError(
+      `Request "${requestId}" is not writable because its status is "${request.status}"`,
+    );
+  }
+
+  return request;
+}
+
+function appendReviewEvent(
+  world: CanonicalSeedWorld,
+  request: SeedRequest,
+  input: {
+    decision: AdminRequestDecisionBody["decision"];
+    reviewComment: string | null;
+    reviewedAt: string;
+    reviewerId: string;
+  },
+) {
+  world.requestReviewEvents.push({
+    id: `request_review_${request.id}`,
+    requestId: request.id,
+    decision: input.decision,
+    reviewComment: input.reviewComment,
+    reviewedAt: input.reviewedAt,
+    reviewerId: input.reviewerId,
+  });
+}
+
+function calculateWorkMinutes(
+  clockInAt: string | null,
+  clockOutAt: string | null,
+) {
+  if (clockInAt === null || clockOutAt === null) {
+    return null;
+  }
+
+  const workMinutes = Math.round(
+    (new Date(clockOutAt).getTime() - new Date(clockInAt).getTime()) / 60000,
+  );
+
+  if (workMinutes < 0) {
+    throw new AdminRequestConflictError(
+      'Manual attendance writeback requires "clockOutAt" to be later than "clockInAt"',
+    );
+  }
+
+  return workMinutes;
+}
+
+function findAttendanceRecord(
+  world: CanonicalSeedWorld,
+  employeeId: string,
+  date: string,
+) {
+  return (
+    world.attendanceRecords.find(
+      (record) => record.employeeId === employeeId && record.date === date,
+    ) ?? null
+  );
+}
+
+function getOrCreateAttendanceRecord(
+  world: CanonicalSeedWorld,
+  employeeId: string,
+  date: string,
+) {
+  const existingRecord = findAttendanceRecord(world, employeeId, date);
+
+  if (existingRecord !== null) {
+    return existingRecord;
+  }
+
+  const record: SeedAttendanceRecord = {
+    id: getAttendanceRecordId(employeeId, date),
+    employeeId,
+    date,
+    clockInAt: null,
+    clockInSource: null,
+    clockOutAt: null,
+    clockOutSource: null,
+    workMinutes: null,
+    manualRequestId: null,
+  };
+
+  world.attendanceRecords.push(record);
+
+  return record;
+}
+
+function applyApprovedManualAttendanceWriteback(
+  world: CanonicalSeedWorld,
+  request: SeedManualRequest,
+) {
+  const existingRecord = findAttendanceRecord(
+    world,
+    request.employeeId,
+    request.date,
+  );
+  const nextClockInAt =
+    request.action === "clock_in" || request.action === "both"
+      ? request.requestedClockInAt
+      : (existingRecord?.clockInAt ?? null);
+  const nextClockOutAt =
+    request.action === "clock_out" || request.action === "both"
+      ? request.requestedClockOutAt
+      : (existingRecord?.clockOutAt ?? null);
+  const nextWorkMinutes = calculateWorkMinutes(nextClockInAt, nextClockOutAt);
+  const record =
+    existingRecord ??
+    getOrCreateAttendanceRecord(world, request.employeeId, request.date);
+
+  record.clockInAt = nextClockInAt;
+  record.clockInSource =
+    request.action === "clock_in" || request.action === "both"
+      ? "manual"
+      : record.clockInSource;
+  record.clockOutAt = nextClockOutAt;
+  record.clockOutSource =
+    request.action === "clock_out" || request.action === "both"
+      ? "manual"
+      : record.clockOutSource;
+  record.workMinutes = nextWorkMinutes;
+  record.manualRequestId = request.id;
+}
+
+function toAdminRequestDecisionResponse(
+  world: CanonicalSeedWorld,
+  request: SeedRequest,
+  status: AdminRequestDecisionResponse["status"],
+): AdminRequestDecisionResponse {
+  const projection = buildRequestChainProjection(world, request.id);
+
+  if (projection === null) {
+    throw new Error(`Unable to project request chain for ${request.id}`);
+  }
+
+  return {
+    id: request.id,
+    requestType: request.requestType,
+    status,
+    reviewedAt: request.reviewedAt,
+    reviewComment: request.reviewComment,
+    governingReviewComment: projection.governingReviewComment,
+    activeRequestId: projection.activeRequestId,
+    activeStatus: projection.activeStatus,
+    effectiveRequestId: projection.effectiveRequestId,
+    effectiveStatus: projection.effectiveStatus,
+    hasActiveFollowUp: projection.hasActiveFollowUp,
+    nextAction: projection.nextAction,
+  };
 }
 
 export function findRequestChainByRequestId(
@@ -119,24 +332,40 @@ export function buildRequestChainProjection(
     };
   }
 
-  const effectiveRequest = chainRequests.at(-1) ?? request;
+  const latestRequest = chainRequests.at(-1) ?? request;
+  const latestParentRequest =
+    latestRequest.parentRequestId === null
+      ? null
+      : (getRequestById(world, latestRequest.parentRequestId) ?? null);
+  const fallsBackToParentRequest =
+    latestRequest.status === "withdrawn" && latestParentRequest !== null;
+  const keepsApprovedParentEffective =
+    latestParentRequest?.status === "approved" &&
+    latestRequest.requestType === "leave" &&
+    (latestRequest.followUpKind === "change" ||
+      latestRequest.followUpKind === "cancel") &&
+    (latestRequest.status === "rejected" ||
+      latestRequest.status === "revision_requested");
   const fallbackEffectiveRequest =
-    effectiveRequest.status === "withdrawn" &&
-    effectiveRequest.parentRequestId !== null
-      ? (getRequestById(world, effectiveRequest.parentRequestId) ??
-        effectiveRequest)
-      : effectiveRequest;
+    fallsBackToParentRequest || keepsApprovedParentEffective
+      ? latestParentRequest
+      : latestRequest;
+  const governingReviewComment =
+    keepsApprovedParentEffective &&
+    (latestRequest.status === "rejected" ||
+      latestRequest.status === "revision_requested")
+      ? latestRequest.reviewComment
+      : fallbackEffectiveRequest.status === "rejected" ||
+          fallbackEffectiveRequest.status === "revision_requested"
+        ? fallbackEffectiveRequest.reviewComment
+        : null;
 
   return {
     activeRequestId: null,
     activeStatus: null,
     effectiveRequestId: fallbackEffectiveRequest.id,
     effectiveStatus: fallbackEffectiveRequest.status,
-    governingReviewComment:
-      fallbackEffectiveRequest.status === "rejected" ||
-      fallbackEffectiveRequest.status === "revision_requested"
-        ? fallbackEffectiveRequest.reviewComment
-        : null,
+    governingReviewComment,
     hasActiveFollowUp: false,
     nextAction: "none",
   };
@@ -224,16 +453,20 @@ function toQueueItem(
     nextAction: projection.nextAction,
   };
 
+  const leaveItem = {
+    ...commonFields,
+    requestedAt: request.requestedAt,
+  };
+
+  if (!shouldProjectAdminLeaveConflict(request, projection)) {
+    return leaveItem;
+  }
+
   const leaveConflict = buildLeaveConflictProjection(world, {
     employeeId: request.employeeId,
     date: request.date,
     excludePendingRequestId: request.id,
   });
-
-  const leaveItem = {
-    ...commonFields,
-    requestedAt: request.requestedAt,
-  };
 
   if (shouldIncludeLeaveConflict(leaveConflict)) {
     return {
@@ -243,6 +476,31 @@ function toQueueItem(
   }
 
   return leaveItem;
+}
+
+function getCompletedQueueRequest(
+  chainRequests: SeedRequest[],
+  projection: RequestChainProjection,
+) {
+  const effectiveRequest =
+    chainRequests.find(
+      (request) => request.id === projection.effectiveRequestId,
+    ) ?? null;
+  const latestRequest = chainRequests.at(-1) ?? null;
+
+  if (
+    latestRequest?.requestType === "leave" &&
+    (latestRequest.status === "rejected" ||
+      latestRequest.status === "revision_requested") &&
+    (latestRequest.followUpKind === "change" ||
+      latestRequest.followUpKind === "cancel") &&
+    projection.effectiveStatus === "approved" &&
+    projection.effectiveRequestId !== latestRequest.id
+  ) {
+    return latestRequest;
+  }
+
+  return effectiveRequest;
 }
 
 export function getAdminRequests(
@@ -276,10 +534,10 @@ export function getAdminRequests(
         : (chainRequests.find(
             (request) => request.id === projection.activeRequestId,
           ) ?? null);
-    const effectiveRequest =
-      chainRequests.find(
-        (request) => request.id === projection.effectiveRequestId,
-      ) ?? null;
+    const completedRequest = getCompletedQueueRequest(
+      chainRequests,
+      projection,
+    );
 
     if (activeRequest !== null) {
       return {
@@ -289,18 +547,18 @@ export function getAdminRequests(
       };
     }
 
-    if (effectiveRequest === null) {
+    if (completedRequest === null) {
       return null;
     }
 
     return {
       kind: "completed" as const,
-      item: toQueueItem(world, effectiveRequest, projection),
+      item: toQueueItem(world, completedRequest, projection),
       sortTime:
-        effectiveRequest.status === "withdrawn"
-          ? getRequestSubmissionTime(effectiveRequest)
-          : getRequestReviewTime(effectiveRequest),
-      status: effectiveRequest.status,
+        completedRequest.status === "withdrawn"
+          ? getRequestSubmissionTime(completedRequest)
+          : getRequestReviewTime(completedRequest),
+      status: completedRequest.status,
     };
   });
 
@@ -366,6 +624,59 @@ export function getAdminRequests(
           ? completedItems
           : [...needsReviewItems, ...completedItems],
   };
+}
+
+export function reviewAdminRequest(
+  world: CanonicalSeedWorld,
+  requestId: string,
+  decision: AdminRequestDecisionBody,
+  input: {
+    reviewedAt: string;
+    reviewerId: string;
+  },
+): AdminRequestDecisionResponse {
+  const request = ensureRequestIsWritable(world, requestId);
+  const nextStatus: AdminRequestDecisionResponse["status"] =
+    decision.decision === "approve"
+      ? "approved"
+      : decision.decision === "reject"
+        ? "rejected"
+        : "revision_requested";
+  const reviewComment =
+    decision.decision === "approve" ? null : decision.reviewComment;
+
+  if (
+    request.requestType === "manual_attendance" &&
+    nextStatus === "approved"
+  ) {
+    applyApprovedManualAttendanceWriteback(world, request);
+  }
+
+  request.status = nextStatus;
+  request.reviewedAt = input.reviewedAt;
+  request.reviewComment = reviewComment;
+
+  appendReviewEvent(world, request, {
+    decision: decision.decision,
+    reviewComment,
+    reviewedAt: input.reviewedAt,
+    reviewerId: input.reviewerId,
+  });
+
+  if (
+    request.requestType === "leave" &&
+    nextStatus === "approved" &&
+    request.parentRequestId !== null &&
+    (request.followUpKind === "change" || request.followUpKind === "cancel")
+  ) {
+    const parentRequest = getRequestById(world, request.parentRequestId);
+
+    if (parentRequest?.requestType === "leave") {
+      parentRequest.supersededByRequestId = request.id;
+    }
+  }
+
+  return toAdminRequestDecisionResponse(world, request, nextStatus);
 }
 
 function getRequestTimestampForSort(timestamp: string | number) {
