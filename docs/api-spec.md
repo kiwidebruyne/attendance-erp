@@ -624,11 +624,11 @@ Response notes:
 
 - leave-request resources that expose this projection use the field name `leaveConflict`
 - the projection is derived from read-only seeded company-event inputs plus the current leave-chain state
-- it applies only to active pending review and approved-state `change`/`cancel` follow-up review
+- it applies to employee leave-entry warnings and admin review or approval surfaces, including active pending review and approved-state `change`/`cancel` follow-up review
 - `pendingLeaveContext` stays context only and does not become automatic blocking math
 - `staffingRisk = warning` means manual admin approval is required; employee-facing surfaces still allow submission
-- `requiresApprovalConfirmation = true` only when a warning-bearing approval still carries company-event or staffing-risk context
-- when `staffingRisk = warning` and `requiresApprovalConfirmation = true`, admins must use the explicit confirmation path before approving
+- `requiresApprovalConfirmation = true` whenever a warning-bearing approval still carries company-event or staffing-risk context
+- when `requiresApprovalConfirmation = true`, admins must use the explicit confirmation path before approving
 - employee-facing consumers must keep the projection qualitative and must not expose peer names or exact staffing counts
 - employee-only top-surface suppression metadata does not belong in this projection
 

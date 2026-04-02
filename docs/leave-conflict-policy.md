@@ -14,7 +14,7 @@ Company-event records are read-only seeded inputs in the mock world, and this po
 
 - Treat company-event conflicts as strong warnings, not employee-side hard blocks.
 - Treat staffing-cap risk as warning plus manual admin approval, not automatic employee-side rejection.
-- Apply this policy only to active pending leave review and approved-state change/cancel follow-up review; reviewed non-approved history with no active follow-up remains completed history.
+- Apply this policy consistently across employee pre-submit warnings and admin review or approval flows; reviewed non-approved history with no active follow-up remains completed history.
 - Evaluate full-day staffing overflow against the currently effective approved leave for the date plus the leave request being reviewed.
 - Keep other pending leave requests visible as review context, but do not treat them as automatic blocking inputs.
 - Keep half-day and hourly leave visible in review context, but do not promote them into first-pass automatic staffing-cap math.
