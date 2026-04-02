@@ -232,6 +232,19 @@ function validateRequestChainProjection(
         'Invalid input: "hasActiveFollowUp" requires both "activeRequestId" and "activeStatus"',
     });
   }
+
+  if (
+    value.hasActiveFollowUp &&
+    value.activeStatus !== null &&
+    value.activeStatus !== "pending"
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["activeStatus"],
+      message:
+        'Invalid input: "activeStatus" must be "pending" when "hasActiveFollowUp" is true',
+    });
+  }
 }
 
 const manualAttendanceRequestResourceBaseSchema = z
@@ -322,6 +335,24 @@ function validateManualAttendanceRelations(
       path: ["parentRequestId"],
       message:
         'Invalid input: "parentRequestId" is required when "followUpKind" is present',
+    });
+  }
+
+  if (!hasParentRequestId && value.rootRequestId !== value.id) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["rootRequestId"],
+      message:
+        'Invalid input: "rootRequestId" must equal "id" for a root manual attendance request',
+    });
+  }
+
+  if (hasParentRequestId && value.rootRequestId === value.id) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["rootRequestId"],
+      message:
+        'Invalid input: "rootRequestId" must point to the root request, not the current follow-up request',
     });
   }
 }

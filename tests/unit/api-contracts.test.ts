@@ -234,6 +234,20 @@ describe("shared contract schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("requires active follow-up projections to stay pending", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_002",
+        activeStatus: "approved",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "approved",
+        governingReviewComment: null,
+        hasActiveFollowUp: true,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("employee attendance contracts", () => {
@@ -616,6 +630,58 @@ describe("employee attendance contracts", () => {
         effectiveRequestId: "req_manual_002",
         effectiveStatus: "pending",
         hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("enforces manual-attendance root request invariants", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Root request with the wrong root chain id.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_999",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_001",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T12:00:00+09:00",
+        reason: "Follow-up with its own id as the root id.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_002",
+        parentRequestId: "req_manual_001",
+        followUpKind: "resubmission",
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: true,
         nextAction: "admin_review",
       }),
     ).toThrow();
