@@ -13,6 +13,12 @@ import type {
   PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 
+type SuccessfulAttendanceAttempt = Extract<
+  AttendanceAttempt,
+  { status: "success" }
+>;
+type FailedAttendanceAttempt = Extract<AttendanceAttempt, { status: "failed" }>;
+
 function createExpectedWorkday(
   overrides: Partial<ExpectedWorkday> = {},
 ): ExpectedWorkday {
@@ -44,16 +50,34 @@ function createAttendanceRecord(
 }
 
 function createAttendanceAttempt(
-  overrides: Partial<AttendanceAttempt> = {},
+  overrides:
+    | (Partial<SuccessfulAttendanceAttempt> & { status?: "success" })
+    | (Partial<FailedAttendanceAttempt> & { status: "failed" }) = {},
 ): AttendanceAttempt {
+  if (overrides.status === "failed") {
+    const failedOverrides = { ...overrides };
+
+    return {
+      id: "attempt_001",
+      date: "2026-03-30",
+      action: "clock_in",
+      attemptedAt: "2026-03-30T09:03:00+09:00",
+      ...failedOverrides,
+      status: "failed",
+      failureReason: failedOverrides.failureReason ?? "BLE beacon not detected",
+    };
+  }
+
+  const successOverrides = { ...overrides };
+
   return {
     id: "attempt_001",
     date: "2026-03-30",
     action: "clock_in",
     attemptedAt: "2026-03-30T09:03:00+09:00",
+    ...successOverrides,
     status: "success",
     failureReason: null,
-    ...overrides,
   };
 }
 
@@ -77,7 +101,9 @@ function createManualRequest(
     requestType: "manual_attendance",
     action: "clock_in",
     date: "2026-03-30",
-    requestedAt: "2026-03-30T09:15:00+09:00",
+    submittedAt: "2026-03-30T09:15:00+09:00",
+    requestedClockInAt: "2026-03-30T09:00:00+09:00",
+    requestedClockOutAt: null,
     reason: "Beacon retry failed",
     status: "pending",
     reviewedAt: null,

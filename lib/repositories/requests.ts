@@ -1,5 +1,5 @@
+import type { AdminRequestsResponse } from "@/lib/contracts/requests";
 import type {
-  AdminRequestsResponse,
   RequestChainProjection,
   RequestQueueView,
   RequestType,
@@ -158,17 +158,48 @@ function getQueueItemEmployee(world: CanonicalSeedWorld, employeeId: string) {
   };
 }
 
+function toManualAttendanceFollowUpKind(
+  followUpKind: SeedManualRequest["followUpKind"],
+) {
+  return followUpKind === "resubmission" ? followUpKind : null;
+}
+
 function toQueueItem(
   world: CanonicalSeedWorld,
   request: SeedRequest,
   projection: RequestChainProjection,
 ) {
+  if (request.requestType === "manual_attendance") {
+    return {
+      id: request.id,
+      employee: getQueueItemEmployee(world, request.employeeId),
+      requestType: "manual_attendance" as const,
+      subtype: request.action,
+      targetDate: request.date,
+      reason: request.reason,
+      status: request.status,
+      reviewedAt: request.reviewedAt,
+      reviewComment: request.reviewComment,
+      governingReviewComment: projection.governingReviewComment,
+      rootRequestId: request.rootRequestId,
+      parentRequestId: request.parentRequestId,
+      followUpKind: toManualAttendanceFollowUpKind(request.followUpKind),
+      supersededByRequestId: request.supersededByRequestId,
+      activeRequestId: projection.activeRequestId,
+      activeStatus: projection.activeStatus,
+      effectiveRequestId: projection.effectiveRequestId,
+      effectiveStatus: projection.effectiveStatus,
+      hasActiveFollowUp: projection.hasActiveFollowUp,
+      nextAction: projection.nextAction,
+      submittedAt: request.submittedAt,
+    };
+  }
+
   const commonFields = {
     id: request.id,
     employee: getQueueItemEmployee(world, request.employeeId),
-    requestType: request.requestType,
-    subtype:
-      request.requestType === "leave" ? request.leaveType : request.action,
+    requestType: "leave" as const,
+    subtype: request.leaveType,
     targetDate: request.date,
     reason: request.reason,
     status: request.status,
@@ -186,13 +217,6 @@ function toQueueItem(
     hasActiveFollowUp: projection.hasActiveFollowUp,
     nextAction: projection.nextAction,
   };
-
-  if (request.requestType === "manual_attendance") {
-    return {
-      ...commonFields,
-      submittedAt: request.submittedAt,
-    };
-  }
 
   const leaveConflict = buildLeaveConflictProjection(world, {
     employeeId: request.employeeId,
@@ -293,12 +317,20 @@ export function getAdminRequests(
 
   const approvedItems = completedEntries
     .filter((entry) => entry.status === "approved")
-    .sort((left, right) => right.sortTime - left.sortTime)
+    .sort(
+      (left, right) =>
+        getRequestTimestampForSort(right.sortTime) -
+        getRequestTimestampForSort(left.sortTime),
+    )
     .map((entry) => entry.item);
 
   const withdrawnItems = completedEntries
     .filter((entry) => entry.status === "withdrawn")
-    .sort((left, right) => right.sortTime - left.sortTime)
+    .sort(
+      (left, right) =>
+        getRequestTimestampForSort(right.sortTime) -
+        getRequestTimestampForSort(left.sortTime),
+    )
     .map((entry) => entry.item);
 
   const reviewedItems = completedEntries
@@ -306,7 +338,11 @@ export function getAdminRequests(
       (entry) =>
         entry.status === "rejected" || entry.status === "revision_requested",
     )
-    .sort((left, right) => right.sortTime - left.sortTime)
+    .sort(
+      (left, right) =>
+        getRequestTimestampForSort(right.sortTime) -
+        getRequestTimestampForSort(left.sortTime),
+    )
     .map((entry) => entry.item);
 
   const completedItems = [
@@ -326,6 +362,8 @@ export function getAdminRequests(
   };
 }
 
-function getRequestTimestampForSort(timestamp: string) {
-  return new Date(timestamp).getTime();
+function getRequestTimestampForSort(timestamp: string | number) {
+  return typeof timestamp === "number"
+    ? timestamp
+    : new Date(timestamp).getTime();
 }
