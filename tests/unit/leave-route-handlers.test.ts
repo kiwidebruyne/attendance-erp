@@ -55,8 +55,8 @@ describe("leave route handlers", () => {
     ).toMatchObject({
       balance: {
         totalDays: 15,
-        usedDays: 0,
-        remainingDays: 15,
+        usedDays: 1,
+        remainingDays: 14,
       },
       selectedDateContext: {
         date: "2026-04-16",
@@ -70,7 +70,18 @@ describe("leave route handlers", () => {
           requiresApprovalConfirmation: true,
         },
       },
-      requests: [],
+      requests: expect.arrayContaining([
+        expect.objectContaining({
+          id: "leave_request_emp_001_2026-04-15_root",
+          status: "revision_requested",
+          isTopSurfaceSuppressed: false,
+        }),
+        expect.objectContaining({
+          id: "leave_request_emp_001_2026-04-17_root",
+          status: "pending",
+          leaveType: "hourly",
+        }),
+      ]),
     });
   });
 

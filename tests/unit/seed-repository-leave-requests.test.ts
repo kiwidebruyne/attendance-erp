@@ -284,7 +284,9 @@ describe("request-chain and leave repository helpers", () => {
     expect(needsReview.viewFilter).toBe("needs_review");
     expect(needsReview.items.map((item) => item.id)).toEqual([
       "leave_request_emp_010_2026-04-20_resubmission",
+      "leave_request_emp_001_2026-04-17_root",
       "leave_request_emp_004_2026-04-16_change",
+      "leave_request_emp_001_2026-04-18_change",
       "manual_request_emp_011_2026-04-20_root",
       "manual_request_emp_010_2026-04-17_root",
       "leave_request_emp_006_2026-04-17_root",
@@ -296,12 +298,15 @@ describe("request-chain and leave repository helpers", () => {
       "leave_request_emp_005_2026-04-18_root",
       "leave_request_emp_005_2026-04-13_root",
       "manual_request_emp_007_2026-04-03_root",
+      "leave_request_emp_001_2026-04-15_root",
     ]);
 
     expect(all.viewFilter).toBe("all");
     expect(all.items.map((item) => item.id)).toEqual([
       "leave_request_emp_010_2026-04-20_resubmission",
+      "leave_request_emp_001_2026-04-17_root",
       "leave_request_emp_004_2026-04-16_change",
+      "leave_request_emp_001_2026-04-18_change",
       "manual_request_emp_011_2026-04-20_root",
       "manual_request_emp_010_2026-04-17_root",
       "leave_request_emp_006_2026-04-17_root",
@@ -309,6 +314,7 @@ describe("request-chain and leave repository helpers", () => {
       "leave_request_emp_005_2026-04-18_root",
       "leave_request_emp_005_2026-04-13_root",
       "manual_request_emp_007_2026-04-03_root",
+      "leave_request_emp_001_2026-04-15_root",
     ]);
     expect(emp004QueueItem).toMatchObject({
       requestType: "leave",
