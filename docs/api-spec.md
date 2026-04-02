@@ -561,6 +561,7 @@ Response notes:
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
 - hourly leave request items expose `startAt` and `endAt` as the authoritative interval fields, with `hours` derived for display/output only
+- leave request items may also carry `leaveConflict` using the shared `Leave Conflict Projection` when they are in active pending review or approved-state `change`/`cancel` follow-up review
 - each leave request item in this `GET /api/leave/me` employee aggregate also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
 - `isTopSurfaceSuppressed` is not a guaranteed field on every leave-request response shape; it is part of this employee aggregate response because this endpoint backs the leave page's history plus top-correction projection
 - when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and date-relevant selected-date context surfaces but is excluded from top correction auto-surfacing until restored
@@ -606,6 +607,30 @@ Response:
   ]
 }
 ```
+
+### `Leave Conflict Projection`
+
+Represents the read-only conflict context shared by employee leave entry and admin leave review consumers.
+
+Fields:
+
+- `companyEventContext`
+- `effectiveApprovedLeaveContext`
+- `pendingLeaveContext`
+- `staffingRisk`
+- `requiresApprovalConfirmation`
+
+Response notes:
+
+- leave-request resources that expose this projection use the field name `leaveConflict`
+- the projection is derived from read-only seeded company-event inputs plus the current leave-chain state
+- it applies only to active pending review and approved-state `change`/`cancel` follow-up review
+- `pendingLeaveContext` stays context only and does not become automatic blocking math
+- `staffingRisk = warning` means manual admin approval is required; employee-facing surfaces still allow submission
+- `requiresApprovalConfirmation = true` only when a warning-bearing approval still carries company-event or staffing-risk context
+- when `staffingRisk = warning` and `requiresApprovalConfirmation = true`, admins must use the explicit confirmation path before approving
+- employee-facing consumers must keep the projection qualitative and must not expose peer names or exact staffing counts
+- employee-only top-surface suppression metadata does not belong in this projection
 
 ### `POST /api/leave/request`
 
@@ -953,6 +978,7 @@ Query parameters:
 Response notes:
 
 - each item uses `Request Status` plus relation fields and the shared `Request Chain Projection`
+- leave request items may also carry `leaveConflict` using the shared `Leave Conflict Projection` when the active review still has company-event or staffing-risk context; employee-only suppression metadata must not appear in admin items
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
 - `governingReviewComment` stays populated while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up
 - `needs_review` groups chains whose active request has `status = pending` and should be ordered newest pending request first
