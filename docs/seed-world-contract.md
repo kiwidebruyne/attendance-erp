@@ -10,12 +10,12 @@ Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/requ
 
 ## Baseline
 
-| Setting          | Value                                       | Notes                                                                                        |
-| ---------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Timezone         | `Asia/Seoul`                                | All seeded datetimes use `+09:00`.                                                           |
-| Baseline date    | `2026-04-13`                                | Fixed current-date anchor for the seed world.                                                |
-| Baseline weekday | Monday                                      | The baseline stays aligned to a workweek start.                                              |
-| Calendar window  | `2026-03-23` through `2026-04-20` inclusive | Deterministic date range that gives about one month of attendance facts around the baseline. |
+| Setting          | Value                                       | Notes                                                                                                              |
+| ---------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Timezone         | `Asia/Seoul`                                | All seeded datetimes use `+09:00`.                                                                                 |
+| Baseline date    | `2026-04-13`                                | Fixed current-date anchor for the seed world.                                                                      |
+| Baseline weekday | Monday                                      | The baseline stays aligned to a workweek start.                                                                    |
+| Calendar window  | `2026-03-15` through `2026-04-20` inclusive | Deterministic date range that fully covers the employee-facing rolling 30-day attendance view around the baseline. |
 
 ## Seed Composition
 
@@ -24,6 +24,7 @@ Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/requ
 - Seed roughly one month of attendance facts inside the calendar window.
 - Include a realistic mix of normal days, late arrivals, early departures, missing records, failed attendance attempts, leave coverage, and carry-over handling.
 - Keep the default `/attendance` employee's rolling week and month history visibly populated across most seeded workdays so the ledger does not read like a mostly empty fallback table.
+- Keep the default `/attendance` employee's rolling 30-day view mostly normal rather than absence-heavy, with one finalized seeded absence plus one current-day unresolved missing check-in at the baseline.
 - Keep all company-event records read-only seeded inputs.
 
 ## Required Scenario Coverage

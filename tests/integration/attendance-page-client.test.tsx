@@ -436,7 +436,7 @@ describe("AttendancePageClient", () => {
     const absentRow = screen.getByText("결근").closest("tr");
 
     expect(absentRow).not.toBeNull();
-    expect(absentRow).not.toHaveClass("bg-status-danger-soft/42");
+    expect(absentRow).toHaveClass("bg-status-danger-soft/42");
     expect(
       within(rows[1] as HTMLElement).getByText("정상"),
     ).toBeInTheDocument();
@@ -470,7 +470,68 @@ describe("AttendancePageClient", () => {
   });
 
   it("adds historical issue rows into the exception stack", () => {
-    render(<AttendancePageClient initialData={createPageData()} />);
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-13",
+                expectedWorkday: createExpectedWorkday(),
+                record: null,
+                display: createDisplay({
+                  activeExceptions: ["not_checked_in"],
+                }),
+              },
+              {
+                date: "2026-04-11",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-11T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-11T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-11T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-11T18:00:00+09:00",
+                }),
+                record: {
+                  id: "attendance_record_emp_001_2026-04-11",
+                  date: "2026-04-11",
+                  clockInAt: "2026-04-11T09:07:00+09:00",
+                  clockInSource: "beacon",
+                  clockOutAt: "2026-04-11T18:02:00+09:00",
+                  clockOutSource: "beacon",
+                  workMinutes: 535,
+                },
+                display: createDisplay({
+                  phase: "checked_out",
+                  flags: ["late"],
+                  nextAction: {
+                    type: "wait",
+                    relatedRequestId: null,
+                  },
+                }),
+              },
+              {
+                date: "2026-04-09",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-09T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-09T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-09T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
+                }),
+                record: null,
+                display: createDisplay({
+                  activeExceptions: ["absent"],
+                  nextAction: {
+                    type: "submit_manual_request",
+                    relatedRequestId: null,
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
 
     expect(screen.getByText("지금 확인할 예외가 있어요")).toBeInTheDocument();
     expect(
@@ -478,6 +539,11 @@ describe("AttendancePageClient", () => {
         "결근 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "지각 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
+      ),
+    ).not.toBeInTheDocument();
   });
 
   it("opens carry-over correction with the prior date and clock-out defaults", () => {

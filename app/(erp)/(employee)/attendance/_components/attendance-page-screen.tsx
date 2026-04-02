@@ -324,6 +324,15 @@ function hasCorrectionNeededStatus(
   );
 }
 
+function hasEscalatedHistoryStatus(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+) {
+  return getHistoryStatusChips(record, todayDate).some(
+    (status) => status.label === "정정 필요" || status.label === "결근",
+  );
+}
+
 function getHistoricalIssueDescription(issueLabels: string[]) {
   if (issueLabels.length === 1) {
     return `${issueLabels[0]} 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요`;
@@ -338,7 +347,10 @@ function buildHistoricalIssueSurfaces(
   return [...data.history.records]
     .sort((left, right) => right.date.localeCompare(left.date))
     .filter(
-      (record) => record.date < data.date && hasHistoryIssue(record, data.date),
+      (record) =>
+        record.date < data.date &&
+        hasHistoryIssue(record, data.date) &&
+        hasEscalatedHistoryStatus(record, data.date),
     )
     .flatMap((record) => {
       const historyAction = buildHistoryAction(record);
@@ -754,12 +766,15 @@ function HistorySection({
               record,
               data.date,
             );
+            const hasAbsentRow = getHistoryStatusChips(record, data.date).some(
+              (status) => status.label === "결근",
+            );
 
             return (
               <TableRow
                 key={record.date}
                 className={cn(
-                  hasCorrectionNeededRow &&
+                  (hasCorrectionNeededRow || hasAbsentRow) &&
                     "bg-status-danger-soft/42 hover:bg-status-danger-soft/56",
                 )}
               >

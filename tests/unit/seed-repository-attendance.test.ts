@@ -210,10 +210,13 @@ describe("attendance repository helpers", () => {
     });
     const monthResponse = getEmployeeAttendanceHistory(canonicalSeedWorld, {
       employeeId: "emp_001",
-      from: "2026-03-24",
+      from: "2026-03-15",
       to: "2026-04-13",
       now: snapshotNow,
     });
+    const monthWorkdayRecords = monthResponse.records.filter(
+      (record) => record.expectedWorkday.isWorkday,
+    );
 
     expect(
       weekResponse.records.find((record) => record.date === "2026-04-07")
@@ -237,12 +240,62 @@ describe("attendance repository helpers", () => {
       clockOutAt: "2026-04-09T17:21:00+09:00",
     });
     expect(
+      monthResponse.records.find((record) => record.date === "2026-03-16")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-03-16T08:56:00+09:00",
+      clockOutAt: "2026-03-16T18:01:00+09:00",
+    });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-23")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-03-23T08:59:00+09:00",
+      clockOutAt: "2026-03-23T18:03:00+09:00",
+    });
+    expect(
       monthResponse.records.find((record) => record.date === "2026-03-24")
         ?.record,
     ).toMatchObject({
       clockInAt: "2026-03-24T08:58:00+09:00",
       clockOutAt: "2026-03-24T18:02:00+09:00",
     });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-30")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-03-30T08:58:00+09:00",
+      clockOutAt: "2026-03-30T18:06:00+09:00",
+    });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-27")
+        ?.display.activeExceptions,
+    ).toContain("absent");
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-27")
+        ?.display.activeExceptions,
+    ).not.toContain("not_checked_in");
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-04-13")
+        ?.display.activeExceptions,
+    ).toContain("not_checked_in");
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-04-13")
+        ?.display.activeExceptions,
+    ).not.toContain("absent");
+    expect(
+      monthWorkdayRecords.filter((record) => record.record !== null),
+    ).toHaveLength(19);
+    expect(
+      monthWorkdayRecords.filter((record) =>
+        record.display.activeExceptions.includes("absent"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      monthWorkdayRecords.filter((record) =>
+        record.display.activeExceptions.includes("not_checked_in"),
+      ),
+    ).toHaveLength(1);
   });
 
   it("marks past unattended workdays as absent in history and admin lists", () => {

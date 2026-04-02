@@ -3,7 +3,7 @@ export const fixedSeoulUtcOffset = "+09:00" as const;
 export const fixedSeoulBaselineDate = "2026-04-13" as const;
 
 export const fixedSeoulCalendarWindow = Object.freeze({
-  start: "2026-03-23",
+  start: "2026-03-15",
   end: "2026-04-20",
 } as const);
 

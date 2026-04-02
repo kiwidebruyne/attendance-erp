@@ -51,7 +51,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Use `-` for missing attendance fact values in the ledger, use `휴일` for non-workday rows, and keep leave usage in its own column with `연차`, `반차`, or `시간차`.
 - Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, and `정정 필요`, but allow more than one chip on the same row when multiple attendance interpretations coexist.
 - Place carry-over missing-checkout context on the affected workday row itself, for example through a `퇴근 누락` special note, rather than repeating that note on later dates.
-- Tint only rows whose visible status set includes `정정 필요` with a subtle red-family background so correction-needed rows read as operationally distinct before the user opens the row action.
+- Tint only rows whose visible status set includes `정정 필요` or `결근` with a subtle red-family background so correction-needed and finalized-absence rows read as operationally distinct before the user opens the row action.
 - On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
 - If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
@@ -68,7 +68,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
-- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window so table-level problems stay discoverable before the ledger.
+- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window only when those rows still show `정정 필요` or `결근`, so table-level problems stay discoverable before the ledger without promoting pure lateness-only rows.
 - Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
 - Contextual admin summary cards such as checked-in and on-leave should reuse the same fact set, but they must not be turned into queue-driving pseudo-exceptions just to force 1:1 row parity on the default today surface.
 - No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.

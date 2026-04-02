@@ -202,6 +202,36 @@ function minutesBetween(startAt: string, endAt: string) {
 
 const emp001CompletedAttendanceDays = deepFreeze([
   {
+    date: "2026-03-16",
+    clockInAt: buildFixedSeoulDateTime("2026-03-16", "08:56:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-16", "18:01:00"),
+  },
+  {
+    date: "2026-03-17",
+    clockInAt: buildFixedSeoulDateTime("2026-03-17", "08:58:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-17", "18:04:00"),
+  },
+  {
+    date: "2026-03-18",
+    clockInAt: buildFixedSeoulDateTime("2026-03-18", "08:57:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-18", "18:02:00"),
+  },
+  {
+    date: "2026-03-19",
+    clockInAt: buildFixedSeoulDateTime("2026-03-19", "08:59:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-19", "18:00:00"),
+  },
+  {
+    date: "2026-03-20",
+    clockInAt: buildFixedSeoulDateTime("2026-03-20", "08:55:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-20", "18:05:00"),
+  },
+  {
+    date: "2026-03-23",
+    clockInAt: buildFixedSeoulDateTime("2026-03-23", "08:59:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-23", "18:03:00"),
+  },
+  {
     date: "2026-03-24",
     clockInAt: buildFixedSeoulDateTime("2026-03-24", "08:58:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-03-24", "18:02:00"),
@@ -215,6 +245,11 @@ const emp001CompletedAttendanceDays = deepFreeze([
     date: "2026-03-26",
     clockInAt: buildFixedSeoulDateTime("2026-03-26", "09:01:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-03-26", "18:05:00"),
+  },
+  {
+    date: "2026-03-30",
+    clockInAt: buildFixedSeoulDateTime("2026-03-30", "08:58:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-30", "18:06:00"),
   },
   {
     date: "2026-03-31",

@@ -40,7 +40,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 Required UI:
 
 - a stable today card that remains visible even when active exceptions exist and shows the current attendance phase, today's check-in and check-out facts, beacon-auth state, and a display-only current worked-time value when it can be calculated
-- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards so older problem rows are also visible before the table
+- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards only for older rows that still need correction or show finalized absence so table-level problems stay visible before the ledger
 - a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
 - a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
 - carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
