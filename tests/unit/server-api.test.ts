@@ -6,6 +6,8 @@ import {
 } from "@/lib/contracts/attendance";
 import { adminRequestDecisionBodySchema } from "@/lib/contracts/requests";
 import {
+  conflictErrorResponse,
+  notFoundErrorResponse,
   parseJsonBody,
   parseSearchParams,
   validationErrorResponse,
@@ -121,6 +123,35 @@ describe("server api helpers", () => {
       error: {
         code: "validation_error",
         message: 'Invalid query parameter "from": Date is required',
+      },
+    });
+  });
+
+  it("builds conflict responses directly from a message", async () => {
+    const response = conflictErrorResponse(
+      'A manual attendance chain already exists for date "2026-04-13"',
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "conflict",
+        message:
+          'A manual attendance chain already exists for date "2026-04-13"',
+      },
+    });
+  });
+
+  it("builds not-found responses directly from a message", async () => {
+    const response = notFoundErrorResponse(
+      'Manual attendance request "req_missing" was not found',
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "not_found",
+        message: 'Manual attendance request "req_missing" was not found',
       },
     });
   });
