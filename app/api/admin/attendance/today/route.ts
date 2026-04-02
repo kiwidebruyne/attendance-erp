@@ -1,12 +1,14 @@
 import {
-  adminAttendanceBaselineDate,
-  adminAttendanceRepository,
+  createAdminAttendanceRepository,
+  getAdminAttendanceBaselineDate,
 } from "@/app/api/admin/attendance/_lib/repository";
 import { createRequestLogger } from "@/lib/server/logger";
 
 export async function GET(request: Request) {
-  const date = adminAttendanceBaselineDate;
-  const payload = adminAttendanceRepository.getAdminAttendanceToday({ date });
+  const date = getAdminAttendanceBaselineDate();
+  const payload = createAdminAttendanceRepository().getAdminAttendanceToday({
+    date,
+  });
   const requestLogger = createRequestLogger(request, {
     bindings: {
       date,

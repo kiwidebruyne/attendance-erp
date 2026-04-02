@@ -1,4 +1,4 @@
-import { adminAttendanceRepository } from "@/app/api/admin/attendance/_lib/repository";
+import { createAdminAttendanceRepository } from "@/app/api/admin/attendance/_lib/repository";
 import { adminAttendanceListQuerySchema } from "@/lib/contracts/admin-attendance";
 import { parseSearchParams } from "@/lib/server/api";
 import { createRequestLogger } from "@/lib/server/logger";
@@ -41,7 +41,7 @@ export async function GET(request: Request) {
   }
 
   const { from, to, name } = parsed.data;
-  const payload = adminAttendanceRepository.getAdminAttendanceList({
+  const payload = createAdminAttendanceRepository().getAdminAttendanceList({
     from,
     to,
     name,
