@@ -83,14 +83,30 @@ export const expectedWorkdaySchema = z.object({
   leaveCoverage: leaveCoverageSchema.nullable(),
 });
 
-export const attendanceAttemptSchema = z.object({
+const attendanceAttemptBaseSchema = z.object({
   id: z.string().min(1),
   date: apiDateSchema,
   action: attendanceAttemptActionSchema,
   attemptedAt: apiDateTimeSchema,
-  status: attendanceAttemptStatusSchema,
-  failureReason: z.string().min(1).nullable(),
 });
+
+export const successfulAttendanceAttemptSchema =
+  attendanceAttemptBaseSchema.extend({
+    status: z.literal("success"),
+    failureReason: z.null(),
+  });
+
+export const failedAttendanceAttemptSchema = attendanceAttemptBaseSchema.extend(
+  {
+    status: z.literal("failed"),
+    failureReason: z.string().min(1),
+  },
+);
+
+export const attendanceAttemptSchema = z.discriminatedUnion("status", [
+  successfulAttendanceAttemptSchema,
+  failedAttendanceAttemptSchema,
+]);
 
 export const attendanceRecordSchema = z.object({
   id: z.string().min(1),
@@ -250,6 +266,12 @@ export type EmployeeSummary = z.infer<typeof employeeSummarySchema>;
 export type LeaveCoverage = z.infer<typeof leaveCoverageSchema>;
 export type ExpectedWorkday = z.infer<typeof expectedWorkdaySchema>;
 export type AttendanceAttempt = z.infer<typeof attendanceAttemptSchema>;
+export type SuccessfulAttendanceAttempt = z.infer<
+  typeof successfulAttendanceAttemptSchema
+>;
+export type FailedAttendanceAttempt = z.infer<
+  typeof failedAttendanceAttemptSchema
+>;
 export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
 export type AttendanceDisplayNextAction = z.infer<
   typeof attendanceDisplayNextActionSchema

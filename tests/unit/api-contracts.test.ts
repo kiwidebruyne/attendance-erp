@@ -107,6 +107,92 @@ describe("shared contract schemas", () => {
       },
     });
   });
+
+  it("requires failureReason to match attendance attempt status", () => {
+    expect(() =>
+      attendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        employee: {
+          id: "emp_001",
+          name: "Alex Kim",
+          department: "Product",
+        },
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: null,
+        attempts: [
+          {
+            id: "attempt_001",
+            date: "2026-03-30",
+            action: "clock_in",
+            attemptedAt: "2026-03-30T09:03:00+09:00",
+            status: "failed",
+            failureReason: null,
+          },
+        ],
+        manualRequest: null,
+        display: {
+          phase: "before_check_in",
+          flags: [],
+          activeExceptions: ["attempt_failed", "not_checked_in"],
+          nextAction: {
+            type: "clock_in",
+            relatedRequestId: null,
+          },
+        },
+      }),
+    ).toThrow();
+
+    expect(() =>
+      attendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        employee: {
+          id: "emp_001",
+          name: "Alex Kim",
+          department: "Product",
+        },
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: null,
+        attempts: [
+          {
+            id: "attempt_001",
+            date: "2026-03-30",
+            action: "clock_in",
+            attemptedAt: "2026-03-30T09:03:00+09:00",
+            status: "success",
+            failureReason: "BLE beacon not detected",
+          },
+        ],
+        manualRequest: null,
+        display: {
+          phase: "before_check_in",
+          flags: [],
+          activeExceptions: [],
+          nextAction: {
+            type: "clock_in",
+            relatedRequestId: null,
+          },
+        },
+      }),
+    ).toThrow();
+  });
 });
 
 describe("employee attendance contracts", () => {

@@ -2,19 +2,14 @@ import { z } from "zod";
 
 import {
   apiDateSchema,
-  attendanceAttemptSchema,
   attendanceDisplaySchema,
   attendanceRecordSchema,
   attendanceSurfaceManualRequestResourceSchema,
   employeeSummarySchema,
   expectedWorkdaySchema,
+  failedAttendanceAttemptSchema,
   previousDayOpenRecordSchema,
 } from "@/lib/contracts/shared";
-
-const failedAttendanceAttemptSchema = attendanceAttemptSchema.extend({
-  status: z.literal("failed"),
-  failureReason: z.string().min(1),
-});
 
 const adminAttendanceTodayItemSchema = z.object({
   employee: employeeSummarySchema,
