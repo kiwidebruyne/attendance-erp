@@ -3,7 +3,7 @@
 ## Purpose
 
 This document is the primary source of truth for request workflow semantics across manual attendance requests and leave requests.
-It explains when a request may be edited, withdrawn, revised, resubmitted, changed, canceled, or decision-revised, and which cross-screen guarantees must hold for both employee and admin views.
+It explains when a request may be edited, withdrawn, revised, resubmitted, changed, or canceled, and which cross-screen guarantees must hold for both employee and admin views.
 
 This document does not own raw discussion history, full HTTP payload definitions, or final UI layout decisions.
 Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `docs/database-schema.md`, `docs/feature-requirements.md`, and `docs/ui-guidelines.md`.

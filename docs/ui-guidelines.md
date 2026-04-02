@@ -99,7 +99,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Keep selected-date context visible in every queue view, but reduce its visual emphasis in `completed` so historical annotations read as context rather than current pressure.
 - Use dim or outlined historical calendar marks for completed-history items rather than the same style used for active review pressure.
 - On `/attendance/leave`, the top correction tier should filter candidates to reviewed `rejected` or `revision_requested` leave requests with no active follow-up and `isTopSurfaceSuppressed = false`.
-- Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and request-context or selected-date context may add restore or resubmission entry points without replacing history.
+- Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and the top correction detail or selected-date context may add restore or resubmission entry points without replacing history.
 - A later resubmission or later reviewed outcome must be re-evaluated as a new top-correction candidate rather than inheriting an older request record's suppressed state.
 - Let issue `#66` own top-candidate filtering and persistence; keep ordering, default expansion, placement, and CTA hierarchy with issue `#41`.
 - On `/attendance/leave`, keep one stable top summary tier visible even when correction candidates exist. That tier should stay calm, lead with leave balance, and summarize the current leave state without pulling plain `pending` requests into the top correction surface.
@@ -110,7 +110,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - `pending` leave rows should lead with `edit` and offer `withdraw` as the secondary action. `approved` leave rows should lead with `change` and offer `cancel`. `rejected` or `revision_requested` rows should lead with `resubmit`, while suppressed reviewed rows may add `show again at top` as a secondary recovery action.
 - `withdrawn` rows and fully superseded historical approvals should stay read-only in the history list and should not advertise fresh action CTAs.
 - Use the calendar on `/attendance/leave` as leave-only planning and context, not as a shared attendance correction launcher.
-- Keep one selected-date context area directly below the calendar. If the selected date already belongs to leave-request context, show that governing context before showing a blank new-request flow.
+- Keep one selected-date context area directly below the calendar. If the selected date already belongs to an existing leave request chain, show that governing context before showing a blank new-request flow.
 - Selected-date context on `/attendance/leave` should be governing-context-first: show one primary governing chain card, and keep additional date-related items as compact secondary links rather than a stack of equal cards.
 - If the clicked date falls inside a multi-day leave request, show the governing full leave range in the primary context card rather than reducing it to the clicked day alone.
 - Keep one inline composer below the calendar as the only primary owner of new request, `resubmit`, `change`, and `cancel` flows on `/attendance/leave`.
