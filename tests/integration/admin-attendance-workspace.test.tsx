@@ -76,11 +76,11 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getAllByText("시간차").length).toBeGreaterThan(0);
     expect(screen.getByText("전체 팀 장부")).toBeInTheDocument();
     expect(screen.getAllByText("전날 미퇴근").length).toBeGreaterThan(0);
-    const noRecordRow = screen.getAllByText("Nari Oh")[0]?.closest("tr");
+    const noRecordRow = screen.getAllByText("오나리")[0]?.closest("tr");
     expect(noRecordRow).not.toBeNull();
     expect(noRecordRow).toHaveTextContent("출근 기록 없음");
-    expect(noRecordRow).toHaveTextContent("Finance");
-    expect(screen.getAllByText("Minji Park").length).toBeGreaterThan(0);
+    expect(noRecordRow).toHaveTextContent("재무");
+    expect(screen.getAllByText("박민지").length).toBeGreaterThan(0);
   });
 
   it("shows the prior-workday target date for the carry-over row", () => {
@@ -96,7 +96,7 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(screen.getAllByText("Minji Park").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("박민지").length).toBeGreaterThan(0);
     expect(screen.getAllByText("2026-04-10").length).toBeGreaterThan(0);
   });
 
@@ -113,9 +113,7 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    const pendingRequestRow = screen
-      .getAllByText("Hyunwoo Baek")[0]
-      ?.closest("tr");
+    const pendingRequestRow = screen.getAllByText("백현우")[0]?.closest("tr");
 
     expect(pendingRequestRow).not.toBeNull();
     expect(pendingRequestRow).toHaveTextContent("시도 실패");
@@ -169,53 +167,53 @@ describe("AdminAttendanceWorkspace", () => {
     const { rerender } = render(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-04-07&to=2026-04-13&name=alex",
+          "?mode=history&from=2026-04-07&to=2026-04-13&name=없는이름",
         )}
         historyResponse={repository.getAdminAttendanceList({
           from: "2026-04-07",
           to: "2026-04-13",
-          name: "alex",
+          name: "없는이름",
         })}
       />,
     );
 
-    expect(screen.getByDisplayValue("alex")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("없는이름")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-07")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-13")).toBeInTheDocument();
 
     rerender(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-04-08&to=2026-04-12&name=junho",
+          "?mode=history&from=2026-04-08&to=2026-04-12&name=준호",
         )}
         historyResponse={repository.getAdminAttendanceList({
           from: "2026-04-08",
           to: "2026-04-12",
-          name: "junho",
+          name: "준호",
         })}
       />,
     );
 
-    expect(screen.getByDisplayValue("junho")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("준호")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-08")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-12")).toBeInTheDocument();
   });
 
-  it("renders the history empty state for the alex name filter", () => {
+  it("renders the history empty state for a non-matching Hangul name filter", () => {
     render(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-04-07&to=2026-04-13&name=alex",
+          "?mode=history&from=2026-04-07&to=2026-04-13&name=없는이름",
         )}
         historyResponse={repository.getAdminAttendanceList({
           from: "2026-04-07",
           to: "2026-04-13",
-          name: "alex",
+          name: "없는이름",
         })}
       />,
     );
 
-    expect(screen.getByDisplayValue("alex")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("없는이름")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-07")).toBeInTheDocument();
     expect(screen.getByDisplayValue("2026-04-13")).toBeInTheDocument();
     expect(
@@ -234,8 +232,8 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(getRowByEmployeeName("Minji Park")).toHaveTextContent("전날 미퇴근");
-    expect(getRowByEmployeeName("Hyunwoo Baek")).toHaveTextContent("시도 실패");
+    expect(getRowByEmployeeName("박민지")).toHaveTextContent("전날 미퇴근");
+    expect(getRowByEmployeeName("백현우")).toHaveTextContent("시도 실패");
     expect(
       screen.queryByText("오늘 지각으로 기록됐어요."),
     ).not.toBeInTheDocument();
@@ -271,10 +269,10 @@ describe("AdminAttendanceWorkspace", () => {
         state={createState()}
         todayExceptionRows={[
           {
-            department: "Operations",
+            department: "운영",
             detail: "결근 상태가 남아 있어요",
             employeeId: "emp_absent",
-            employeeName: "Absent Employee",
+            employeeName: "결근 직원",
             exceptionType: "결근",
             id: "exception-absent-row",
             referenceDate: "2026-04-10",
@@ -296,7 +294,7 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(getRowByEmployeeName("Absent Employee")).toHaveClass(
+    expect(getRowByEmployeeName("결근 직원")).toHaveClass(
       "bg-status-danger-soft/28",
     );
   });

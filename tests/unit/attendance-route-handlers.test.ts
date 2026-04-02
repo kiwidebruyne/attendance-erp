@@ -486,7 +486,7 @@ describe("employee attendance route handlers", () => {
       await (
         await getAdminAttendanceList(
           new Request(
-            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=minji",
+            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=민지",
           ),
         )
       ).json(),
@@ -539,7 +539,7 @@ describe("employee attendance route handlers", () => {
       await (
         await getAdminAttendanceList(
           new Request(
-            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=minji",
+            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=민지",
           ),
         )
       ).json(),

@@ -418,8 +418,7 @@ describe("leave repository helpers", () => {
       activeStatus: null,
       effectiveRequestId: "leave_request_emp_010_2026-04-20_root",
       effectiveStatus: "rejected",
-      governingReviewComment:
-        "Please resubmit after adjusting the staffing plan.",
+      governingReviewComment: "운영 인력 계획을 조정한 뒤 다시 제출해 주세요.",
       nextAction: "none",
     });
 

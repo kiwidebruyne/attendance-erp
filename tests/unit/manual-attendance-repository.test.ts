@@ -184,7 +184,7 @@ describe("manual attendance repository helpers", () => {
       requestType: "manual_attendance",
       status: "pending",
       governingReviewComment:
-        "Please submit a follow-up if the beacon issue continues.",
+        "비콘 문제가 계속되면 후속 정정 요청을 다시 제출해 주세요.",
       rootRequestId: chain.rootRequestId,
       parentRequestId: chain.rootRequestId,
       followUpKind: "resubmission",
@@ -396,7 +396,7 @@ describe("manual attendance repository helpers", () => {
         effectiveRequestId: chain.rootRequestId,
         effectiveStatus: "rejected",
         governingReviewComment:
-          "Please submit a follow-up if the beacon issue continues.",
+          "비콘 문제가 계속되면 후속 정정 요청을 다시 제출해 주세요.",
         nextAction: "none",
       },
     );

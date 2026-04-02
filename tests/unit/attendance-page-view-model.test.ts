@@ -110,8 +110,8 @@ function createTodayResponse(
     date: "2026-04-13",
     employee: {
       id: "emp_001",
-      name: "Minji Park",
-      department: "Operations",
+      name: "박민지",
+      department: "운영",
     },
     expectedWorkday: createExpectedWorkday(),
     todayRecord: null,
