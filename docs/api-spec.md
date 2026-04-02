@@ -542,7 +542,7 @@ Response notes:
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
 - each leave request item in this `GET /api/leave/me` employee aggregate also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
 - `isTopSurfaceSuppressed` is not a guaranteed field on every leave-request response shape; it is part of this employee aggregate response because this endpoint backs the leave page's history plus top-correction projection
-- when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and request-context surfaces but is excluded from top correction auto-surfacing until restored
+- when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and date-relevant selected-date context surfaces but is excluded from top correction auto-surfacing until restored
 - top-surface suppression persists across sessions and browser instances for the owning employee account
 - admin request endpoints do not expose `isTopSurfaceSuppressed`
 
