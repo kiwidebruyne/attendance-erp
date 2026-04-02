@@ -79,7 +79,7 @@ describe("AdminAttendanceWorkspace", () => {
 
     expect(screen.getByText("실패한 시도")).toBeInTheDocument();
     expect(screen.getByText("오늘 확인 필요")).toBeInTheDocument();
-    const noRecordRow = screen.getByText("Junho Lee").closest("li");
+    const noRecordRow = screen.getAllByText("출근 기록 없음")[0]?.closest("li");
     expect(noRecordRow).not.toBeNull();
     expect(noRecordRow).toHaveTextContent("출근 기록 없음");
     expect(noRecordRow).toHaveTextContent("기록 없음");

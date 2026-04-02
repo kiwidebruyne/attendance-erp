@@ -55,8 +55,8 @@ describe("leave route handlers", () => {
     ).toMatchObject({
       balance: {
         totalDays: 15,
-        usedDays: 1.38,
-        remainingDays: 13.62,
+        usedDays: 2.38,
+        remainingDays: 12.62,
       },
       selectedDateContext: {
         date: "2026-04-16",

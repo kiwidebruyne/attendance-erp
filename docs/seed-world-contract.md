@@ -3,7 +3,7 @@
 ## Purpose
 
 This document is the primary source of truth for the deterministic mock seed world used by the shared attendance, leave, and request surfaces.
-It defines one fixed Asia/Seoul baseline date, one deterministic calendar window, and the minimum seeded scenario mix that the mock API and screens must share.
+It defines one fixed Asia/Seoul baseline timestamp, one deterministic calendar window, and the minimum seeded scenario mix that the mock API and screens must share.
 
 This document does not redefine attendance, request, or leave semantics.
 Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/request-lifecycle-model.md`, `docs/leave-conflict-policy.md`, `docs/feature-requirements.md`, `docs/api-spec.md`, and `docs/database-schema.md`.

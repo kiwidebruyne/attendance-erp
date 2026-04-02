@@ -106,8 +106,16 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Do not frame reviewed non-approved admin rows or detail surfaces as "waiting for employee".
 - Do not show employee-resubmit CTA copy or guidance inside admin detail for those reviewed-history cases.
 - Keep their rationale visible without implying new admin action on the same record.
-- Use a queue-first workspace on `/admin/attendance/requests`: the queue is the primary entry surface, and the current queue selection should drive both selected-date context and detail.
-- Treat the selected-date context calendar as a supporting surface attached to detail rather than a third equal primary column.
+- Use a two-row review workspace on `/admin/attendance/requests`: render the manual-attendance table first and the leave table second, with each row pairing its own table on the left and its own right-side detail/review panel.
+- Do not add a top summary strip on `/admin/attendance/requests`; the workspace should start with the two stacked tables.
+- Keep filters in the table headers instead of a separate toolbar. Use the same clickable header affordance for every filterable column so the dropdown interaction is predictable before opening it.
+- Put name search inside the `이름` header popover for each table, keeping manual-attendance and leave filtering independent.
+- Use a date-range popover for the `대상일` header with `오늘 / 최근 7일 / 최근 30일` presets plus direct `시작일 / 종료일` inputs.
+- Remove the `후속 요청` column from the review tables; keep follow-up context inside the right-side detail surface.
+- Add a `시간` column to the leave table and show `HH:MM-HH:MM` only for hourly leave rows, using `-` for non-hourly rows.
+- Give each section a wider right-side review workspace and split it into a read-only detail surface plus a separate action surface when the request is actionable.
+- Treat chain context and request summary as section-local supporting detail inside the detail surface rather than a third equal primary column.
+- Keep the table header as the owner of the filter grammar; the right-side review workspace should not absorb the table search or column filters.
 - Keep the same workspace grammar across `needs_review`, `completed`, and `all`, but lower the visual emphasis of `completed` so it reads as review history rather than current action pressure.
 - In `all`, section actionable review work ahead of completed review history instead of mixing both into one undifferentiated list.
 - In `all`, use the meaning-first section labels `검토 필요` and `완료된 검토 기록` rather than state-machine jargon.
@@ -126,22 +134,27 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Let reviewed `revision_requested` history read as correction-oriented and reviewed `rejected` history read as refusal-oriented without implying an admin-side next step.
 - For actionable review detail, keep review actions in a sticky footer rather than in the queue row. Hide those actions entirely on completed-history detail and replace them with quiet read-only outcome copy that owns the admin display of `nextAction = none`.
 - After a review action, update the queue row, selected detail state, and calendar annotations immediately. When another actionable item remains in the current view, advance to it automatically.
-- Keep selected-date context visible in every queue view, but reduce its visual emphasis in `completed` so historical annotations read as context rather than current pressure.
+- Keep section-local review panels visible in every queue view, but reduce their visual emphasis in `completed` so historical annotations read as context rather than current pressure.
 - Use dim or outlined historical calendar marks for completed-history items rather than the same style used for active review pressure.
 - On `/attendance/leave`, the top correction tier should filter candidates to reviewed `rejected` or `revision_requested` leave requests with no active follow-up and `isTopSurfaceSuppressed = false`.
-- Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and the top correction detail or selected-date context may add restore or resubmission entry points without replacing history.
+- Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and the top correction row or selected-date context may add restore or resubmission entry points without replacing history.
 - A later resubmission or later reviewed outcome must be re-evaluated as a new top-correction candidate rather than inheriting an older request record's suppressed state.
 - Let issue `#66` own top-candidate filtering and persistence; keep ordering, default expansion, placement, and CTA hierarchy with issue `#41`.
-- On `/attendance/leave`, keep one stable top summary tier visible even when correction candidates exist. That tier should stay calm, lead with leave balance, and summarize the current leave state without pulling plain `pending` requests into the top correction surface.
-- Place the conditional top correction tier directly below the stable summary tier and above the calendar so reviewed non-approved leave context reads as page-local action guidance before planning context.
-- When multiple reviewed non-approved leave requests qualify for top correction surfacing, use a compact list plus one expanded detail instead of stacking multiple full correction cards. Expand the most recently reviewed eligible request by default.
-- The expanded top-correction detail should keep prior request summary, current reviewed outcome, latest review reason, next action, primary `resubmit`, and the hide/show-top affordance in one visible block.
-- Keep `/attendance/leave` history chain-first rather than record-first. Use one flat row per governing request chain, order rows by latest activity descending, and keep earlier chain steps as secondary timeline or detail instead of separate top-level rows by default.
+- On `/attendance/leave`, keep one stable top summary tier visible even when correction candidates exist. That tier should stay calm, use one combined summary card, lead with the current leave balance, and summarize the current leave state through four chain counts in this order: `revision_requested`, `approved`, `pending`, and `rejected`.
+- Place the conditional top correction tier directly below the stable summary tier and above the history row so reviewed non-approved leave context reads as page-local action guidance before history and planning context.
+- Render the top correction tier as a table-style recovery surface so multiple reviewed non-approved leave requests can be compared at once without card switching.
+- Each top-correction row should keep prior request summary, current reviewed outcome, latest review reason, next action, the primary `resubmit` action, and the hide/show-top affordance visible together.
+- Keep `/attendance/leave` history chain-aware, but render the bottom leave history as a table anchored to the governing request with columns centered on `유형`, `날짜`, `세부사항`, `상태`, `사유`, and `작업`.
+- In that history table, show `세부사항` as the leave-detail label itself: `annual -> 연차`, `half_am -> 오전 반차`, `half_pm -> 오후 반차`, and hourly time ranges.
+- Do not add a separate `최근 활동` column to the leave history table.
+- Leave history state cells should show only a badge without extra descriptive text, and long reason text should wrap naturally instead of clamping.
 - `pending` leave rows should lead with `edit` and offer `withdraw` as the secondary action. `approved` leave rows should lead with `change` and offer `cancel`. `rejected` or `revision_requested` rows should lead with `resubmit`, while suppressed reviewed rows may add `show again at top` as a secondary recovery action.
 - `withdrawn` rows and fully superseded historical approvals should stay read-only in the history list and should not advertise fresh action CTAs.
 - Use the calendar on `/attendance/leave` as leave-only planning and context, not as a shared attendance correction launcher.
-- Keep one selected-date context area directly below the calendar. If the selected date already belongs to an existing leave request chain, show that governing context before showing a blank new-request flow.
-- Selected-date context on `/attendance/leave` should be governing-context-first: show one primary governing chain card, and keep additional date-related items as compact secondary links rather than a stack of equal cards.
+- The calendar panel header should show only the month label and prev/next month controls; remove the calendar title, explanatory description, and `새 요청 시작` button.
+- Keep one lower planning row that places the calendar, selected-date context, and inline composer side by side on desktop. On narrow widths, stack the same three surfaces in that order.
+- Keep the selected-date context immediately after the calendar in the lower planning order. If the selected date already belongs to an existing leave request chain, show that governing context before showing a blank new-request flow. The selected-date panel remains the entry point for starting a new request.
+- Selected-date context on `/attendance/leave` should be governing-context-first, but expressed as field-separated factual rows instead of long prose summary cards. Lead with `유형`, `날짜`, `세부사항`, `상태`, and `사유`, then append optional `검토 메모`, `현재 승인 일정`, and conflict rows only when they add operational meaning.
 - If the clicked date falls inside a multi-day leave request, show the governing full leave range in the primary context card rather than reducing it to the clicked day alone.
 - Keep one inline composer below the calendar as the only primary owner of new request, `resubmit`, `change`, and `cancel` flows on `/attendance/leave`.
 - Top-correction and history CTAs should sync the relevant date or range, update selected-date context, and open that inline composer with the right prefilled flow instead of opening separate modal or sheet owners.

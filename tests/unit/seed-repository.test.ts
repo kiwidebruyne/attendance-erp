@@ -150,7 +150,7 @@ describe("seed repository", () => {
     ).toMatchObject({
       date: "2026-04-13",
       summary: {
-        checkedInCount: 1,
+        checkedInCount: 9,
       },
     });
 

@@ -71,24 +71,26 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a stable top summary tier that always shows leave balance plus calm current-state context rather than escalating plain pending requests into the top correction surface
-- a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state
-- a leave-only planning calendar with selected-date context directly below it
-- one inline leave composer below the calendar that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
-- a flat list of the current user's leave request chains, ordered by latest activity, with each row representing the current governing chain context rather than every request record as a separate top-level row
-- each leave-chain history row should summarize the governed date or date range, leave type, employee reason summary, current governing status, and latest review timing while earlier chain steps remain secondary chain detail rather than separate top-level rows
+- a stable top summary tier that always shows one combined summary card led by the current leave balance plus calm current-state counts for `revision_requested`, `approved`, `pending`, and `rejected` chains rather than escalating plain pending requests into the top correction surface
+- a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state, rendered as a table-style recovery surface rather than an expanded detail card
+- a full-width leave history row below the planning workspace so planning stays calendar-first while history remains the required recovery surface
+- a lower planning workspace that keeps the leave-only calendar, selected-date context, and inline composer adjacent on desktop and stacked in the same order on narrow widths
+- one inline leave composer in that planning workspace that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
+- a bottom leave history table with columns centered on `유형`, `날짜`, `세부사항`, `상태`, `사유`, and `작업`, with no separate `최근 활동` column; `세부사항` should keep `annual -> 연차`, `half_am -> 오전 반차`, `half_pm -> 오후 반차`, and hourly time ranges
+- the leave history table should keep state cells as badge-only values without extra descriptive text, and long reason text should wrap naturally instead of clamping
+- the leave history table should remain chain-aware, but the visible row structure should stay anchored to the governing request rather than splitting earlier chain steps into separate top-level rows
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
 - reviewed non-approved leave requests should read as completed admin review with a clear employee-side resubmission path; `revision_requested` should emphasize correction guidance, while `rejected` should emphasize refusal of the current version without removing the linked resubmission path
 - a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
-- when multiple reviewed non-approved leave requests qualify for top correction surfacing, a compact candidate list plus one expanded detail that defaults to the most recently reviewed eligible request
-- top correction detail that keeps the prior request summary, reviewed outcome, review reason, next action, primary `resubmit`, and the hide/show-top affordance together
+- each top correction row should keep the prior request summary, reviewed outcome, review reason, next action, primary `resubmit`, and the hide/show-top affordance visible together without relying on a separate expanded detail card
 - reviewed non-approved leave requests may be hidden from top correction auto-surfacing one reviewed request at a time without removing history, rationale, or linked resubmission context
-- history must remain the required recovery surface for a previously suppressed reviewed leave request, while the top correction detail or selected-date context may add optional restore or resubmission entry points without replacing history
+- history must remain the required recovery surface for a previously suppressed reviewed leave request, while the top correction row or selected-date context may add optional restore or resubmission entry points without replacing history
 - employees may restore a previously suppressed reviewed leave request from history or selected-date context surfaces when they want it back in the top correction tier
 - suppressing one reviewed leave request must not hide a different request that only shares the same date, leave type, or root chain history
 - selecting a date with existing leave context must show the governing chain context before offering a blank new-request flow
 - if a clicked date belongs to a multi-day leave range, the selected-date context must show the governing full range rather than only the clicked date
-- selected-date context should lead with one governing chain card and keep other date-related items as compact secondary links rather than a stack of equal full cards
+- selected-date context should show the governing request through field-separated factual rows such as `유형`, `날짜`, `세부사항`, `상태`, and `사유`, then append optional `검토 메모`, `현재 승인 일정`, and conflict rows only when relevant
+- the calendar panel header should show only the month label and prev/next month controls, removing the calendar title, explanatory description, and `새 요청 시작` button
 - top-correction and history CTAs should converge on the same inline composer so the write-flow owner stays unambiguous across new request, `resubmit`, `change`, and `cancel`
 - pending leave actions should stay history-led with `edit` primary and `withdraw` secondary; approved leave actions should stay history-led with `change` primary and `cancel` secondary
 - suppressed reviewed non-approved rows should keep `resubmit` as the primary action and may add `show again at top` as a secondary recovery action where relevant
@@ -136,10 +138,16 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a request table covering manual attendance requests and leave requests
+- two request tables covering manual attendance requests and leave requests
 - filter tabs for needs review, completed, and all
 - default landing tab is `needs_review`; initial load uses the tab only and does not imply additional default text or date filters
-- a queue-first review workspace where the request table is the primary entry surface and the selected request drives supporting selected-date context plus detail
+- no top summary strip; the page body should render two stacked review rows in fixed order, with the manual-attendance table first and the leave table second
+- each table should keep its own header-triggered column filters and its own right-side detail/review panel; the `이름` column owns name search inside its header popover
+- each table should allocate a wider right-side review workspace that splits detail and actions into separate surfaces, with completed-history panels staying read-only and lower-emphasis
+- manual-attendance rows should use the visible columns `이름 / 부서 / 정정 종류 / 대상일 / 요청 상태 / 반영 상태 / 사유`
+- leave rows should use the visible columns `이름 / 부서 / 휴가 종류 / 시간 / 대상일 / 요청 상태 / 반영 상태 / 운영 경고 / 사유`, with `시간` showing `HH:MM-HH:MM` only for hourly leave and `-` otherwise
+- do not show a `후속 요청` table column in the admin review workspace; keep follow-up context inside detail only
+- the `대상일` header filter should support `오늘 / 최근 7일 / 최근 30일` presets plus direct `시작일 / 종료일` range input
 - `needs_review` rows are ordered newest pending request first
 - approve, reject, and request-revision actions anchored in actionable request detail rather than queue rows
 - explicit review-comment input when rejecting a request or requesting revision
@@ -161,7 +169,7 @@ Required UI:
 - manual attendance and leave requests should share the route but use different review summaries: manual review should lead with correction summary, target workday, and current/effective state, while leave review should lead with the current request, effective leave, and risk summary
 - visible company-event, effective approved leave, pending leave context, and staffing-cap risk before approving a leave request; see `docs/leave-conflict-policy.md`
 - a second confirmation surface only when approving a leave request that still carries a company-event or staffing-cap warning
-- selected-date context should stay available across `needs_review`, `completed`, and `all`, while completed-history context uses lower-emphasis historical treatment rather than the same pressure styling as actionable review work
+- each table row should keep its chain context and review summary in the section-local right-side detail panel across `needs_review`, `completed`, and `all`, while completed-history panels use lower-emphasis historical treatment rather than the same pressure styling as actionable review work
 
 Decision points for later issue planning:
 
@@ -178,7 +186,7 @@ Decision points for later issue planning:
 - Top-of-screen warnings should take priority over buried table-only states when the user needs immediate action.
 - Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, row-local missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
 - Every important state should include the current state, the reason, and the next action.
-- Notification surfaces should be layered and deduplicated: summary cards, exception stacks, queue rows, detail panels, selected-date context, and history rows may repeat the same state only as supporting context; the highest-priority visible surface owns the primary next action.
+- Notification surfaces should be layered and deduplicated: summary cards, exception stacks, queue rows, detail panels, and history rows may repeat the same state only as supporting context; the highest-priority visible surface owns the primary next action.
 - Warning, badge, and CTA cleanup after approvals, rejections, resubmissions, withdrawals, or successful corrections must happen consistently across employee and admin surfaces, and stale lower-priority copies should disappear when the governing state changes.
 - Request surfaces should expose the same active request, effective status, and review comment to both employees and admins, while employee resubmission prompting may remain page-local.
 - On admin completed-history surfaces, the "next action" rule should not be interpreted as employee-resubmit guidance inside the admin workspace; those surfaces should read as no further admin action on the same record.

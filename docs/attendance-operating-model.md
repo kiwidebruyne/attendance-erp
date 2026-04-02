@@ -78,11 +78,11 @@ Important rule:
 
 ### No Successful Check-In After Expected Start
 
-| Moment                                                           | Canonical Fact Changes                    | Derived Result                                        | Required Surface Behavior                                                                      |
-| ---------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `09:00` passes with no successful check-in and no covering leave | no fact change                            | `activeExceptions` includes `not_checked_in`          | employee sees a missing-record warning with the next action; admin queue includes the employee |
-| The employee has failed attempts but still no success            | failed `attendanceAttempt` rows may exist | `attempt_failed` and `not_checked_in` may both matter | show failure context first, then the unresolved missing attendance fact                        |
-| Day closes with no successful check-in                           | still no `attendanceRecord`               | `absent` may be derived                               | use finalized absence only after the real-time operating window has ended                      |
+| Moment                                                           | Canonical Fact Changes                    | Derived Result                                        | Required Surface Behavior                                                                                    |
+| ---------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `09:00` passes with no successful check-in and no covering leave | no fact change                            | `activeExceptions` includes `not_checked_in`          | employee sees a missing-record warning with the next action; admin top exception table includes the employee |
+| The employee has failed attempts but still no success            | failed `attendanceAttempt` rows may exist | `attempt_failed` and `not_checked_in` may both matter | show failure context first, then the unresolved missing attendance fact                                      |
+| Day closes with no successful check-in                           | still no `attendanceRecord`               | `absent` may be derived                               | use finalized absence only after the real-time operating window has ended                                    |
 
 ### Prior-Day Open Checkout and Overnight Writeback
 

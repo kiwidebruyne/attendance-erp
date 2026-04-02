@@ -89,17 +89,17 @@ describe("canonical seed world", () => {
       leaveRequestId: "leave_request_emp_005_2026-04-18_root",
     });
     expect(seedScenarioAnchors.manualAttendanceResubmissionChain).toEqual({
-      employeeId: "emp_009",
-      rootRequestId: "manual_request_emp_009_2026-04-08_root",
-      activeRequestId: "manual_request_emp_009_2026-04-08_resubmission",
+      employeeId: "emp_010",
+      rootRequestId: "manual_request_emp_010_2026-04-13_root",
+      activeRequestId: "manual_request_emp_010_2026-04-13_resubmission",
     });
     expect(seedScenarioAnchors.pendingManualEdit).toEqual({
       employeeId: "emp_010",
-      requestId: "manual_request_emp_010_2026-04-09_root",
+      requestId: "manual_request_emp_010_2026-04-17_root",
     });
     expect(seedScenarioAnchors.pendingManualWithdraw).toEqual({
       employeeId: "emp_011",
-      requestId: "manual_request_emp_011_2026-04-07_root",
+      requestId: "manual_request_emp_011_2026-04-20_root",
     });
     expect(seedScenarioAnchors.approvedManualWriteback).toEqual({
       employeeId: "emp_007",

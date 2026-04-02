@@ -439,7 +439,7 @@ describe("attendance repository helpers", () => {
       date: "2026-04-13",
       summary: {
         failedAttemptCount: 1,
-        checkedInCount: 1,
+        checkedInCount: 9,
       },
       items: expect.arrayContaining([
         expect.objectContaining({

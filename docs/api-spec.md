@@ -848,14 +848,15 @@ Typical error cases:
 ### `GET /api/admin/attendance/today`
 
 Returns today's team-level summary plus employee-level fact and exception rows for same-day operations.
+The seeded example below assumes the deterministic Monday-noon snapshot, so most same-day records are already present while a small set of operational exceptions remains visible.
 
 Response:
 
 ```json
 {
-  "date": "2026-03-30",
+  "date": "2026-04-13",
   "summary": {
-    "checkedInCount": 8,
+    "checkedInCount": 9,
     "notCheckedInCount": 2,
     "lateCount": 1,
     "onLeaveCount": 1,
@@ -865,22 +866,22 @@ Response:
     {
       "employee": {
         "id": "emp_001",
-        "name": "Alex Kim",
-        "department": "Product"
+        "name": "Minji Park",
+        "department": "Operations"
       },
       "expectedWorkday": {
         "isWorkday": true,
-        "expectedClockInAt": "2026-03-30T09:00:00+09:00",
-        "expectedClockOutAt": "2026-03-30T18:00:00+09:00",
-        "adjustedClockInAt": "2026-03-30T09:00:00+09:00",
-        "adjustedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "expectedClockInAt": "2026-04-13T09:00:00+09:00",
+        "expectedClockOutAt": "2026-04-13T18:00:00+09:00",
+        "adjustedClockInAt": "2026-04-13T09:00:00+09:00",
+        "adjustedClockOutAt": "2026-04-13T18:00:00+09:00",
         "countsTowardAdminSummary": true,
         "leaveCoverage": null
       },
       "todayRecord": {
-        "id": "att_20260330_emp_001",
-        "date": "2026-03-30",
-        "clockInAt": "2026-03-30T09:03:00+09:00",
+        "id": "attendance_record_emp_001_2026-04-13",
+        "date": "2026-04-13",
+        "clockInAt": "2026-04-13T08:58:00+09:00",
         "clockInSource": "beacon",
         "clockOutAt": null,
         "clockOutSource": null,
@@ -888,7 +889,7 @@ Response:
       },
       "display": {
         "phase": "working",
-        "flags": ["late"],
+        "flags": [],
         "activeExceptions": [],
         "nextAction": {
           "type": "clock_out",
@@ -992,6 +993,7 @@ Query parameters:
 Response notes:
 
 - each item uses `Request Status` plus relation fields and the shared `Request Chain Projection`
+- leave request items also expose nullable `startAt` and `endAt` interval fields; hourly leave items populate them and non-hourly leave items keep them `null`
 - leave request items may also carry `leaveConflict` using the shared `Leave Conflict Projection` when the active review still has company-event or staffing-risk context; employee-only suppression metadata must not appear in admin items
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
 - `governingReviewComment` stays populated while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up
