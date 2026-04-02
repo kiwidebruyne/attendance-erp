@@ -416,6 +416,7 @@ Example request body:
 - `reason`: required employee note
 - `parentRequestId`: optional; required when creating a follow-up resubmission
 - `followUpKind`: optional `resubmission` only in the current product
+- `submittedAt` is not a client input on create; the server records it when the request is created and returns it in response payloads
 
 Current-scope rules:
 
@@ -491,6 +492,7 @@ Current-scope rules:
 - The request must currently have `status = pending`.
 - If `status = withdrawn`, omit the other editable fields.
 - If `status` is omitted, provide at least one employee-editable field.
+- `submittedAt` remains immutable after creation; edits update the pending request payload but do not replace the original submission timestamp.
 - The resulting payload must still satisfy the action-specific clock rules: `clock_in` requires `requestedClockInAt`, `clock_out` requires `requestedClockOutAt`, and `both` requires both fields.
 - If the resulting action is `clock_out`, the target day must already have an open attendance record; otherwise the employee must use `both`.
 - This endpoint never creates a follow-up request; it only mutates the current pending request in place.
