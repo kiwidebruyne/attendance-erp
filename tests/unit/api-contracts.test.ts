@@ -26,35 +26,54 @@ import {
 import {
   apiDateSchema,
   apiDateTimeSchema,
-  approvalStatusSchema,
-  attendanceStatusSchema,
+  attendanceExceptionTypeSchema,
+  attendanceFlagSchema,
+  attendancePhaseSchema,
+  attendanceRecordSourceSchema,
   errorResponseSchema,
   leaveTypeSchema,
   manualAttendanceActionSchema,
+  nextActionTypeSchema,
+  requestChainProjectionSchema,
+  requestStatusSchema,
   requestTypeSchema,
-  verificationMethodSchema,
 } from "@/lib/contracts/shared";
 
 describe("shared contract schemas", () => {
   it("accept documented enum vocabulary and ISO date primitives", () => {
-    expect(attendanceStatusSchema.options).toEqual([
+    expect(attendancePhaseSchema.options).toEqual([
+      "non_workday",
+      "before_check_in",
       "working",
-      "normal",
-      "late",
-      "early_leave",
+      "checked_out",
+    ]);
+    expect(attendanceFlagSchema.options).toEqual(["late", "early_leave"]);
+    expect(attendanceExceptionTypeSchema.options).toEqual([
+      "attempt_failed",
+      "not_checked_in",
       "absent",
-      "on_leave",
+      "previous_day_checkout_missing",
+      "leave_work_conflict",
+      "manual_request_pending",
+      "manual_request_rejected",
     ]);
-    expect(verificationMethodSchema.options).toEqual([
-      "beacon",
-      "manual",
-      "none",
+    expect(nextActionTypeSchema.options).toEqual([
+      "clock_in",
+      "clock_out",
+      "submit_manual_request",
+      "resolve_previous_day_checkout",
+      "review_request_status",
+      "review_leave_conflict",
+      "wait",
     ]);
-    expect(approvalStatusSchema.options).toEqual([
+    expect(requestStatusSchema.options).toEqual([
       "pending",
+      "revision_requested",
+      "withdrawn",
       "approved",
       "rejected",
     ]);
+    expect(attendanceRecordSourceSchema.options).toEqual(["beacon", "manual"]);
     expect(manualAttendanceActionSchema.options).toEqual([
       "clock_in",
       "clock_out",
@@ -89,6 +108,200 @@ describe("shared contract schemas", () => {
       },
     });
   });
+
+  it("requires failureReason to match attendance attempt status", () => {
+    expect(() =>
+      attendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        employee: {
+          id: "emp_001",
+          name: "Alex Kim",
+          department: "Product",
+        },
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: null,
+        attempts: [
+          {
+            id: "attempt_001",
+            date: "2026-03-30",
+            action: "clock_in",
+            attemptedAt: "2026-03-30T09:03:00+09:00",
+            status: "failed",
+            failureReason: null,
+          },
+        ],
+        manualRequest: null,
+        display: {
+          phase: "before_check_in",
+          flags: [],
+          activeExceptions: ["attempt_failed", "not_checked_in"],
+          nextAction: {
+            type: "clock_in",
+            relatedRequestId: null,
+          },
+        },
+      }),
+    ).toThrow();
+
+    expect(() =>
+      attendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        employee: {
+          id: "emp_001",
+          name: "Alex Kim",
+          department: "Product",
+        },
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: null,
+        attempts: [
+          {
+            id: "attempt_001",
+            date: "2026-03-30",
+            action: "clock_in",
+            attemptedAt: "2026-03-30T09:03:00+09:00",
+            status: "success",
+            failureReason: "BLE beacon not detected",
+          },
+        ],
+        manualRequest: null,
+        display: {
+          phase: "before_check_in",
+          flags: [],
+          activeExceptions: [],
+          nextAction: {
+            type: "clock_in",
+            relatedRequestId: null,
+          },
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("requires active request id and active status to be paired", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_001",
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("requires an active request when a follow-up is marked active", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        governingReviewComment: "Please attach the beacon retry details.",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("requires active follow-up projections to stay pending", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_002",
+        activeStatus: "approved",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "approved",
+        governingReviewComment: null,
+        hasActiveFollowUp: true,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
+  it("requires any active request projection to stay pending", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_001",
+        activeStatus: "approved",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "approved",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
+  it("requires effective request fields to match active work", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        governingReviewComment: "Please attach the beacon retry details.",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("requires nextAction to match whether active work exists", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        governingReviewComment: "Please attach the beacon retry details.",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: true,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("employee attendance contracts", () => {
@@ -101,14 +314,44 @@ describe("employee attendance contracts", () => {
           name: "Alex Kim",
           department: "Product",
         },
-        today: {
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: {
+          id: "att_20260330_emp_001",
+          date: "2026-03-30",
           clockInAt: "2026-03-30T09:03:00+09:00",
+          clockInSource: "beacon",
           clockOutAt: null,
+          clockOutSource: null,
           workMinutes: null,
-          status: "working",
-          beaconVerified: true,
-          verificationMethod: "beacon",
-          manualRequest: null,
+        },
+        attempts: [
+          {
+            id: "attempt_001",
+            date: "2026-03-30",
+            action: "clock_in",
+            attemptedAt: "2026-03-30T09:03:00+09:00",
+            status: "success",
+            failureReason: null,
+          },
+        ],
+        manualRequest: null,
+        display: {
+          phase: "working",
+          flags: ["late"],
+          activeExceptions: [],
+          nextAction: {
+            type: "clock_out",
+            relatedRequestId: null,
+          },
         },
       }),
     ).toMatchObject({
@@ -116,11 +359,69 @@ describe("employee attendance contracts", () => {
       employee: {
         id: "emp_001",
       },
-      today: {
-        status: "working",
-        beaconVerified: true,
+      todayRecord: {
+        id: "att_20260330_emp_001",
+      },
+      display: {
+        phase: "working",
       },
     });
+  });
+
+  it("rejects approved manualRequest payloads in the attendance today response", () => {
+    expect(() =>
+      attendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        employee: {
+          id: "emp_001",
+          name: "Alex Kim",
+          department: "Product",
+        },
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: null,
+        attempts: [],
+        manualRequest: {
+          id: "req_manual_001",
+          requestType: "manual_attendance",
+          action: "clock_in",
+          date: "2026-03-30",
+          requestedAt: "2026-03-30T09:00:00+09:00",
+          reason: "Beacon was not detected at the office entrance.",
+          status: "approved",
+          reviewedAt: "2026-03-30T11:00:00+09:00",
+          reviewComment: null,
+          governingReviewComment: null,
+          rootRequestId: "req_manual_001",
+          parentRequestId: null,
+          followUpKind: null,
+          supersededByRequestId: null,
+          activeRequestId: null,
+          activeStatus: null,
+          effectiveRequestId: "req_manual_001",
+          effectiveStatus: "approved",
+          hasActiveFollowUp: false,
+          nextAction: "none",
+        },
+        display: {
+          phase: "before_check_in",
+          flags: [],
+          activeExceptions: [],
+          nextAction: {
+            type: "clock_in",
+            relatedRequestId: null,
+          },
+        },
+      }),
+    ).toThrow();
   });
 
   it("requires from and to in the attendance history query", () => {
@@ -139,17 +440,38 @@ describe("employee attendance contracts", () => {
         records: [
           {
             date: "2026-03-30",
-            clockInAt: "2026-03-30T09:03:00+09:00",
-            clockOutAt: null,
-            workMinutes: null,
-            status: "working",
-            beaconVerified: true,
-            verificationMethod: "beacon",
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            record: {
+              id: "att_20260330_emp_001",
+              date: "2026-03-30",
+              clockInAt: "2026-03-30T09:03:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: {
+              phase: "working",
+              flags: ["late"],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_out",
+                relatedRequestId: null,
+              },
+            },
           },
         ],
       }),
     ).toMatchObject({
-      records: [{ status: "working" }],
+      records: [{ display: { phase: "working" } }],
     });
   });
 
@@ -164,6 +486,46 @@ describe("employee attendance contracts", () => {
     ).toThrow();
   });
 
+  it("rejects a follow-up kind without a parent request id", () => {
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        followUpKind: "resubmission",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a parent request id without a follow-up kind", () => {
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        parentRequestId: "req_manual_000",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts a resubmission only when parent and follow-up fields are paired", () => {
+    expect(
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        parentRequestId: "req_manual_000",
+        followUpKind: "resubmission",
+      }),
+    ).toMatchObject({
+      parentRequestId: "req_manual_000",
+      followUpKind: "resubmission",
+    });
+  });
+
   it("parses the documented manual attendance request response", () => {
     expect(
       manualAttendanceRequestResponseSchema.parse({
@@ -174,12 +536,209 @@ describe("employee attendance contracts", () => {
         requestedAt: "2026-03-30T09:00:00+09:00",
         reason: "Beacon was not detected at the office entrance.",
         status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_001",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
       }),
     ).toMatchObject({
       id: "req_manual_001",
       requestType: "manual_attendance",
       status: "pending",
+      effectiveStatus: "pending",
     });
+  });
+
+  it("couples reviewed fields to reviewed manual attendance statuses", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        status: "pending",
+        reviewedAt: "2026-03-30T11:00:00+09:00",
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_001",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        status: "rejected",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: "Please clarify the missing clock-out time.",
+        rootRequestId: "req_manual_001",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects unsupported manual-attendance follow-up kinds", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T12:00:00+09:00",
+        reason: "Updated request after approval.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: "req_manual_001",
+        followUpKind: "change",
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("requires manual-attendance relation fields to be paired", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T12:00:00+09:00",
+        reason: "Follow-up without kind.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: "req_manual_001",
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T12:00:00+09:00",
+        reason: "Follow-up kind without parent.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_002",
+        parentRequestId: null,
+        followUpKind: "resubmission",
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("enforces manual-attendance root request invariants", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Root request with the wrong root chain id.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_999",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_001",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T12:00:00+09:00",
+        reason: "Follow-up with its own id as the root id.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_002",
+        parentRequestId: "req_manual_001",
+        followUpKind: "resubmission",
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
   });
 });
 
@@ -335,24 +894,177 @@ describe("admin attendance contracts", () => {
           notCheckedInCount: 2,
           lateCount: 1,
           onLeaveCount: 1,
+          failedAttemptCount: 1,
+          previousDayOpenCount: 1,
         },
         items: [
           {
-            employeeId: "emp_001",
-            name: "Alex Kim",
-            department: "Product",
-            clockInAt: "2026-03-30T09:03:00+09:00",
-            clockOutAt: null,
-            status: "working",
-            verificationMethod: "beacon",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            todayRecord: {
+              id: "att_20260330_emp_001",
+              date: "2026-03-30",
+              clockInAt: "2026-03-30T09:03:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: {
+              phase: "working",
+              flags: ["late"],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_out",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: null,
+            previousDayOpenRecord: null,
+            manualRequest: null,
           },
         ],
       }),
     ).toMatchObject({
       summary: {
         checkedInCount: 8,
+        failedAttemptCount: 1,
       },
     });
+  });
+
+  it("rejects admin today rows whose latestFailedAttempt is not failed", () => {
+    expect(() =>
+      adminAttendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        summary: {
+          checkedInCount: 8,
+          notCheckedInCount: 2,
+          lateCount: 1,
+          onLeaveCount: 1,
+          failedAttemptCount: 1,
+          previousDayOpenCount: 1,
+        },
+        items: [
+          {
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            todayRecord: null,
+            display: {
+              phase: "before_check_in",
+              flags: [],
+              activeExceptions: ["attempt_failed", "not_checked_in"],
+              nextAction: {
+                type: "clock_in",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: {
+              id: "attempt_001",
+              date: "2026-03-30",
+              action: "clock_in",
+              attemptedAt: "2026-03-30T09:03:00+09:00",
+              status: "success",
+              failureReason: null,
+            },
+            previousDayOpenRecord: null,
+            manualRequest: null,
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects withdrawn manualRequest payloads in admin today rows", () => {
+    expect(() =>
+      adminAttendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        summary: {
+          checkedInCount: 8,
+          notCheckedInCount: 2,
+          lateCount: 1,
+          onLeaveCount: 1,
+          failedAttemptCount: 1,
+          previousDayOpenCount: 1,
+        },
+        items: [
+          {
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            todayRecord: null,
+            display: {
+              phase: "before_check_in",
+              flags: [],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_in",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: null,
+            previousDayOpenRecord: null,
+            manualRequest: {
+              id: "req_manual_001",
+              requestType: "manual_attendance",
+              action: "clock_in",
+              date: "2026-03-30",
+              requestedAt: "2026-03-30T09:00:00+09:00",
+              reason: "Beacon was not detected at the office entrance.",
+              status: "withdrawn",
+              reviewedAt: null,
+              reviewComment: null,
+              governingReviewComment: null,
+              rootRequestId: "req_manual_001",
+              parentRequestId: null,
+              followUpKind: null,
+              supersededByRequestId: null,
+              activeRequestId: null,
+              activeStatus: null,
+              effectiveRequestId: "req_manual_001",
+              effectiveStatus: "withdrawn",
+              hasActiveFollowUp: false,
+              nextAction: "none",
+            },
+          },
+        ],
+      }),
+    ).toThrow();
   });
 
   it("parses the documented admin attendance list response and optional name filter", () => {
@@ -379,20 +1091,45 @@ describe("admin attendance contracts", () => {
         records: [
           {
             date: "2026-03-30",
-            employeeId: "emp_001",
-            name: "Alex Kim",
-            department: "Product",
-            clockInAt: "2026-03-30T09:03:00+09:00",
-            clockOutAt: null,
-            workMinutes: null,
-            status: "working",
-            verificationMethod: "beacon",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            record: {
+              id: "att_20260330_emp_001",
+              date: "2026-03-30",
+              clockInAt: "2026-03-30T09:03:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: {
+              phase: "working",
+              flags: ["late"],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_out",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: null,
           },
         ],
       }),
     ).toMatchObject({
       total: 22,
-      records: [{ employeeId: "emp_001" }],
+      records: [{ employee: { id: "emp_001" } }],
     });
   });
 });
