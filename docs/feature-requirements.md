@@ -74,12 +74,12 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a stable top summary tier that always shows one combined leave-balance card plus calm current-state counts for `revision_requested`, `approved`, `pending`, and `rejected` chains rather than escalating plain pending requests into the top correction surface
+- a stable top summary tier that always shows one combined summary card with calm current-state counts for `revision_requested`, `approved`, `pending`, and `rejected` chains rather than escalating plain pending requests into the top correction surface
 - a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state, rendered as a table-style recovery surface rather than an expanded detail card
 - a full-width leave history row below the planning workspace so planning stays calendar-first while history remains the required recovery surface
 - a lower planning workspace that keeps the leave-only calendar, selected-date context, and inline composer adjacent on desktop and stacked in the same order on narrow widths
 - one inline leave composer in that planning workspace that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
-- a bottom leave history table with columns centered on `유형`, `날짜`, `세부사항`, `상태`, `사유`, and `작업`, with no separate `최근 활동` column
+- a bottom leave history table with columns centered on `유형`, `날짜`, `세부사항`, `상태`, `사유`, and `작업`, with no separate `최근 활동` column; `세부사항` should keep `annual -> 연차`, `half_am -> 오전 반차`, `half_pm -> 오후 반차`, and hourly time ranges
 - the leave history table should keep state cells as badge-only values without extra descriptive text, and long reason text should wrap naturally instead of clamping
 - the leave history table should remain chain-aware, but the visible row structure should stay anchored to the governing request rather than splitting earlier chain steps into separate top-level rows
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
@@ -93,7 +93,7 @@ Required UI:
 - suppressing one reviewed leave request must not hide a different request that only shares the same date, leave type, or root chain history
 - selecting a date with existing leave context must show the governing chain context before offering a blank new-request flow, and the selected-date panel remains the entry point for starting a new request
 - if a clicked date belongs to a multi-day leave range, the selected-date context must show the governing full range rather than only the clicked date
-- selected-date context should lead with one governing chain card and keep other date-related items as compact secondary links rather than a stack of equal full cards
+- selected-date context should show the governing request through field-separated factual rows such as `유형`, `날짜`, `세부사항`, `상태`, and `사유`, then append optional `검토 메모`, `현재 승인 일정`, and conflict rows only when relevant
 - the calendar panel header should show only the month label and prev/next month controls, removing the calendar title, explanatory description, and `새 요청 시작` button
 - top-correction and history CTAs should converge on the same inline composer so the write-flow owner stays unambiguous across new request, `resubmit`, `change`, and `cancel`
 - when top-correction, history, or selected-date CTAs open the inline composer, the page may scroll to that composer area so the write flow stays in view

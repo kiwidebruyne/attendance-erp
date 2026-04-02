@@ -5,14 +5,13 @@ import {
   FileClockIcon,
   ListTodoIcon,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef } from "react";
 
 import {
   buildDateTimeFromDateAndTime,
   formatHourlyDurationHours,
   formatLeaveDateLabel,
   formatLeaveDateTimeLabel,
-  formatLeaveDayCount,
   formatLeaveRequestSummary,
   formatLeaveTimeLabel,
   formatLeaveTypeLabel,
@@ -252,107 +251,85 @@ function getCompanyEventLabel(
 function formatHistoryRequestDetail(chain: LeaveChainModel) {
   const request = chain.activeRequest ?? chain.effectiveRequest;
 
-  if (request.leaveType === "hourly") {
-    return `${formatLeaveTimeLabel(request.startAt)} ~ ${formatLeaveTimeLabel(request.endAt)}`;
+  return formatLeaveRequestDetail(request);
+}
+
+function formatLeaveRequestDetail(input: {
+  leaveType: LeaveChainModel["effectiveRequest"]["leaveType"];
+  startAt: string | null;
+  endAt: string | null;
+}) {
+  if (input.leaveType === "hourly") {
+    return `${formatLeaveTimeLabel(input.startAt)} ~ ${formatLeaveTimeLabel(input.endAt)}`;
   }
 
-  if (chain.activeRequest?.followUpKind === "change") {
-    return `변경 요청 · ${formatLeaveDateLabel(chain.activeRequest.date)}`;
-  }
-
-  if (chain.activeRequest?.followUpKind === "cancel") {
-    return "취소 요청 진행 중";
-  }
-
-  if (chain.activeRequest?.followUpKind === "resubmission") {
-    return "다시 제출한 요청";
-  }
-
-  switch (request.leaveType) {
+  switch (input.leaveType) {
     case "annual":
-      return chain.requests.length > 1
-        ? `하루 일정 · 단계 ${chain.requests.length}개`
-        : "하루 일정";
+      return "연차";
     case "half_am":
-      return "오전 일정";
+      return "오전 반차";
     case "half_pm":
-      return "오후 일정";
+      return "오후 반차";
   }
 }
 
+function DetailField({
+  children,
+  label,
+}: Readonly<{
+  children: ReactNode;
+  label: string;
+}>) {
+  return (
+    <div className="grid gap-1 border-t border-border/70 py-3 first:border-t-0 first:pt-0 last:pb-0 sm:grid-cols-[96px_minmax(0,1fr)] sm:gap-4">
+      <p className="text-[12px] font-medium text-muted-foreground">{label}</p>
+      <div className="min-w-0 text-sm leading-6 text-foreground">
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function SummaryTier({
-  data,
   viewModel,
 }: Readonly<{
-  data: LeavePageData;
   viewModel: LeavePageViewModel;
 }>) {
   return (
     <section>
       <Card>
-        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
-          <div className="min-w-[184px] space-y-2">
+        <CardContent className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="space-y-1.5">
             <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-              남은 연차
+              다시 제출 필요
             </p>
-            <div className="space-y-1">
-              <p className="text-[30px] font-semibold tracking-[-0.03em] text-[#162847]">
-                {formatLeaveDayCount(data.overview.balance.remainingDays)}
-              </p>
-              <p className="text-sm text-secondary">
-                총 {formatLeaveDayCount(data.overview.balance.totalDays)} 중{" "}
-                {formatLeaveDayCount(data.overview.balance.usedDays)} 사용했어요
-              </p>
-            </div>
+            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+              {viewModel.revisionRequestedCount}건
+            </p>
           </div>
-
-          <div className="hidden h-10 w-px bg-border xl:block" />
-
-          <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                다시 제출 필요
-              </p>
-              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                {viewModel.revisionRequestedCount}건
-              </p>
-              <p className="text-sm text-secondary">
-                보완 후 다시 제출해야 해요
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                승인됨
-              </p>
-              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                {viewModel.approvedCount}건
-              </p>
-              <p className="text-sm text-secondary">
-                승인된 휴가를 바로 확인할 수 있어요
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                검토중
-              </p>
-              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                {viewModel.pendingCount}건
-              </p>
-              <p className="text-sm text-secondary">
-                지금 검토 중인 요청이에요
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                반려됨
-              </p>
-              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                {viewModel.rejectedCount}건
-              </p>
-              <p className="text-sm text-secondary">
-                검토 결과를 확인하고 다시 정리해요
-              </p>
-            </div>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+              승인됨
+            </p>
+            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+              {viewModel.approvedCount}건
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+              검토중
+            </p>
+            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+              {viewModel.pendingCount}건
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+              반려됨
+            </p>
+            <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+              {viewModel.rejectedCount}건
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -388,7 +365,7 @@ function TopCorrectionTier({
               </CardTitle>
             </div>
             <CardDescription className="text-sm leading-6">
-              검토가 끝난 비승인 요청을 모아 보고 바로 다시 제출해요
+              보완 요청을 받은 신청을 다시 제출해요
             </CardDescription>
           </div>
           <Badge variant="destructive">{viewModel.attentionCount}건</Badge>
@@ -416,9 +393,6 @@ function TopCorrectionTier({
                   <div className="space-y-1">
                     <p className="font-medium text-foreground">
                       {candidate.currentSummary}
-                    </p>
-                    <p className="text-sm text-secondary">
-                      단계 {candidate.requests.length}개 체인
                     </p>
                   </div>
                 </TableCell>
@@ -472,10 +446,6 @@ function TopCorrectionTier({
           })}
         </TableBody>
       </Table>
-      <div className="border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">
-        지금 다시 제출이 필요한 요청 {viewModel.attentionCount}건을 보여주고
-        있어요
-      </div>
     </Card>
   );
 }
@@ -614,24 +584,23 @@ function SelectedDateContextPanel({
 
   return (
     <Card>
-      <CardHeader className="gap-2 border-b border-border/80 pb-5">
+      <CardHeader className="border-b border-border/80 pb-5">
         <CardTitle className="text-xl tracking-[-0.03em]">
           {formatLeaveDateLabel(data.selectedDate)}
         </CardTitle>
-        <CardDescription className="text-sm leading-6">
-          선택한 날짜를 먼저 보고 필요한 흐름을 이어서 열어요
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 pt-5">
         {primaryChain === null ? (
           <div className="space-y-4">
             <div className="rounded-[14px] border border-border/80 bg-surface-subtle p-4">
               <p className="text-sm font-medium text-foreground">
-                연결된 휴가 체인이 아직 없어요
+                이 날짜에는 신청내역이 없어요
               </p>
-              <p className="mt-2 text-sm leading-6 text-secondary">
-                {selectionState.message}
-              </p>
+              {!selectionState.canCreate ? (
+                <p className="mt-2 text-sm leading-6 text-secondary">
+                  {selectionState.message}
+                </p>
+              ) : null}
             </div>
 
             {!hasMeaningfulLeaveConflict(selectedDateConflict) ? null : (
@@ -667,62 +636,68 @@ function SelectedDateContextPanel({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="space-y-3 rounded-[14px] border border-border/80 bg-surface-subtle p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-foreground">
-                    {primaryChain.currentSummary}
-                  </p>
-                  <p className="text-sm leading-6 text-secondary">
-                    {primaryChain.selectedDateSummary}
-                  </p>
-                </div>
+            <div className="rounded-[14px] border border-border/80 bg-surface-subtle p-4">
+              <DetailField label="유형">
+                {formatLeaveTypeLabel(
+                  (primaryChain.activeRequest ?? primaryChain.effectiveRequest)
+                    .leaveType,
+                )}
+              </DetailField>
+              <DetailField label="날짜">
+                {formatLeaveDateLabel(
+                  (primaryChain.activeRequest ?? primaryChain.effectiveRequest)
+                    .date,
+                )}
+              </DetailField>
+              <DetailField label="세부사항">
+                {formatLeaveRequestDetail(
+                  primaryChain.activeRequest ?? primaryChain.effectiveRequest,
+                )}
+              </DetailField>
+              <DetailField label="상태">
                 <Badge variant={getStatusBadgeVariant(primaryChain)}>
                   {primaryChain.statusLabel}
                 </Badge>
-              </div>
+              </DetailField>
+              <DetailField label="사유">
+                <p className="break-words whitespace-normal">
+                  {primaryChain.reasonSummary}
+                </p>
+              </DetailField>
+              {primaryChain.reviewComment === null ? null : (
+                <DetailField label="검토 메모">
+                  <p className="break-words whitespace-normal text-status-danger">
+                    {primaryChain.reviewComment}
+                  </p>
+                </DetailField>
+              )}
               {primaryChain.activeRequest !== null &&
               primaryChain.effectiveRequest.status === "approved" ? (
-                <div className="rounded-[12px] border border-primary/15 bg-primary/6 p-3 text-sm text-secondary">
-                  <p className="font-medium text-foreground">
-                    현재 승인된 일정
-                  </p>
-                  <p className="mt-1">
-                    {formatLeaveRequestSummary(primaryChain.effectiveRequest)}
-                  </p>
-                  <p className="mt-2">
-                    후속 요청:{" "}
-                    {formatLeaveRequestSummary(primaryChain.activeRequest)}
-                  </p>
-                </div>
+                <DetailField label="현재 승인 일정">
+                  <div className="space-y-1 text-secondary">
+                    <p className="font-medium text-foreground">
+                      {formatLeaveRequestSummary(primaryChain.effectiveRequest)}
+                    </p>
+                    <p>
+                      후속 요청:{" "}
+                      {formatLeaveRequestSummary(primaryChain.activeRequest)}
+                    </p>
+                  </div>
+                </DetailField>
               ) : null}
-
-              {primaryChain.reviewComment === null ? null : (
-                <Alert className="border-status-danger-soft bg-status-danger-soft/35">
-                  <CircleAlertIcon
-                    aria-hidden="true"
-                    className="size-4 text-status-danger"
-                  />
-                  <AlertTitle className="text-status-danger">
-                    검토 사유
-                  </AlertTitle>
-                  <AlertDescription>
-                    {primaryChain.reviewComment}
-                  </AlertDescription>
-                </Alert>
+              {getCompanyEventLabel(primaryChain, data) === null ? null : (
+                <DetailField label="운영 일정">
+                  {getCompanyEventLabel(primaryChain, data)}
+                </DetailField>
               )}
-
               {getConflictMessages(primaryChain, data).length === 0 ? null : (
-                <div className="flex flex-col gap-2 text-sm text-secondary">
-                  {getCompanyEventLabel(primaryChain, data) === null ? null : (
-                    <span>
-                      운영 일정: {getCompanyEventLabel(primaryChain, data)}
-                    </span>
-                  )}
-                  {getConflictMessages(primaryChain, data).map((message) => (
-                    <span key={message}>{message}</span>
-                  ))}
-                </div>
+                <DetailField label="충돌 안내">
+                  <div className="space-y-1 text-secondary">
+                    {getConflictMessages(primaryChain, data).map((message) => (
+                      <p key={message}>{message}</p>
+                    ))}
+                  </div>
+                </DetailField>
               )}
             </div>
 
@@ -750,7 +725,7 @@ function SelectedDateContextPanel({
             {viewModel.selectedDateChains.length < 2 ? null : (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-foreground">
-                  같은 날짜의 다른 이력
+                  같은 날짜의 다른 신청
                 </p>
                 <div className="flex flex-col gap-2">
                   {viewModel.selectedDateChains.slice(1).map((chain) => (
@@ -1095,11 +1070,10 @@ function HistorySection({
 }>) {
   return (
     <Card className="scroll-mt-20">
-      <CardHeader className="gap-2 border-b border-border/80 pb-5">
-        <CardTitle className="text-xl tracking-[-0.03em]">휴가 이력</CardTitle>
-        <CardDescription className="text-sm leading-6">
-          체인 단위로 최근 활동을 묶어 보고 바로 이어서 수정하거나 다시 제출해요
-        </CardDescription>
+      <CardHeader className="border-b border-border/80 pb-5">
+        <CardTitle className="text-xl tracking-[-0.03em]">
+          휴가 신청내역
+        </CardTitle>
       </CardHeader>
 
       {viewModel.visibleChains.length === 0 ? (
@@ -1195,10 +1169,6 @@ function HistorySection({
               })}
             </TableBody>
           </Table>
-          <div className="border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">
-            현재 보이는 휴가 체인 {viewModel.totalChains}개를 정리해 보여주고
-            있어요
-          </div>
         </>
       )}
     </Card>
@@ -1259,11 +1229,11 @@ export function LeavePageScreen({
           휴가 관리
         </h1>
         <p className="mt-1 text-sm leading-6 text-secondary">
-          남은 휴가를 확인하고 필요한 일정과 검토 이력을 한 화면에서 맞춰요
+          휴가를 신청하고 관리해요
         </p>
       </header>
 
-      <SummaryTier data={data} viewModel={viewModel} />
+      <SummaryTier viewModel={viewModel} />
 
       <TopCorrectionTier
         data={data}
