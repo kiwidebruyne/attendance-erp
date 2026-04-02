@@ -52,6 +52,8 @@ const adminLeaveRequestQueueItemSchema = adminRequestQueueItemBaseSchema
     requestType: z.literal("leave"),
     subtype: leaveTypeSchema,
     requestedAt: apiDateTimeSchema,
+    startAt: apiDateTimeSchema.nullable(),
+    endAt: apiDateTimeSchema.nullable(),
     leaveConflict: leaveConflictSchema.optional(),
   })
   .merge(requestReviewStateFieldsSchema)
