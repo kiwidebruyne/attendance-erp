@@ -33,6 +33,7 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - A reviewed non-approved request with no active follow-up is no longer treated as shared active work. The latest reviewed outcome still remains visible as chain history, but shared queue-state vocabulary should not model it as `waiting_for_employee`.
 - Any remaining `waiting_for_employee` mention in this document should be read as historical or rejected-alternative vocabulary only, not as active source-of-truth terminology.
 - Employee-facing resubmission prompting remains valid for reviewed non-approved requests, but that prompting now belongs to page IA rather than shared request queue-state semantics.
+- Employee-only leave top-surface suppression for reviewed non-approved requests should remain request-scoped visibility metadata. It persists per employee and reviewed request record, preserves history plus resubmission access, and does not change the shared request projection.
 - Any earlier direction that suggested same-record revision of a `rejected` or `revision_requested` request should now be read as superseded discussion history rather than active contract.
 - Notification scope is in-app first: warnings, badges, and status surfaces come before external push channels.
 - Employee and admin views must stay synchronized on the same facts and statuses, with stale states cleared promptly.
@@ -53,6 +54,8 @@ This document is a cumulative source-of-truth log for preserving raw product-spe
 - Use that document for reviewed-request immutability, follow-up request chains, revision/change/cancel flows, and shared employee/admin request synchronization rules.
 - Keep issue `#41` focused on leave-page IA, issue `#42` focused on review-workspace IA under the updated admin queue contract, issue `#64` focused on removing `waiting_for_employee` and promoting non-approved reviewed requests into completed review history on admin surfaces, and issue `#66` focused on leave top-surface suppression semantics.
 - The rejected alternatives behind issue `#64` are: keep a standalone `waiting_for_employee` admin queue, or add a separate source-of-truth document instead of promoting the decision into the existing canonical request documents.
+- The rejected alternatives behind issue `#66` are: create a dedicated suppression-only source-of-truth document, or model suppression as shared queue-state meaning instead of employee-page visibility metadata.
+- Promote the final `#66` decision into `docs/feature-requirements.md`, `docs/ui-guidelines.md`, `docs/ux-writing-guidelines.md`, `docs/api-spec.md`, and `docs/database-schema.md` rather than inventing a separate suppression-spec document.
 - Keep this file focused on raw discussion provenance, locked cross-screen principles, and unresolved product questions.
 
 ## Promoted Leave Conflict Policy

@@ -79,6 +79,10 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
 - When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface. If the projection points at a prior-workday correction, show the target date explicitly.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
+- On `/attendance/leave`, the top correction tier should filter candidates to reviewed `rejected` or `revision_requested` leave requests with no active follow-up and `isTopSurfaceSuppressed = false`.
+- Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and request-context or selected-date context may add restore or resubmission entry points without replacing history.
+- A later resubmission or later reviewed outcome must be re-evaluated as a new top-correction candidate rather than inheriting an older request record's suppressed state.
+- Let issue `#66` own top-candidate filtering and persistence; keep ordering, default expansion, placement, and CTA hierarchy with issue `#41`.
 - If an employee edits or withdraws a pending request before review, the admin row summary should refresh promptly from the latest projection rather than lingering as stale request state.
 - Employee leave-conflict warnings should communicate operational sensitivity without exposing peer identities or exact staffing counts.
 - Leave approvals that proceed despite a company-event or staffing-cap warning must use explicit confirmation rather than a blind single-click action.

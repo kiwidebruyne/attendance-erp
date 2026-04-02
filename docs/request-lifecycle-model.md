@@ -89,6 +89,7 @@ Do not add a separate `chainId` in the current product.
 `governingReviewComment` is the latest unresolved `reject` or `request_revision` rationale that must stay visible while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up; otherwise it is `null`.
 When a chain is `rejected` or `revision_requested` with no active follow-up, `activeRequestId` and `activeStatus` are `null`, `effective*` still point to the latest reviewed outcome, and `nextAction = none`.
 Employee pages may still expose linked `resubmission` entry points from request status and relation fields, but that availability is not itself active work in the shared projection.
+Employee-only leave top-surface suppression is page-level visibility metadata. It must not change `active*`, `effective*`, `governingReviewComment`, `nextAction`, or same-record lock behavior.
 
 ## Lifecycle Concepts
 

@@ -540,6 +540,11 @@ Response notes:
 - approved leave may later surface in attendance endpoints as `leaveCoverage`
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
+- each leave request item in this `GET /api/leave/me` employee aggregate also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
+- `isTopSurfaceSuppressed` is not a guaranteed field on every leave-request response shape; it is part of this employee aggregate response because this endpoint backs the leave page's history plus top-correction projection
+- when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and request-context surfaces but is excluded from top correction auto-surfacing until restored
+- top-surface suppression persists across sessions and browser instances for the owning employee account
+- admin request endpoints do not expose `isTopSurfaceSuppressed`
 
 Response:
 
@@ -572,7 +577,8 @@ Response:
       "effectiveRequestId": "req_leave_001",
       "effectiveStatus": "approved",
       "hasActiveFollowUp": true,
-      "nextAction": "admin_review"
+      "nextAction": "admin_review",
+      "isTopSurfaceSuppressed": false
     }
   ]
 }
@@ -716,6 +722,46 @@ Typical error cases:
 - `400 validation_error` when the payload mixes `status = withdrawn` with editable fields or otherwise violates the pending-edit contract
 - `404 not_found` when the request id does not exist
 - `409 conflict` when the request is no longer `pending`
+
+### `PUT /api/leave/request/[id]/top-surface-suppression`
+
+Persists top-surface suppression for one reviewed non-approved leave request owned by the current employee.
+
+Current-scope rules:
+
+- The request must belong to the current employee.
+- The request must currently have `requestType = leave`.
+- The request must currently have `status = rejected` or `revision_requested`.
+- The request must currently have `hasActiveFollowUp = false`.
+- The endpoint creates or preserves an `Employee Leave Top Surface Suppression` relation and does not reopen, rewrite, or re-review the request.
+- Repeating the same `PUT` is idempotent.
+
+Response:
+
+- `204 no content`
+
+Typical error cases:
+
+- `404 not_found` when the request id does not exist for the current employee
+- `409 conflict` when the request is not currently suppressible under the leave request lifecycle rules
+
+### `DELETE /api/leave/request/[id]/top-surface-suppression`
+
+Restores top correction auto-surfacing for one previously suppressed reviewed non-approved leave request owned by the current employee.
+
+Current-scope rules:
+
+- The request must belong to the current employee.
+- Restoring does not change the request record, review rationale, or request-chain projection.
+- Repeating the same `DELETE` is idempotent, even when no suppression relation currently exists.
+
+Response:
+
+- `204 no content`
+
+Typical error cases:
+
+- `404 not_found` when the request id does not exist for the current employee
 
 ## Admin Endpoints
 
