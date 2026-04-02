@@ -326,6 +326,61 @@ describe("AttendancePageClient", () => {
     });
   });
 
+  it("drops hidden clock fields when changing a pending request action type", async () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          today: {
+            ...createPageData().today,
+            previousDayOpenRecord: null,
+            manualRequest: createManualRequest({
+              action: "both",
+              requestedClockOutAt: "2026-04-13T18:04:00+09:00",
+              reason: "Office network outage blocked both attendance writes.",
+            }),
+            display: createDisplay({
+              activeExceptions: ["manual_request_pending", "not_checked_in"],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: null,
+              },
+            }),
+          },
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "상태 확인" }));
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.click(sheet.getByRole("button", { name: "내용 수정" }));
+    fireEvent.click(sheet.getByRole("radio", { name: "퇴근" }));
+
+    expect(sheet.queryByLabelText("출근 시간")).not.toBeInTheDocument();
+
+    fireEvent.click(sheet.getByRole("button", { name: "변경 저장" }));
+
+    await waitFor(() => {
+      expect(api.updateManualAttendanceRequest).toHaveBeenCalledTimes(1);
+    });
+
+    const [, payload] = api.updateManualAttendanceRequest.mock.calls[0] as [
+      string,
+      Record<string, string>,
+    ];
+
+    expect(payload).toMatchObject({
+      action: "clock_out",
+      date: "2026-04-13",
+      reason: "Office network outage blocked both attendance writes.",
+      requestedClockOutAt: "2026-04-13T18:04:00+09:00",
+    });
+    expect(payload).not.toHaveProperty("requestedClockInAt");
+  });
+
   it("shows revision_requested rationale and submits a resubmission follow-up", async () => {
     render(
       <AttendancePageClient

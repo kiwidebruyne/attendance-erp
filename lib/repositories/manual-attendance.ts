@@ -235,6 +235,35 @@ function validateClockOutOpenRecordRule(
   }
 }
 
+function resolvePatchedClockFields(
+  request: SeedManualAttendanceRequest,
+  input: ManualAttendanceRequestPatchBody,
+  nextAction: SeedManualAttendanceRequest["action"],
+) {
+  if (nextAction === "clock_in") {
+    return {
+      nextRequestedClockInAt:
+        input.requestedClockInAt ?? request.requestedClockInAt,
+      nextRequestedClockOutAt: null,
+    };
+  }
+
+  if (nextAction === "clock_out") {
+    return {
+      nextRequestedClockInAt: null,
+      nextRequestedClockOutAt:
+        input.requestedClockOutAt ?? request.requestedClockOutAt,
+    };
+  }
+
+  return {
+    nextRequestedClockInAt:
+      input.requestedClockInAt ?? request.requestedClockInAt,
+    nextRequestedClockOutAt:
+      input.requestedClockOutAt ?? request.requestedClockOutAt,
+  };
+}
+
 function validateFollowUpTargetDate(
   parentRequest: SeedManualAttendanceRequest,
   date: string,
@@ -493,10 +522,8 @@ export function updateManualAttendanceRequest(
 
   const nextDate = input.date ?? request.date;
   const nextAction = input.action ?? request.action;
-  const nextRequestedClockInAt =
-    input.requestedClockInAt ?? request.requestedClockInAt;
-  const nextRequestedClockOutAt =
-    input.requestedClockOutAt ?? request.requestedClockOutAt;
+  const { nextRequestedClockInAt, nextRequestedClockOutAt } =
+    resolvePatchedClockFields(request, input, nextAction);
   const parentRequest =
     request.parentRequestId === null
       ? null

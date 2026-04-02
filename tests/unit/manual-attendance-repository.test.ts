@@ -152,6 +152,43 @@ function createPatchDuplicateWorld() {
   return world;
 }
 
+function createPendingActionSwitchWorld() {
+  const world = createWorld();
+
+  world.attendanceRecords.push({
+    id: "attendance_record_emp_001_2026-04-19",
+    employeeId: "emp_001",
+    date: "2026-04-19",
+    clockInAt: "2026-04-19T09:01:00+09:00",
+    clockInSource: "beacon",
+    clockOutAt: null,
+    clockOutSource: null,
+    workMinutes: null,
+    manualRequestId: null,
+  });
+
+  world.manualAttendanceRequests.push({
+    id: "manual_request_emp_001_2026-04-19_root",
+    employeeId: "emp_001",
+    requestType: "manual_attendance",
+    action: "both",
+    date: "2026-04-19",
+    submittedAt: "2026-04-19T18:10:00+09:00",
+    requestedClockInAt: "2026-04-19T09:01:00+09:00",
+    requestedClockOutAt: "2026-04-19T18:00:00+09:00",
+    reason: "Both attendance facts need correction before review.",
+    status: "pending",
+    reviewedAt: null,
+    reviewComment: null,
+    rootRequestId: "manual_request_emp_001_2026-04-19_root",
+    parentRequestId: null,
+    followUpKind: null,
+    supersededByRequestId: null,
+  });
+
+  return world;
+}
+
 describe("manual attendance repository helpers", () => {
   it("builds a full resource with the governing review comment preserved on a pending resubmission", () => {
     const resource = buildManualAttendanceRequestResource(
@@ -421,6 +458,26 @@ describe("manual attendance repository helpers", () => {
         },
       ),
     ).toThrowError(ManualAttendanceConflictError);
+  });
+
+  it("drops obsolete stored clock fields when a pending patch changes action type", () => {
+    const edited = updateManualAttendanceRequest(
+      createPendingActionSwitchWorld(),
+      "emp_001",
+      "manual_request_emp_001_2026-04-19_root",
+      {
+        action: "clock_out",
+        requestedClockOutAt: "2026-04-19T18:04:00+09:00",
+      },
+    );
+
+    expect(manualAttendanceRequestEntitySchema.parse(edited)).toMatchObject({
+      id: "manual_request_emp_001_2026-04-19_root",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-19T18:04:00+09:00",
+      status: "pending",
+    });
   });
 
   it("rejects clock_out-only requests when the target date has no open attendance record", () => {

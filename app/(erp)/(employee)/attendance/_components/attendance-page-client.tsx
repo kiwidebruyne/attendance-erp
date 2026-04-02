@@ -32,12 +32,7 @@ function toCreateRequestBody(
     date: draft.date,
     action: draft.action,
     reason: draft.reason,
-    ...(draft.requestedClockInAt
-      ? { requestedClockInAt: draft.requestedClockInAt }
-      : {}),
-    ...(draft.requestedClockOutAt
-      ? { requestedClockOutAt: draft.requestedClockOutAt }
-      : {}),
+    ...toManualAttendanceClockFields(draft),
   };
 }
 
@@ -48,12 +43,38 @@ function toPatchRequestBody(
     date: draft.date,
     action: draft.action,
     reason: draft.reason,
-    ...(draft.requestedClockInAt
-      ? { requestedClockInAt: draft.requestedClockInAt }
-      : {}),
-    ...(draft.requestedClockOutAt
-      ? { requestedClockOutAt: draft.requestedClockOutAt }
-      : {}),
+    ...toManualAttendanceClockFields(draft),
+  };
+}
+
+function toManualAttendanceClockFields(draft: AttendanceManualRequestDraft) {
+  if (draft.action === "clock_in") {
+    return draft.requestedClockInAt === null
+      ? {}
+      : {
+          requestedClockInAt: draft.requestedClockInAt,
+        };
+  }
+
+  if (draft.action === "clock_out") {
+    return draft.requestedClockOutAt === null
+      ? {}
+      : {
+          requestedClockOutAt: draft.requestedClockOutAt,
+        };
+  }
+
+  return {
+    ...(draft.requestedClockInAt === null
+      ? {}
+      : {
+          requestedClockInAt: draft.requestedClockInAt,
+        }),
+    ...(draft.requestedClockOutAt === null
+      ? {}
+      : {
+          requestedClockOutAt: draft.requestedClockOutAt,
+        }),
   };
 }
 
