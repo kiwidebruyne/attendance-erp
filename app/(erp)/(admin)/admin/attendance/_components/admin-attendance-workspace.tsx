@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type {
@@ -25,6 +26,7 @@ type AdminAttendanceWorkspaceProps = {
 const defaultHistoryState = normalizeAdminAttendanceUrlState(
   new URLSearchParams("mode=history"),
 ) as AdminAttendanceHistoryUrlState;
+const adminAttendanceRoute = "/admin/attendance" satisfies Route;
 
 function buildSearchParams(state: AdminAttendanceUrlState) {
   const searchParams = new URLSearchParams();
@@ -67,16 +69,16 @@ export function AdminAttendanceWorkspace({
   state,
   todayResponse,
 }: AdminAttendanceWorkspaceProps) {
-  const pathname = usePathname();
   const router = useRouter();
 
   function replaceState(nextState: AdminAttendanceUrlState) {
     const nextSearchParams = buildSearchParams(nextState).toString();
-    router.replace(
+    const nextRoute =
       nextSearchParams.length === 0
-        ? pathname
-        : `${pathname}?${nextSearchParams}`,
-    );
+        ? adminAttendanceRoute
+        : (`${adminAttendanceRoute}?${nextSearchParams}` as Route);
+
+    router.replace(nextRoute);
   }
 
   function handleModeChange(mode: string) {
