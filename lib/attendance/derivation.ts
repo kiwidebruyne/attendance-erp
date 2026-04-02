@@ -5,6 +5,7 @@ import type {
   AttendanceFlag,
   AttendancePhase,
   AttendanceRecord,
+  AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
   PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
@@ -15,6 +16,7 @@ type DeriveAttendanceDisplayInput = {
   record: AttendanceRecord | null;
   attempts: AttendanceAttempt[];
   previousDayOpenRecord: PreviousDayOpenRecord | null;
+  manualRequest?: AttendanceSurfaceManualRequestResource | null;
 };
 
 type DeriveAdminAttendanceSummaryItem = {
@@ -194,6 +196,7 @@ function deriveActiveExceptions({
   record,
   attempts,
   previousDayOpenRecord,
+  manualRequest,
   phase,
 }: DeriveAttendanceDisplayInput & {
   phase: AttendancePhase;
@@ -246,6 +249,14 @@ function deriveActiveExceptions({
 
   if (latestOperationalFailure) {
     activeExceptions.push("attempt_failed");
+  }
+
+  if (manualRequest?.effectiveStatus === "pending") {
+    activeExceptions.push("manual_request_pending");
+  }
+
+  if (manualRequest?.effectiveStatus === "rejected") {
+    activeExceptions.push("manual_request_rejected");
   }
 
   if (

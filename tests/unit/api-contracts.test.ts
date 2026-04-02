@@ -302,6 +302,20 @@ describe("shared contract schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects pending effective status when no active request exists", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("employee attendance contracts", () => {
