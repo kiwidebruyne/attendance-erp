@@ -81,6 +81,8 @@ app/
 
 - Prefer Server Components for route-level data reads and initial page composition.
 - Use Client Components only for browser-driven interactivity such as filters, tabs, forms, modal state, and optimistic UI.
+- Keep route `page.tsx` files server-first even when a screen later adopts React Query. Move interactive data consumption into nested Client Components instead of converting the route entry itself into a Client Component by default.
+- Mount shared client-only providers such as `QueryClientProvider` at the narrowest shared route-group boundary that needs them. For the ERP assignment shell, that boundary lives under `app/(erp)/layout.tsx`, not the document root layout.
 - Keep shared table formatting, validation helpers, and mock repositories outside route files so they can be reused by both pages and Route Handlers.
 - Do not colocate `page.tsx` and `route.ts` in the same route segment.
 
@@ -117,7 +119,8 @@ Recommended conventions inside `lib/`:
 ## Mock API Boundary
 
 - Route Handlers are the public contract for the assignment's REST API.
-- UI routes should consume the mock API contract or shared mock repositories, but they should not import handler files directly.
+- Interactive client screens should read from `/api/**`, validate responses with the existing shared contracts in `lib/contracts/**`, and avoid importing Route Handler files directly.
+- Server-first route pages may still read shared mock repositories for initial composition when a task explicitly requires server-side reads, but client React Query consumers should stay on the `/api/**` boundary.
 - Keep request and response shapes aligned with `docs/api-spec.md`.
 - Keep shared vocabulary aligned with `docs/database-schema.md`.
 - Default to the Node.js runtime unless a specific issue documents an Edge runtime need.

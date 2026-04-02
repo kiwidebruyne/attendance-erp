@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Providers } from "@/app/(erp)/providers";
 import { ErpShell } from "@/components/shell/erp-shell";
 
 export default function ErpLayout({
@@ -7,5 +8,9 @@ export default function ErpLayout({
 }: Readonly<{
   children: ReactNode;
 }>) {
-  return <ErpShell>{children}</ErpShell>;
+  return (
+    <ErpShell>
+      <Providers>{children}</Providers>
+    </ErpShell>
+  );
 }
