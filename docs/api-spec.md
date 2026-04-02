@@ -340,6 +340,10 @@ Response notes:
 - `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for the current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape, keeps `status` and `effectiveStatus` inside that same subset, and may target the requested workday or the prior workday during carry-over handling.
 - Consumers should treat `manualRequest` as a compact row-level projection that exists only on `GET /api/attendance/me` and `GET /api/admin/attendance/today`, rather than a full request detail payload. If its `date` points at the prior workday during carry-over handling, the row should show that target date explicitly.
 - If an employee edits or withdraws a pending manual request before review, the row should refresh from the latest projection. Approved manual requests should disappear from this embedded surface once canonical attendance writeback completes.
+- `display.activeExceptions` may contain multiple values at once.
+- `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
+- `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
+- When `display.activeExceptions` includes `absent` and no higher-priority carry-over or request-state override applies, `display.nextAction.type` must be `submit_manual_request` rather than `clock_in`.
 
 ### `GET /api/attendance/me/history?from=&to=`
 
@@ -682,7 +686,6 @@ Request body:
 Current-scope rules:
 
 - The request must currently have `status = pending`.
-- If `date` is provided, it must still target today or a future workday in the first pass.
 - If `status = withdrawn`, omit the other editable fields.
 - If `status` is omitted, provide at least one employee-editable field.
 - This endpoint never creates a follow-up request; approved-state leave change or cancel still requires `POST /api/leave/request` with `followUpKind`.
