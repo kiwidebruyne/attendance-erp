@@ -241,6 +241,21 @@ This is a derived attendance input rather than a separate employee-facing workfl
 | `startAt`    | string | covered interval start time                |
 | `endAt`      | string | covered interval end time                  |
 
+### Company Event
+
+Represents a seeded read-only company calendar input that can make a date operationally sensitive for leave review.
+
+| Field   | Type   | Notes                                   |
+| ------- | ------ | --------------------------------------- |
+| `id`    | string | stable company-event identifier         |
+| `date`  | string | calendar date on which the event exists |
+| `title` | string | display label for the company event     |
+
+Important rules:
+
+- Company events are read-only seeded inputs in the mock world.
+- Leave conflict policy may read them for warnings, but leave endpoints do not mutate them.
+
 ### Manual Attendance Request
 
 Represents a manual correction request when successful attendance facts are missing or incomplete.
@@ -338,6 +353,28 @@ Important rules:
 - `governingReviewComment` stays populated only while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up; otherwise it is `null`.
 - Employee pages may still expose linked `resubmission` entry points from request status and relation fields even though the shared projection no longer treats the reviewed non-approved step as active work.
 - Employee-only leave top-surface suppression is separate visibility metadata and must not change `active*`, `effective*`, `governingReviewComment`, or `nextAction`.
+
+### Leave Conflict Projection
+
+Represents the read-only leave conflict context shared by employee leave entry and admin leave review surfaces.
+
+Expected fields:
+
+- `companyEventContext`
+- `effectiveApprovedLeaveContext`
+- `pendingLeaveContext`
+- `staffingRisk`
+- `requiresApprovalConfirmation`
+
+Important rules:
+
+- API resources that expose this projection use the field name `leaveConflict`.
+- Employee pre-submit warning flow may expose the same projection through selected-date entry context before a leave-request record exists.
+- The projection is derived from read-only seeded company-event inputs plus the current leave-chain state, and it is shared by employee leave entry pre-submit warnings and admin leave review surfaces.
+- It applies to employee pre-submit warning flow and to active pending review and approved-state `change`/`cancel` follow-up review.
+- `pendingLeaveContext` stays context only and does not become automatic blocking math.
+- `staffingRisk = warning` means manual admin approval is required; employee-facing surfaces still allow submission.
+- The projection does not include employee-only top-surface suppression metadata.
 
 ### Attendance Display
 
