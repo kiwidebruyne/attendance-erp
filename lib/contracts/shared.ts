@@ -260,6 +260,15 @@ function validateRequestChainProjection(
     });
   }
 
+  if (!hasActiveRequest && value.effectiveStatus === "pending") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["effectiveStatus"],
+      message:
+        'Invalid input: "effectiveStatus" cannot be "pending" when no active work exists',
+    });
+  }
+
   if (hasActiveRequest && value.nextAction !== "admin_review") {
     ctx.addIssue({
       code: "custom",

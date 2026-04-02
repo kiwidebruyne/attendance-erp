@@ -8,6 +8,7 @@ import type {
   AttendanceAttempt,
   AttendanceDisplay,
   AttendanceRecord,
+  AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
   PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
@@ -64,6 +65,34 @@ function createPreviousDayOpenRecord(
     clockInAt: "2026-03-29T09:00:00+09:00",
     clockOutAt: null,
     expectedClockOutAt: "2026-03-29T18:00:00+09:00",
+    ...overrides,
+  };
+}
+
+function createManualRequest(
+  overrides: Partial<AttendanceSurfaceManualRequestResource> = {},
+): AttendanceSurfaceManualRequestResource {
+  return {
+    id: "req_manual_001",
+    requestType: "manual_attendance",
+    action: "clock_in",
+    date: "2026-03-30",
+    requestedAt: "2026-03-30T09:15:00+09:00",
+    reason: "Beacon retry failed",
+    status: "pending",
+    reviewedAt: null,
+    reviewComment: null,
+    rootRequestId: "req_manual_001",
+    parentRequestId: null,
+    followUpKind: null,
+    supersededByRequestId: null,
+    activeRequestId: "req_manual_001",
+    activeStatus: "pending",
+    effectiveRequestId: "req_manual_001",
+    effectiveStatus: "pending",
+    governingReviewComment: null,
+    hasActiveFollowUp: false,
+    nextAction: "admin_review",
     ...overrides,
   };
 }
@@ -280,6 +309,59 @@ describe("attendance derivation", () => {
       activeExceptions: ["previous_day_checkout_missing", "not_checked_in"],
       nextAction: {
         type: "resolve_previous_day_checkout",
+        relatedRequestId: null,
+      },
+    });
+  });
+
+  it("surfaces pending manual requests in attendance exceptions", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T09:20:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: null,
+        manualRequest: createManualRequest(),
+      }),
+    ).toEqual({
+      phase: "before_check_in",
+      flags: [],
+      activeExceptions: ["manual_request_pending", "not_checked_in"],
+      nextAction: {
+        type: "review_request_status",
+        relatedRequestId: null,
+      },
+    });
+  });
+
+  it("surfaces rejected manual requests in attendance exceptions", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T18:05:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: null,
+        manualRequest: createManualRequest({
+          id: "req_manual_002",
+          status: "rejected",
+          reviewedAt: "2026-03-30T17:30:00+09:00",
+          reviewComment: "Need clearer retry context.",
+          activeRequestId: null,
+          activeStatus: null,
+          effectiveRequestId: "req_manual_002",
+          effectiveStatus: "rejected",
+          governingReviewComment: "Need clearer retry context.",
+          nextAction: "none",
+        }),
+      }),
+    ).toEqual({
+      phase: "before_check_in",
+      flags: [],
+      activeExceptions: ["manual_request_rejected", "absent"],
+      nextAction: {
+        type: "review_request_status",
         relatedRequestId: null,
       },
     });
