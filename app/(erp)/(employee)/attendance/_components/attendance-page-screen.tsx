@@ -340,24 +340,25 @@ function buildHistoricalIssueSurfaces(
     .filter(
       (record) => record.date < data.date && hasHistoryIssue(record, data.date),
     )
-    .map((record) => {
+    .flatMap((record) => {
       const historyAction = buildHistoryAction(record);
 
       if (historyAction === null) {
-        return null;
+        return [];
       }
 
-      return {
-        ...historyAction,
-        id: `history-issue-${record.date}`,
-        title: formatNumericDateLabel(record.date),
-        description: getHistoricalIssueDescription(
-          getHistoryIssueLabels(record, data.date),
-        ),
-        tone: "destructive" as const,
-      };
-    })
-    .filter((surface): surface is AttendanceSurfaceModel => surface !== null);
+      return [
+        {
+          ...historyAction,
+          id: `history-issue-${record.date}`,
+          title: formatNumericDateLabel(record.date),
+          description: getHistoricalIssueDescription(
+            getHistoryIssueLabels(record, data.date),
+          ),
+          tone: "destructive" as const,
+        },
+      ];
+    });
 }
 
 function getSurfaceMetaLabel(
