@@ -187,7 +187,9 @@ Fields:
 - `id`
 - `action`
 - `date`
-- `requestedAt`
+- `submittedAt`
+- `requestedClockInAt`
+- `requestedClockOutAt`
 - `status`
 - `reviewComment`
 - `governingReviewComment`
@@ -405,7 +407,8 @@ Example request body:
 
 - `date`: required target workday
 - `action`: required `clock_in`, `clock_out`, or `both`
-- `requestedAt`: required employee submission time
+- `requestedClockInAt`: required when `action` is `clock_in` or `both`
+- `requestedClockOutAt`: required when `action` is `clock_out` or `both`
 - `reason`: required employee note
 - `parentRequestId`: optional; required when creating a follow-up resubmission
 - `followUpKind`: optional `resubmission` only in the current product
@@ -413,6 +416,8 @@ Example request body:
 Current-scope rules:
 
 - Omit `parentRequestId` and `followUpKind` for a new root request.
+- A new root request conflicts when the employee already has a governing manual-attendance chain for the same target date, even if the earlier request used a different `action`.
+- `clock_out` is valid only when the target day already has an open attendance record; otherwise the employee must use `both`.
 - `followUpKind = resubmission` is valid only when the parent manual request currently has `status = rejected` or `revision_requested`.
 - `followUpKind = resubmission` creates a new pending follow-up and does not reopen the parent reviewed request in place.
 - Approved manual-attendance requests do not support follow-up `change` or `cancel` in the current product.
@@ -423,7 +428,7 @@ Example request body:
 {
   "date": "2026-03-30",
   "action": "clock_in",
-  "requestedAt": "2026-03-30T09:00:00+09:00",
+  "requestedClockInAt": "2026-03-30T09:00:00+09:00",
   "reason": "Beacon was not detected at the office entrance."
 }
 ```
@@ -436,7 +441,9 @@ Response:
   "requestType": "manual_attendance",
   "action": "clock_in",
   "date": "2026-03-30",
-  "requestedAt": "2026-03-30T09:00:00+09:00",
+  "submittedAt": "2026-03-30T09:10:00+09:00",
+  "requestedClockInAt": "2026-03-30T09:00:00+09:00",
+  "requestedClockOutAt": null,
   "reason": "Beacon was not detected at the office entrance.",
   "status": "pending",
   "reviewedAt": null,
@@ -458,7 +465,7 @@ Response:
 Typical error cases:
 
 - `400 validation_error` for malformed payloads
-- `409 conflict` when a duplicate manual request already exists for the same employee and date
+- `409 conflict` when a governing manual-attendance chain already exists for the same employee and target date
 - `409 conflict` when the same chain already has another active employee follow-up
 - `409 conflict` when the parent request is already approved and would require an out-of-scope manual-attendance rollback flow
 
@@ -470,7 +477,8 @@ Request body:
 
 - `date`: optional when editing the pending request
 - `action`: optional when editing the pending request
-- `requestedAt`: optional when editing the pending request
+- `requestedClockInAt`: optional when editing the pending request
+- `requestedClockOutAt`: optional when editing the pending request
 - `reason`: optional when editing the pending request
 - `status`: optional; the only writable status value is `withdrawn`
 
@@ -479,6 +487,8 @@ Current-scope rules:
 - The request must currently have `status = pending`.
 - If `status = withdrawn`, omit the other editable fields.
 - If `status` is omitted, provide at least one employee-editable field.
+- The resulting payload must still satisfy the action-specific clock rules: `clock_in` requires `requestedClockInAt`, `clock_out` requires `requestedClockOutAt`, and `both` requires both fields.
+- If the resulting action is `clock_out`, the target day must already have an open attendance record; otherwise the employee must use `both`.
 - This endpoint never creates a follow-up request; it only mutates the current pending request in place.
 
 Example request body:
@@ -505,7 +515,9 @@ Response:
   "requestType": "manual_attendance",
   "action": "clock_in",
   "date": "2026-03-30",
-  "requestedAt": "2026-03-30T09:00:00+09:00",
+  "submittedAt": "2026-03-30T09:10:00+09:00",
+  "requestedClockInAt": "2026-03-30T09:00:00+09:00",
+  "requestedClockOutAt": null,
   "reason": "Beacon failed again; correcting the note before review.",
   "status": "pending",
   "reviewedAt": null,
