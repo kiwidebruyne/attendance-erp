@@ -1,5 +1,4 @@
 import {
-  ArrowUpRightIcon,
   CalendarClockIcon,
   CircleAlertIcon,
   Clock3Icon,
@@ -104,6 +103,38 @@ function formatWeeklyMinutes(workMinutes: number) {
   const minutes = workMinutes % 60;
 
   return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+}
+
+function formatBeaconAuthLabel(today: AttendancePageData["today"]) {
+  if (
+    today.todayRecord?.clockInSource === "beacon" ||
+    today.todayRecord?.clockOutSource === "beacon"
+  ) {
+    return "인증됨";
+  }
+
+  if (
+    today.attempts.findLast(
+      (attempt) =>
+        attempt.status === "failed" &&
+        attempt.failureReason.toLowerCase().includes("beacon"),
+    ) !== undefined
+  ) {
+    return "인증 실패";
+  }
+
+  if (
+    today.todayRecord?.clockInSource === "manual" ||
+    today.todayRecord?.clockOutSource === "manual"
+  ) {
+    return "수동 반영";
+  }
+
+  if (today.todayRecord === null) {
+    return "-";
+  }
+
+  return "-";
 }
 
 function addDays(date: string, delta: number) {
@@ -311,20 +342,36 @@ function getTodayPrimaryAction(surfaces: AttendanceSurfaceModel[]): Readonly<{
   };
 }
 
-function getActualRecordSummary(
-  record: AttendancePageData["history"]["records"][number],
-) {
-  return `${formatAttendanceTime(record.record?.clockInAt ?? null)} - ${formatAttendanceTime(record.record?.clockOutAt ?? null)}`;
+function getHistoryRowButtonVariant(
+  historyAction: AttendanceHistoryAction,
+): "default" | "outline" | "secondary" {
+  return historyAction.draft.action === "clock_out" ? "outline" : "secondary";
 }
 
-function getWorkMinutesDetail(
+function getSurfaceButtonVariant(surface: AttendanceSurfaceModel) {
+  if (surface.tone === "destructive") {
+    return "destructive";
+  }
+
+  if (surface.kind === "leave_conflict") {
+    return "outline";
+  }
+
+  if (surface.kind === "pending") {
+    return "outline";
+  }
+
+  return "secondary";
+}
+
+function getTotalWorkTimeLabel(
   record: AttendancePageData["history"]["records"][number],
 ) {
   if (
     record.record?.workMinutes === null ||
     record.record?.workMinutes === undefined
   ) {
-    return null;
+    return "-";
   }
 
   return formatWorkMinutes(record.record.workMinutes);
@@ -397,7 +444,7 @@ function TodayBriefingPanel({
 
             <div className="hidden h-10 w-px bg-border xl:block" />
 
-            <div className="grid flex-1 gap-4 sm:grid-cols-3">
+            <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <div className="space-y-1.5">
                 <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
                   출근 시간
@@ -410,13 +457,20 @@ function TodayBriefingPanel({
               </div>
               <div className="space-y-1.5">
                 <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                  예상 퇴근
+                  퇴근 시간
                 </p>
                 <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground">
                   {formatAttendanceTime(
-                    data.today.expectedWorkday.adjustedClockOutAt ??
-                      data.today.expectedWorkday.expectedClockOutAt,
+                    data.today.todayRecord?.clockOutAt ?? null,
                   )}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                  비콘 인증 여부
+                </p>
+                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground">
+                  {formatBeaconAuthLabel(data.today)}
                 </p>
               </div>
               <div className="space-y-1.5">
@@ -507,7 +561,9 @@ function ExceptionStack({
           aria-hidden="true"
           className="size-4 text-status-danger"
         />
-        <h2 className="text-sm font-medium text-foreground">예외 사항 처리</h2>
+        <h2 className="text-sm font-medium text-foreground">
+          지금 확인할 근태가 있어요
+        </h2>
         <span className="inline-flex size-5 items-center justify-center rounded-full bg-status-danger-soft text-[10px] font-medium text-status-danger">
           {surfaces.length}
         </span>
@@ -517,10 +573,10 @@ function ExceptionStack({
         <Card>
           <CardContent className="space-y-2">
             <p className="text-sm font-medium text-foreground">
-              지금 바로 확인할 예외가 없어요.
+              지금 바로 확인할 예외가 없어요
             </p>
             <p className="text-sm leading-6 text-secondary">
-              새로운 문제나 검토 결과가 생기면 이 영역에서 먼저 보여드려요.
+              새로운 문제나 검토 결과가 생기면 이 영역에서 먼저 보여드려요
             </p>
           </CardContent>
         </Card>
@@ -567,7 +623,7 @@ function ExceptionStack({
                   <Button
                     className="w-full"
                     onClick={() => onOpenSheet(surface)}
-                    variant="outline"
+                    variant={getSurfaceButtonVariant(surface)}
                   >
                     {surface.ctaLabel}
                   </Button>
@@ -594,13 +650,12 @@ function HistoryRowAction({
 
   return (
     <Button
-      aria-label={historyAction.label}
+      className="ml-auto"
       onClick={() => onOpenSheet(historyAction)}
-      size="icon-xs"
-      variant="ghost"
+      size="sm"
+      variant={getHistoryRowButtonVariant(historyAction)}
     >
-      <ArrowUpRightIcon />
-      <span className="sr-only">{historyAction.label}</span>
+      {historyAction.label}
     </Button>
   );
 }
@@ -623,7 +678,7 @@ function HistorySection({
           </h2>
           <p className="text-sm leading-6 text-secondary">
             최근 {data.view === "week" ? "7일" : "30일"} 기록을 보고 필요한
-            날짜만 다시 열어 확인해요.
+            날짜만 다시 열어 확인해요
           </p>
         </div>
         <ToggleGroup
@@ -648,7 +703,9 @@ function HistorySection({
           <TableRow>
             <TableHead>날짜</TableHead>
             <TableHead>예정 시간</TableHead>
-            <TableHead>실제 기록</TableHead>
+            <TableHead>출근 시각</TableHead>
+            <TableHead>퇴근 시각</TableHead>
+            <TableHead>총 근무 시간</TableHead>
             <TableHead>상태</TableHead>
             <TableHead className="text-right">작업</TableHead>
           </TableRow>
@@ -656,7 +713,6 @@ function HistorySection({
         <TableBody>
           {data.history.records.map((record) => {
             const historyAction = buildHistoryAction(record);
-            const workMinutesDetail = getWorkMinutesDetail(record);
             const status = getHistoryStatusPresentation(
               record.display,
               data.today.manualRequest,
@@ -670,15 +726,14 @@ function HistorySection({
                 <TableCell>
                   {formatWorkWindow(record.expectedWorkday)}
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2 text-foreground">
-                    <span>{getActualRecordSummary(record)}</span>
-                    {workMinutesDetail === null ? null : (
-                      <span className="text-xs text-muted-foreground">
-                        ({workMinutesDetail})
-                      </span>
-                    )}
-                  </div>
+                <TableCell className="whitespace-nowrap text-foreground">
+                  {formatAttendanceTime(record.record?.clockInAt ?? null)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-foreground">
+                  {formatAttendanceTime(record.record?.clockOutAt ?? null)}
+                </TableCell>
+                <TableCell className="whitespace-nowrap text-foreground">
+                  {getTotalWorkTimeLabel(record)}
                 </TableCell>
                 <TableCell>
                   <StatusChip
@@ -698,7 +753,7 @@ function HistorySection({
         </TableBody>
       </Table>
       <div className="flex items-center justify-between border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">
-        <span>최근 {data.history.records.length}건을 표시하고 있어요.</span>
+        <span>최근 {data.history.records.length}건을 표시하고 있어요</span>
         <span>
           {data.historyRange.from} ~ {data.historyRange.to}
         </span>
@@ -727,7 +782,7 @@ export function AttendancePageScreen({
           근태 관리
         </h1>
         <p className="text-sm leading-6 text-secondary">
-          오늘의 근무 상태와 기록을 확인하고 관리합니다.
+          오늘의 근무 상태와 기록을 확인하고 관리합니다
         </p>
       </header>
 

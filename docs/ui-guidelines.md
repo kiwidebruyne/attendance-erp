@@ -26,6 +26,8 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 
 - Treat the provided attendance Figma frame as the primary shell reference and `docs/assets/erp-reference-dashboard.webp` as a supporting tone reference.
 - Reuse the Figma frame's 200px dark sidebar, 56px white utility bar, pale content canvas, and white card surfaces.
+- On desktop, the sidebar may collapse into a thin rail as long as the menu re-open control remains visible at the top and the same four-route IA stays intact.
+- Do not reserve the top utility bar for helper filler copy. If no route-level helper is needed, leave the left side visually quiet.
 - Keep the shared page chrome consistent: each route should present a page title and one brief context line near the top of the content area.
 - Global navigation should stay limited to the four assignment routes. Do not promote request queue views or attendance history view toggles into the sidebar.
 - Keep `/admin/attendance` today-versus-history switching inside the page itself rather than promoting it into separate navigation.
@@ -37,12 +39,14 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - `/attendance` should follow the Figma composition: page header, one daily briefing row with a 3:1 main briefing/metric split, then a lower two-column area with a fixed-width exception rail and a larger ledger panel.
 - `/attendance` should use a stable today card plus a separate active-exception stack before any history table or secondary summary.
 - Keep the today card visible even when multiple critical exceptions are active. The card provides the user's current context; exception surfaces should not replace it.
-- The today card should summarize the adjusted expected work window, current phase, next action, and current active exceptions.
+- The today card should summarize the current phase, current in or out facts, beacon-auth state, next action, and current active exceptions.
 - Treat active exceptions as independent surfaces rather than a single combined warning area.
 - Keep every current active exception visible in the stack. Do not collapse lower-priority active exceptions into a badge count, overflow menu, or hidden secondary area while they still matter operationally.
 - Each active exception surface should own its own CTA and explanation.
 - Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
 - History rows may expose the same recovery or review flows, but row actions should be compact re-entry points that stay less prominent than the top-of-screen surfaces.
+- `/attendance` history should keep scheduled time, check-in time, check-out time, total work time, status, and CTA in separate columns instead of merging actual facts into one dense cell.
+- Use `-` for missing attendance fact values in the ledger, and use `주말` for non-workday schedule rows.
 - On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
 - If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.

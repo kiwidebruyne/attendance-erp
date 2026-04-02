@@ -119,12 +119,12 @@ function EditableRequestForm({
 
   const handleSubmit = () => {
     if (reason.trim().length === 0) {
-      setLocalError("사유를 입력해 주세요.");
+      setLocalError("사유를 입력해 주세요");
       return;
     }
 
     if (date.length === 0) {
-      setLocalError("대상 날짜를 확인해 주세요.");
+      setLocalError("대상 날짜를 확인해 주세요");
       return;
     }
 
@@ -132,7 +132,7 @@ function EditableRequestForm({
       (action === "clock_in" || action === "both") &&
       requestedClockInAt === ""
     ) {
-      setLocalError("출근 시간을 입력해 주세요.");
+      setLocalError("출근 시간을 입력해 주세요");
       return;
     }
 
@@ -140,7 +140,7 @@ function EditableRequestForm({
       (action === "clock_out" || action === "both") &&
       requestedClockOutAt === ""
     ) {
-      setLocalError("퇴근 시간을 입력해 주세요.");
+      setLocalError("퇴근 시간을 입력해 주세요");
       return;
     }
 
@@ -283,7 +283,7 @@ function EditableRequestForm({
       <SheetFooter className="border-t border-border">
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={onClose}>
-            취소
+            닫기
           </Button>
           {state.kind === "pending_edit" ? (
             <Button
@@ -295,7 +295,7 @@ function EditableRequestForm({
             </Button>
           ) : null}
           <Button disabled={isSubmitting} onClick={handleSubmit}>
-            {isSubmitting ? "처리 중..." : state.ctaLabel}
+            {isSubmitting ? "처리 중…" : state.ctaLabel}
           </Button>
         </div>
       </SheetFooter>
@@ -347,11 +347,11 @@ export function AttendanceSharedSheet({
                 <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4 text-sm leading-6 text-muted-foreground">
                   <p>
                     승인된 휴가 정보와 실제 근무 기록이 같은 날짜에 함께 보이고
-                    있어요.
+                    있어요
                   </p>
                   <p>
                     지금 이 화면에서는 즉시 정정 요청을 쓰지 않고, 현재 휴가
-                    상태와 근무 사실을 먼저 함께 확인하는 흐름으로 안내해요.
+                    상태와 근무 사실을 먼저 함께 확인하는 흐름으로 안내해요
                   </p>
                 </div>
               </div>

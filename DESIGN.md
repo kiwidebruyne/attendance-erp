@@ -47,8 +47,8 @@ Depth should come from surface contrast, a light `#e2e8f0` border, and a soft `0
 
 ## Components
 
-- **Sidebar Navigation**: Persistent 200px dark vertical navigation, simple grouped links, active items on `#3d4e6e`, and no launcher-grid styling.
-- **Top Utility Bar**: 56px white bar with one short context line on the left and compact utility/avatar controls on the right.
+- **Sidebar Navigation**: 200px dark vertical navigation by default, with a thin desktop collapse rail that keeps a top menu re-open control, simple grouped links, active items on `#3d4e6e`, and no launcher-grid styling.
+- **Top Utility Bar**: 56px white bar with compact utility/avatar controls and no mandatory helper sentence on the left.
 - **Cards**: 16px radius, white surface, `#e2e8f0` border, low shadow, and generous 20–24px internal padding.
 - **Tables**: quiet headers, roomy horizontal padding, soft row hover, and one clear primary status chip per row when the layout would otherwise feel noisy.
 - **Buttons**: strong action buttons use `#162847`; secondary actions should prefer outline or soft semantic fills.
@@ -60,6 +60,6 @@ Depth should come from surface contrast, a light `#e2e8f0` border, and a soft `0
 
 - Do use purple as accent and metric emphasis, not as the default fill for every large action.
 - Do maintain accessible contrast and visible focus states.
-- Do keep the shell proportions stable: 200px sidebar, 56px top bar, calm content canvas.
+- Do keep the shell proportions stable: 200px expanded sidebar, a thin desktop collapse rail, 56px top bar, and a calm content canvas.
 - Don't mix multiple corner-radius systems or inconsistent shadow styles.
 - Don't reintroduce generic app-shell chrome that looks like a starter template rather than the Figma frame.

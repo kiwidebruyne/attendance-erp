@@ -3,6 +3,7 @@
 import {
   BellIcon,
   CalendarDaysIcon,
+  ChevronLeftIcon,
   Clock3Icon,
   FileTextIcon,
   LayoutDashboardIcon,
@@ -81,13 +82,17 @@ function getRoleDescription(pathname: string) {
 
 type ShellSidebarNavProps = {
   isMobile?: boolean;
+  isCollapsed?: boolean;
   onNavigate?: () => void;
+  onToggleCollapse?: () => void;
   pathname: string;
 };
 
 function ShellSidebarNav({
   isMobile = false,
+  isCollapsed = false,
   onNavigate,
+  onToggleCollapse,
   pathname,
 }: ShellSidebarNavProps) {
   const roleLabel = getRoleLabel(pathname);
@@ -97,23 +102,56 @@ function ShellSidebarNav({
     <div
       className={cn(
         "flex h-full flex-col bg-sidebar text-sidebar-foreground",
-        isMobile ? "w-full" : "w-[200px]",
+        isMobile ? "w-full" : isCollapsed ? "w-[56px]" : "w-[200px]",
       )}
     >
-      <div className="flex h-14 items-center justify-between border-b border-white/10 px-4">
-        <div className="min-w-0">
-          <p className="truncate text-[12px] font-medium tracking-[-0.02em] text-white">
-            베스트슬립 전사 관리 시스템
-          </p>
-        </div>
+      <div
+        className={cn(
+          "flex h-14 items-start border-b border-white/10 pt-2",
+          isCollapsed ? "justify-end px-2" : "justify-between px-4",
+        )}
+      >
+        {!isCollapsed ? (
+          <div className="min-w-0 pt-0.5">
+            <p className="truncate text-[14px] font-semibold tracking-[-0.03em] text-white">
+              베스트슬립
+            </p>
+            <p className="truncate text-[10px] font-medium text-white/52">
+              전사 관리 시스템
+            </p>
+          </div>
+        ) : null}
+        {onToggleCollapse ? (
+          <Button
+            aria-controls="erp-sidebar"
+            aria-expanded={!isCollapsed}
+            aria-label={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            className={cn(
+              "shrink-0 text-white hover:bg-white/10 hover:text-white",
+              isCollapsed && "size-9",
+            )}
+            onClick={onToggleCollapse}
+            size="icon-sm"
+            variant="ghost"
+          >
+            {isCollapsed ? <MenuIcon /> : <ChevronLeftIcon />}
+          </Button>
+        ) : null}
       </div>
 
-      <nav className="flex flex-1 flex-col gap-5 overflow-y-auto px-3 py-4">
+      <nav
+        className={cn(
+          "flex flex-1 flex-col overflow-y-auto py-4",
+          isCollapsed ? "gap-4 px-2" : "gap-5 px-3",
+        )}
+      >
         {ERP_NAV_SECTIONS.map((section) => (
           <div key={section.label} className="flex flex-col gap-2">
-            <p className="px-1 text-[11px] font-medium tracking-[0.08em] text-white/45 uppercase">
-              {section.label}
-            </p>
+            {!isCollapsed ? (
+              <p className="px-1 text-[11px] font-medium uppercase tracking-[0.08em] text-white/45">
+                {section.label}
+              </p>
+            ) : null}
             <div className="flex flex-col gap-1">
               {section.items.map((item) => {
                 const isActive = isNavItemActive(pathname, item.href);
@@ -123,7 +161,8 @@ function ShellSidebarNav({
                     key={item.href}
                     aria-current={isActive ? "page" : undefined}
                     className={cn(
-                      "flex items-center gap-3 rounded-[10px] px-3 py-2.5 text-[13px] font-medium transition-colors",
+                      "flex items-center rounded-[10px] py-2.5 text-[13px] font-medium transition-colors",
+                      isCollapsed ? "justify-center px-0" : "gap-3 px-3",
                       isActive
                         ? "bg-shell-sidebar-strong text-white"
                         : "text-white/75 hover:bg-white/5 hover:text-white",
@@ -132,7 +171,9 @@ function ShellSidebarNav({
                     onClick={onNavigate}
                   >
                     <item.icon aria-hidden="true" className="size-4" />
-                    <span>{item.label}</span>
+                    <span className={cn(isCollapsed && "sr-only")}>
+                      {item.label}
+                    </span>
                   </Link>
                 );
               })}
@@ -141,21 +182,23 @@ function ShellSidebarNav({
         ))}
       </nav>
 
-      <div className="border-t border-white/10 px-4 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-8 items-center justify-center rounded-full bg-white/15 text-[11px] font-medium text-white">
-            {roleLabel.slice(0, 1)}
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-[12px] font-medium text-white">
-              {roleLabel}
-            </p>
-            <p className="truncate text-[10px] text-white/60">
-              {roleDescription}
-            </p>
+      {!isCollapsed ? (
+        <div className="border-t border-white/10 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-8 items-center justify-center rounded-full bg-white/15 text-[11px] font-medium text-white">
+              {roleLabel.slice(0, 1)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[12px] font-medium text-white">
+                {roleLabel}
+              </p>
+              <p className="truncate text-[10px] text-white/60">
+                {roleDescription}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -168,7 +211,9 @@ export function ErpShellFrame({
   pathname: string;
 }>) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const roleLabel = getRoleLabel(pathname);
+  const desktopSidebarWidth = desktopSidebarCollapsed ? 56 : 200;
 
   return (
     <div className="min-h-svh bg-shell-canvas text-foreground">
@@ -179,11 +224,24 @@ export function ErpShellFrame({
         Skip to main content
       </a>
 
-      <aside className="fixed inset-y-0 left-0 hidden w-[200px] lg:block">
-        <ShellSidebarNav pathname={pathname} />
+      <aside
+        id="erp-sidebar"
+        className="fixed inset-y-0 left-0 hidden overflow-hidden transition-[width] duration-200 lg:block"
+        style={{ width: desktopSidebarWidth }}
+      >
+        <ShellSidebarNav
+          isCollapsed={desktopSidebarCollapsed}
+          onToggleCollapse={() => setDesktopSidebarCollapsed((value) => !value)}
+          pathname={pathname}
+        />
       </aside>
 
-      <div className="flex min-h-svh flex-col lg:pl-[200px]">
+      <div
+        className={cn(
+          "flex min-h-svh flex-col transition-[padding-left] duration-200",
+          desktopSidebarCollapsed ? "lg:pl-[56px]" : "lg:pl-[200px]",
+        )}
+      >
         <header className="sticky top-0 z-30 border-b border-border bg-shell-topbar/95 backdrop-blur-sm">
           <div className="flex h-14 items-center justify-between gap-4 px-4 lg:px-6">
             <div className="flex min-w-0 items-center gap-3">
@@ -196,9 +254,6 @@ export function ErpShellFrame({
               >
                 <MenuIcon />
               </Button>
-              <p className="truncate text-[13px] text-secondary">
-                업무 영역을 선택하여 시작하세요.
-              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -244,7 +299,7 @@ export function ErpShellFrame({
           <SheetHeader className="sr-only">
             <SheetTitle>주요 탐색</SheetTitle>
             <SheetDescription>
-              베스트슬립 근태 ERP 화면 사이를 이동합니다.
+              베스트슬립 근태 ERP 화면 사이를 이동합니다
             </SheetDescription>
           </SheetHeader>
           <ShellSidebarNav

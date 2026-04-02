@@ -220,9 +220,82 @@ describe("AttendancePageClient", () => {
 
     expect(screen.getByText("근태 관리")).toBeInTheDocument();
     expect(
-      screen.getByText("어제 퇴근 기록이 아직 없어요."),
+      screen.getByText("어제 퇴근 기록이 아직 없어요"),
     ).toBeInTheDocument();
     expect(screen.getByText("출퇴근 이력")).toBeInTheDocument();
+  });
+
+  it("shows beacon authentication status in the today card", () => {
+    const pageData = createPageData({
+      today: {
+        ...createPageData().today,
+        todayRecord: {
+          id: "attendance_record_emp_001_2026-04-13",
+          date: "2026-04-13",
+          clockInAt: "2026-04-13T09:00:00+09:00",
+          clockInSource: "beacon",
+          clockOutAt: null,
+          clockOutSource: null,
+          workMinutes: 180,
+        },
+      },
+    });
+
+    render(<AttendancePageClient initialData={pageData} />);
+
+    expect(screen.getByText("비콘 인증 여부")).toBeInTheDocument();
+    expect(screen.getByText("인증됨")).toBeInTheDocument();
+    expect(screen.getByText("퇴근 시간").closest("div")).toHaveTextContent(
+      "퇴근 시간-",
+    );
+  });
+
+  it("splits history record times and uses dash placeholders for missing values", () => {
+    const pageData = createPageData({
+      history: {
+        ...createPageData().history,
+        records: [
+          {
+            date: "2026-04-11",
+            expectedWorkday: createExpectedWorkday({
+              isWorkday: false,
+              expectedClockInAt: null,
+              expectedClockOutAt: null,
+              adjustedClockInAt: null,
+              adjustedClockOutAt: null,
+            }),
+            record: null,
+            display: createDisplay({
+              phase: "non_workday",
+              activeExceptions: [],
+              nextAction: {
+                type: "wait",
+                relatedRequestId: null,
+              },
+            }),
+          },
+        ],
+      },
+    });
+
+    render(<AttendancePageClient initialData={pageData} />);
+
+    expect(
+      screen.getByRole("columnheader", { name: "출근 시각" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "퇴근 시각" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "총 근무 시간" }),
+    ).toBeInTheDocument();
+
+    const row = screen.getByText("주말").closest("tr");
+
+    expect(row).not.toBeNull();
+    expect(within(row as HTMLElement).getAllByText("-").length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("keeps failed attempts and missing check-ins as separate surfaces", () => {
@@ -241,9 +314,9 @@ describe("AttendancePageClient", () => {
       />,
     );
 
-    expect(screen.getByText("비콘을 찾을 수 없어요.")).toBeInTheDocument();
+    expect(screen.getByText("비콘을 찾을 수 없어요")).toBeInTheDocument();
     expect(
-      screen.getByText("오늘 출근 기록이 아직 없어요."),
+      screen.getByText("오늘 출근 기록이 아직 없어요"),
     ).toBeInTheDocument();
   });
 
@@ -258,9 +331,7 @@ describe("AttendancePageClient", () => {
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
     );
 
-    expect(
-      sheet.getByText("어제 퇴근 기록이 아직 없어요."),
-    ).toBeInTheDocument();
+    expect(sheet.getByText("어제 퇴근 기록이 아직 없어요")).toBeInTheDocument();
     expect(sheet.getByLabelText("대상 날짜")).toHaveValue("2026-04-10");
     expect(sheet.getByLabelText("퇴근 시간")).toHaveValue("18:00");
   });
@@ -453,9 +524,7 @@ describe("AttendancePageClient", () => {
     );
 
     expect(screen.getByText("근태 관리")).toBeInTheDocument();
-    expect(
-      sheet.getByText("근무 기록을 정정할 수 있어요."),
-    ).toBeInTheDocument();
+    expect(sheet.getByText("근무 기록을 정정할 수 있어요")).toBeInTheDocument();
     expect(sheet.getByLabelText("대상 날짜")).toHaveValue("2026-04-13");
   });
 
@@ -504,7 +573,7 @@ describe("AttendancePageClient", () => {
 
     expect(
       sheet.getByText(
-        "승인된 휴가 정보와 실제 근무 기록이 같은 날짜에 함께 보이고 있어요.",
+        "승인된 휴가 정보와 실제 근무 기록이 같은 날짜에 함께 보이고 있어요",
       ),
     ).toBeInTheDocument();
     expect(sheet.queryByLabelText("사유")).not.toBeInTheDocument();
