@@ -72,6 +72,9 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Warnings should explain why the user is seeing them now, not only what label applies.
 - Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
 - On `/admin/attendance/requests`, treat reviewed `rejected` and `revision_requested` items as completed review history/context inside `completed` and `all`, not as a separate employee-waiting queue.
+- Default the route to `needs_review`; initial load should not invent extra text or date filters beyond the selected tab.
+- In `needs_review`, order actionable rows newest pending request first.
+- In `completed` and the completed-history section of `all`, order rows by latest review activity descending.
 - Give reviewed non-approved history lower visual emphasis than actionable `needs_review` work.
 - Do not frame reviewed non-approved admin rows or detail surfaces as "waiting for employee".
 - Do not show employee-resubmit CTA copy or guidance inside admin detail for those reviewed-history cases.
@@ -82,7 +85,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - In `all`, section actionable review work ahead of completed review history instead of mixing both into one undifferentiated list.
 - In `all`, use the meaning-first section labels `검토 필요` and `완료된 검토 기록` rather than state-machine jargon.
 - In `completed`, separate approved or withdrawn results from reviewed non-approved history while keeping both inside the same route-local workspace, place the approved or withdrawn section first, and use the internal section labels `승인/철회 완료` and `반려·보완 요청 기록`.
-- `needs_review` rows should use one primary status plus at most two secondary chips, not multiple equal badges. Use fact-led rationale copy that reads as current state plus why it matters now, keep the default to one line, and allow at most a two-line clamp.
+- `needs_review` rows should show the employee block, request type/subtype, primary target date, current/effective state cue, one-line reason, and at most two secondary chips. Use fact-led rationale copy that reads as current state plus why it matters now, keep the default to one line, and allow at most a two-line clamp.
 - Show one primary target date in a row by default, and add a secondary date only when date mismatch is important to understanding the request.
 - Prioritize row chips as follows: show active/effective mismatch first when present, then one type-specific chip. Leave rows should prioritize staffing-risk, then company-event, then pending same-date pressure. Manual-attendance rows should prioritize unresolved governing-rationale signal as the second chip.
 - Completed-history rows should keep the same basic row skeleton as `needs_review`, but lighter. Show the outcome plus one-line reason without adding a separate history badge.
