@@ -8,6 +8,7 @@ import {
   buildManualAttendanceRequestResource,
   createManualAttendanceRequest,
   ManualAttendanceConflictError,
+  ManualAttendanceValidationError,
   resolveAttendanceSurfaceManualRequest,
   updateManualAttendanceRequest,
 } from "@/lib/repositories/manual-attendance";
@@ -152,43 +153,6 @@ function createPatchDuplicateWorld() {
   return world;
 }
 
-function createPendingActionSwitchWorld() {
-  const world = createWorld();
-
-  world.attendanceRecords.push({
-    id: "attendance_record_emp_001_2026-04-19",
-    employeeId: "emp_001",
-    date: "2026-04-19",
-    clockInAt: "2026-04-19T09:01:00+09:00",
-    clockInSource: "beacon",
-    clockOutAt: null,
-    clockOutSource: null,
-    workMinutes: null,
-    manualRequestId: null,
-  });
-
-  world.manualAttendanceRequests.push({
-    id: "manual_request_emp_001_2026-04-19_root",
-    employeeId: "emp_001",
-    requestType: "manual_attendance",
-    action: "both",
-    date: "2026-04-19",
-    submittedAt: "2026-04-19T18:10:00+09:00",
-    requestedClockInAt: "2026-04-19T09:01:00+09:00",
-    requestedClockOutAt: "2026-04-19T18:00:00+09:00",
-    reason: "Both attendance facts need correction before review.",
-    status: "pending",
-    reviewedAt: null,
-    reviewComment: null,
-    rootRequestId: "manual_request_emp_001_2026-04-19_root",
-    parentRequestId: null,
-    followUpKind: null,
-    supersededByRequestId: null,
-  });
-
-  return world;
-}
-
 describe("manual attendance repository helpers", () => {
   it("builds a full resource with the governing review comment preserved on a pending resubmission", () => {
     const resource = buildManualAttendanceRequestResource(
@@ -258,6 +222,58 @@ describe("manual attendance repository helpers", () => {
     expect(withdrawnSummary).toBeNull();
   });
 
+  it("sorts date-scoped chain requests before deriving the attendance surface summary", () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push(
+      {
+        id: "manual_request_emp_001_2026-04-13_resubmission",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-04-13",
+        submittedAt: "2026-04-13T11:30:00+09:00",
+        requestedClockInAt: "2026-04-13T09:04:00+09:00",
+        requestedClockOutAt: null,
+        reason:
+          "Approved resubmission should clear the stale rejected summary.",
+        status: "approved",
+        reviewedAt: "2026-04-13T12:00:00+09:00",
+        reviewComment: null,
+        rootRequestId: "manual_request_emp_001_2026-04-13_root",
+        parentRequestId: "manual_request_emp_001_2026-04-13_root",
+        followUpKind: "resubmission",
+        supersededByRequestId: null,
+      },
+      {
+        id: "manual_request_emp_001_2026-04-13_root",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-04-13",
+        submittedAt: "2026-04-13T10:05:00+09:00",
+        requestedClockInAt: "2026-04-13T09:05:00+09:00",
+        requestedClockOutAt: null,
+        reason: "The root request was rejected before the approved follow-up.",
+        status: "rejected",
+        reviewedAt: "2026-04-13T11:00:00+09:00",
+        reviewComment: "Please clarify the correction context.",
+        rootRequestId: "manual_request_emp_001_2026-04-13_root",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+      },
+    );
+
+    const summary = resolveAttendanceSurfaceManualRequest(
+      world,
+      "emp_001",
+      "2026-04-13",
+      null,
+    );
+
+    expect(summary).toBeNull();
+  });
   it("creates a root request and rejects a second governing request for the same date even when the action differs", () => {
     const world = createWorld();
     const created = createManualAttendanceRequest(
@@ -447,6 +463,108 @@ describe("manual attendance repository helpers", () => {
     ).toThrowError(ManualAttendanceConflictError);
   });
 
+  it("allows action edits to replace incompatible clock fields on one-sided pending requests", () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push({
+      id: "manual_request_emp_001_2026-04-10_root",
+      employeeId: "emp_001",
+      requestType: "manual_attendance",
+      action: "clock_in",
+      date: "2026-04-10",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+
+    const updated = updateManualAttendanceRequest(
+      world,
+      "emp_001",
+      "manual_request_emp_001_2026-04-10_root",
+      {
+        action: "clock_out",
+        requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+      },
+    );
+
+    expect(manualAttendanceRequestEntitySchema.parse(updated)).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+    });
+  });
+
+  it("rejects opposite-side clock fields when a patch keeps the existing one-sided action", () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push({
+      id: "manual_request_emp_001_2026-04-10_root",
+      employeeId: "emp_001",
+      requestType: "manual_attendance",
+      action: "clock_in",
+      date: "2026-04-10",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+
+    expect(() =>
+      updateManualAttendanceRequest(
+        world,
+        "emp_001",
+        "manual_request_emp_001_2026-04-10_root",
+        {
+          requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+        },
+      ),
+    ).toThrowError(ManualAttendanceValidationError);
+  });
+
+  it("rejects repository-level create and withdraw shapes that the route contract disallows", () => {
+    expect(() =>
+      createManualAttendanceRequest(
+        createResubmissionWorld(),
+        "emp_009",
+        {
+          date: "2026-04-08",
+          action: "clock_in",
+          requestedClockInAt: "2026-04-08T09:08:00+09:00",
+          reason: "Missing follow-up kind should still fail in the repository.",
+          parentRequestId: "manual_request_emp_009_2026-04-08_root",
+        },
+        "2026-04-08T16:20:00+09:00",
+      ),
+    ).toThrowError(ManualAttendanceValidationError);
+
+    expect(() =>
+      updateManualAttendanceRequest(
+        createWorld(),
+        "emp_011",
+        "manual_request_emp_011_2026-04-07_root",
+        {
+          status: "withdrawn",
+          reason: "Withdrawal should not be combined with edits.",
+        },
+      ),
+    ).toThrowError(ManualAttendanceValidationError);
+  });
   it("rejects a pending patch that moves the request onto a date already governed by another chain", () => {
     expect(() =>
       updateManualAttendanceRequest(
@@ -458,26 +576,6 @@ describe("manual attendance repository helpers", () => {
         },
       ),
     ).toThrowError(ManualAttendanceConflictError);
-  });
-
-  it("drops obsolete stored clock fields when a pending patch changes action type", () => {
-    const edited = updateManualAttendanceRequest(
-      createPendingActionSwitchWorld(),
-      "emp_001",
-      "manual_request_emp_001_2026-04-19_root",
-      {
-        action: "clock_out",
-        requestedClockOutAt: "2026-04-19T18:04:00+09:00",
-      },
-    );
-
-    expect(manualAttendanceRequestEntitySchema.parse(edited)).toMatchObject({
-      id: "manual_request_emp_001_2026-04-19_root",
-      action: "clock_out",
-      requestedClockInAt: null,
-      requestedClockOutAt: "2026-04-19T18:04:00+09:00",
-      status: "pending",
-    });
   });
 
   it("rejects clock_out-only requests when the target date has no open attendance record", () => {

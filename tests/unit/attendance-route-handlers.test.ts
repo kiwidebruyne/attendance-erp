@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { GET as getAdminAttendanceList } from "@/app/api/admin/attendance/list/route";
+import { GET as getAdminAttendanceToday } from "@/app/api/admin/attendance/today/route";
 import { PATCH as patchManualAttendance } from "@/app/api/attendance/manual/[id]/route";
 import { POST as createManualAttendance } from "@/app/api/attendance/manual/route";
 import { GET as getAttendanceHistory } from "@/app/api/attendance/me/history/route";
 import { GET as getAttendanceMe } from "@/app/api/attendance/me/route";
+import {
+  adminAttendanceListResponseSchema,
+  adminAttendanceTodayResponseSchema,
+} from "@/lib/contracts/admin-attendance";
 import {
   attendanceHistoryResponseSchema,
   attendanceTodayResponseSchema,
@@ -320,6 +326,205 @@ describe("employee attendance route handlers", () => {
     expect(todayAfterWithdraw.manualRequest).toBeNull();
   });
 
+  it("allows action edits that switch one-sided requests to the opposite action", async () => {
+    const world = createWorld();
+    addPendingManualRequest(world, {
+      id: "manual_request_emp_001_2026-04-10_root",
+      date: "2026-04-10",
+      action: "clock_in",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+    });
+    setMockSeedWorldForTests(world);
+
+    const response = await patchManualAttendance(
+      new Request(
+        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-10_root",
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "clock_out",
+            requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+          }),
+        },
+      ),
+      {
+        params: Promise.resolve({
+          id: "manual_request_emp_001_2026-04-10_root",
+        }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(
+      manualAttendanceRequestResponseSchema.parse(await response.json()),
+    ).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+    });
+  });
+
+  it("rejects opposite-side clock fields when a patch keeps the existing one-sided action", async () => {
+    const world = createWorld();
+    addPendingManualRequest(world, {
+      id: "manual_request_emp_001_2026-04-10_root",
+      date: "2026-04-10",
+      action: "clock_in",
+      submittedAt: "2026-04-10T09:20:00+09:00",
+      requestedClockInAt: "2026-04-10T09:03:00+09:00",
+      requestedClockOutAt: null,
+      reason: "The original correction used the wrong action.",
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+    });
+    setMockSeedWorldForTests(world);
+
+    const response = await patchManualAttendance(
+      new Request(
+        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-10_root",
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+          }),
+        },
+      ),
+      {
+        params: Promise.resolve({
+          id: "manual_request_emp_001_2026-04-10_root",
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: {
+        code: "validation_error",
+        message:
+          'Manual attendance "clock_in" does not accept "requestedClockOutAt"',
+      },
+    });
+  });
+
+  it("keeps admin attendance routes synchronized with employee manual-request mutations", async () => {
+    const createResponse = await createManualAttendance(
+      new Request("https://example.com/api/attendance/manual", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          date: "2026-04-13",
+          action: "clock_in",
+          requestedClockInAt: "2026-04-13T09:05:00+09:00",
+          reason: "Beacon was unavailable during check-in.",
+        }),
+      }),
+    );
+    const createdRequest = manualAttendanceRequestResponseSchema.parse(
+      await createResponse.json(),
+    );
+
+    expect(createResponse.status).toBe(201);
+
+    const adminTodayAfterCreate = adminAttendanceTodayResponseSchema.parse(
+      await (
+        await getAdminAttendanceToday(
+          new Request("https://example.com/api/admin/attendance/today"),
+        )
+      ).json(),
+    );
+    const adminTodayEmployeeRow = adminTodayAfterCreate.items.find(
+      (item) => item.employee.id === "emp_001",
+    );
+
+    expect(adminTodayEmployeeRow?.manualRequest).toMatchObject({
+      id: createdRequest.id,
+      date: "2026-04-13",
+      status: "pending",
+    });
+
+    const adminListAfterCreate = adminAttendanceListResponseSchema.parse(
+      await (
+        await getAdminAttendanceList(
+          new Request(
+            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=minji",
+          ),
+        )
+      ).json(),
+    );
+    const adminListEmployeeRow = adminListAfterCreate.records.find(
+      (record) =>
+        record.employee.id === "emp_001" && record.date === "2026-04-13",
+    );
+
+    expect(adminListEmployeeRow?.display.activeExceptions).toContain(
+      "manual_request_pending",
+    );
+
+    const withdrawResponse = await patchManualAttendance(
+      new Request(
+        `https://example.com/api/attendance/manual/${createdRequest.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "withdrawn",
+          }),
+        },
+      ),
+      {
+        params: Promise.resolve({
+          id: createdRequest.id,
+        }),
+      },
+    );
+
+    expect(withdrawResponse.status).toBe(200);
+
+    const adminTodayAfterWithdraw = adminAttendanceTodayResponseSchema.parse(
+      await (
+        await getAdminAttendanceToday(
+          new Request("https://example.com/api/admin/attendance/today"),
+        )
+      ).json(),
+    );
+    const adminTodayRowAfterWithdraw = adminTodayAfterWithdraw.items.find(
+      (item) => item.employee.id === "emp_001",
+    );
+
+    expect(adminTodayRowAfterWithdraw?.manualRequest).toBeNull();
+
+    const adminListAfterWithdraw = adminAttendanceListResponseSchema.parse(
+      await (
+        await getAdminAttendanceList(
+          new Request(
+            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=minji",
+          ),
+        )
+      ).json(),
+    );
+    const adminListRowAfterWithdraw = adminListAfterWithdraw.records.find(
+      (record) =>
+        record.employee.id === "emp_001" && record.date === "2026-04-13",
+    );
+
+    expect(adminListRowAfterWithdraw?.display.activeExceptions).not.toContain(
+      "manual_request_pending",
+    );
+  });
   it("returns not-found and lifecycle conflicts for invalid patch targets", async () => {
     const missingResponse = await patchManualAttendance(
       new Request("https://example.com/api/attendance/manual/req_missing", {
