@@ -14,6 +14,11 @@ export async function GET(request: Request) {
   }
 
   const { from, to, name } = parsed.data;
+  const payload = adminAttendanceRepository.getAdminAttendanceList({
+    from,
+    to,
+    name,
+  });
   const bindings = {
     from,
     to,
@@ -31,11 +36,5 @@ export async function GET(request: Request) {
     "Fetched admin attendance list",
   );
 
-  return Response.json(
-    adminAttendanceRepository.getAdminAttendanceList({
-      from,
-      to,
-      name,
-    }),
-  );
+  return Response.json(payload);
 }

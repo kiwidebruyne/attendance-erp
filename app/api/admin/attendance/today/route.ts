@@ -1,9 +1,12 @@
-import { adminAttendanceRepository } from "@/app/api/admin/attendance/_lib/repository";
-import { canonicalSeedWorld } from "@/lib/seed/world";
+import {
+  adminAttendanceBaselineDate,
+  adminAttendanceRepository,
+} from "@/app/api/admin/attendance/_lib/repository";
 import { createRequestLogger } from "@/lib/server/logger";
 
 export async function GET(request: Request) {
-  const date = canonicalSeedWorld.baselineDate;
+  const date = adminAttendanceBaselineDate;
+  const payload = adminAttendanceRepository.getAdminAttendanceToday({ date });
   const requestLogger = createRequestLogger(request, {
     bindings: {
       date,
@@ -18,7 +21,5 @@ export async function GET(request: Request) {
     "Fetched admin attendance today",
   );
 
-  return Response.json(
-    adminAttendanceRepository.getAdminAttendanceToday({ date }),
-  );
+  return Response.json(payload);
 }
