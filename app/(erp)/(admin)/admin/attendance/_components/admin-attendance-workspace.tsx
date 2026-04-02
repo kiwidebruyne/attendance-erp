@@ -131,7 +131,18 @@ export function AdminAttendanceWorkspace({
 
       <TabsContent className="mt-0" value="today">
         {todayResponse === undefined ? null : (
-          <AdminAttendanceTodayView response={todayResponse} />
+          <AdminAttendanceTodayView
+            name={state.name}
+            onNameChange={(name) =>
+              replaceState({
+                mode: "today",
+                ...(withOptionalName(name) === undefined
+                  ? { name: undefined }
+                  : { name: withOptionalName(name) }),
+              })
+            }
+            response={todayResponse}
+          />
         )}
       </TabsContent>
 
