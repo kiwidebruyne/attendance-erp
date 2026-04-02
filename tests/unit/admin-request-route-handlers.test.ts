@@ -246,6 +246,69 @@ describe("admin request route handlers", () => {
     ).toBe(false);
   });
 
+  it("rejects manual approvals that would write negative work minutes and keeps the request pending", async () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push({
+      id: "manual_request_emp_001_2026-04-23_root",
+      employeeId: "emp_001",
+      requestType: "manual_attendance",
+      action: "both",
+      date: "2026-04-23",
+      submittedAt: "2026-04-23T09:15:00+09:00",
+      requestedClockInAt: "2026-04-23T18:00:00+09:00",
+      requestedClockOutAt: "2026-04-23T09:00:00+09:00",
+      reason: "Reversed timestamps must not create negative work minutes.",
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+      rootRequestId: "manual_request_emp_001_2026-04-23_root",
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    });
+    setMockSeedWorldForTests(world);
+
+    const response = await patchAdminRequestRoute(
+      "manual_request_emp_001_2026-04-23_root",
+      {
+        decision: "approve",
+      },
+    );
+    const mutatedWorld = getMockSeedWorld();
+    const storedRequest = mutatedWorld.manualAttendanceRequests.find(
+      (request) => request.id === "manual_request_emp_001_2026-04-23_root",
+    );
+    const writtenRecord = mutatedWorld.attendanceRecords.find(
+      (record) =>
+        record.employeeId === "emp_001" && record.date === "2026-04-23",
+    );
+    const queue = createSeedRepository({
+      world: mutatedWorld,
+    }).getAdminRequests({
+      view: "needs_review",
+    });
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({
+      error: {
+        code: "conflict",
+        message: expect.stringContaining("later than"),
+      },
+    });
+    expect(storedRequest).toMatchObject({
+      status: "pending",
+      reviewedAt: null,
+      reviewComment: null,
+    });
+    expect(writtenRecord).toBeUndefined();
+    expect(
+      queue.items.some(
+        (item) => item.id === "manual_request_emp_001_2026-04-23_root",
+      ),
+    ).toBe(true);
+  });
+
   it("supports reject and request_revision decisions for current pending requests", async () => {
     const rejectResponse = await patchAdminRequestRoute(
       "leave_request_emp_006_2026-04-17_root",

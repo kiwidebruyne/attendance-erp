@@ -154,9 +154,17 @@ function calculateWorkMinutes(
     return null;
   }
 
-  return Math.round(
+  const workMinutes = Math.round(
     (new Date(clockOutAt).getTime() - new Date(clockInAt).getTime()) / 60000,
   );
+
+  if (workMinutes < 0) {
+    throw new AdminRequestConflictError(
+      'Manual attendance writeback requires "clockOutAt" to be later than "clockInAt"',
+    );
+  }
+
+  return workMinutes;
 }
 
 function findAttendanceRecord(
@@ -203,26 +211,35 @@ function applyApprovedManualAttendanceWriteback(
   world: CanonicalSeedWorld,
   request: SeedManualRequest,
 ) {
-  const record = getOrCreateAttendanceRecord(
+  const existingRecord = findAttendanceRecord(
     world,
     request.employeeId,
     request.date,
   );
+  const nextClockInAt =
+    request.action === "clock_in" || request.action === "both"
+      ? request.requestedClockInAt
+      : (existingRecord?.clockInAt ?? null);
+  const nextClockOutAt =
+    request.action === "clock_out" || request.action === "both"
+      ? request.requestedClockOutAt
+      : (existingRecord?.clockOutAt ?? null);
+  const nextWorkMinutes = calculateWorkMinutes(nextClockInAt, nextClockOutAt);
+  const record =
+    existingRecord ??
+    getOrCreateAttendanceRecord(world, request.employeeId, request.date);
 
-  if (request.action === "clock_in" || request.action === "both") {
-    record.clockInAt = request.requestedClockInAt;
-    record.clockInSource = "manual";
-  }
-
-  if (request.action === "clock_out" || request.action === "both") {
-    record.clockOutAt = request.requestedClockOutAt;
-    record.clockOutSource = "manual";
-  }
-
-  record.workMinutes = calculateWorkMinutes(
-    record.clockInAt,
-    record.clockOutAt,
-  );
+  record.clockInAt = nextClockInAt;
+  record.clockInSource =
+    request.action === "clock_in" || request.action === "both"
+      ? "manual"
+      : record.clockInSource;
+  record.clockOutAt = nextClockOutAt;
+  record.clockOutSource =
+    request.action === "clock_out" || request.action === "both"
+      ? "manual"
+      : record.clockOutSource;
+  record.workMinutes = nextWorkMinutes;
   record.manualRequestId = request.id;
 }
 
@@ -628,6 +645,13 @@ export function reviewAdminRequest(
   const reviewComment =
     decision.decision === "approve" ? null : decision.reviewComment;
 
+  if (
+    request.requestType === "manual_attendance" &&
+    nextStatus === "approved"
+  ) {
+    applyApprovedManualAttendanceWriteback(world, request);
+  }
+
   request.status = nextStatus;
   request.reviewedAt = input.reviewedAt;
   request.reviewComment = reviewComment;
@@ -650,13 +674,6 @@ export function reviewAdminRequest(
     if (parentRequest?.requestType === "leave") {
       parentRequest.supersededByRequestId = request.id;
     }
-  }
-
-  if (
-    request.requestType === "manual_attendance" &&
-    nextStatus === "approved"
-  ) {
-    applyApprovedManualAttendanceWriteback(world, request);
   }
 
   return toAdminRequestDecisionResponse(world, request, nextStatus);
