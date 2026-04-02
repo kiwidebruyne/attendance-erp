@@ -35,12 +35,11 @@ describe("admin attendance route helpers", () => {
     vi.mocked(fetchAdminAttendanceToday).mockResolvedValueOnce({
       date: "2026-04-13",
       summary: {
-        checkedInCount: 9,
-        notCheckedInCount: 2,
-        lateCount: 1,
-        onLeaveCount: 1,
-        failedAttemptCount: 1,
-        previousDayOpenCount: 1,
+        checkedInCount: 1,
+        notCheckedInCount: 1,
+        lateCount: 0,
+        onLeaveCount: 0,
+        failedAttemptCount: 0,
       },
       items: [],
     });
@@ -57,7 +56,6 @@ describe("admin attendance route helpers", () => {
     });
     expect(fetchAdminAttendanceList).not.toHaveBeenCalled();
     expect(result.todayResponse?.date).toBe("2026-04-13");
-    expect(result.todayExceptionRows).toEqual([]);
     expect(result.historyResponse).toBeUndefined();
   });
 
@@ -95,7 +93,6 @@ describe("admin attendance route helpers", () => {
     );
     expect(fetchAdminAttendanceToday).not.toHaveBeenCalled();
     expect(result.historyResponse?.filters.name).toBe("alex");
-    expect(result.todayExceptionRows).toBeUndefined();
     expect(result.todayResponse).toBeUndefined();
   });
 

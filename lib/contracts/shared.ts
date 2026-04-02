@@ -16,7 +16,6 @@ export const attendanceExceptionTypeSchema = z.enum([
   "attempt_failed",
   "not_checked_in",
   "absent",
-  "previous_day_checkout_missing",
   "leave_work_conflict",
   "manual_request_pending",
   "manual_request_rejected",
@@ -25,7 +24,6 @@ export const nextActionTypeSchema = z.enum([
   "clock_in",
   "clock_out",
   "submit_manual_request",
-  "resolve_previous_day_checkout",
   "review_request_status",
   "review_leave_conflict",
   "wait",
@@ -137,13 +135,6 @@ export const attendanceDisplaySchema = z.object({
   flags: z.array(attendanceFlagSchema),
   activeExceptions: z.array(attendanceExceptionTypeSchema),
   nextAction: attendanceDisplayNextActionSchema,
-});
-
-export const previousDayOpenRecordSchema = z.object({
-  date: apiDateSchema,
-  clockInAt: apiDateTimeSchema,
-  clockOutAt: apiDateTimeSchema.nullable(),
-  expectedClockOutAt: apiDateTimeSchema.nullable(),
 });
 
 export const leaveBalanceSchema = z.object({
@@ -734,7 +725,6 @@ export type AttendanceDisplayNextAction = z.infer<
   typeof attendanceDisplayNextActionSchema
 >;
 export type AttendanceDisplay = z.infer<typeof attendanceDisplaySchema>;
-export type PreviousDayOpenRecord = z.infer<typeof previousDayOpenRecordSchema>;
 export type LeaveBalance = z.infer<typeof leaveBalanceSchema>;
 export type CompanyEvent = z.infer<typeof companyEventSchema>;
 export type LeaveConflict = z.infer<typeof leaveConflictSchema>;

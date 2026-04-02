@@ -40,20 +40,19 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 Required UI:
 
 - a stable today card that remains visible even when active exceptions exist and shows the current attendance phase, today's check-in and check-out facts, beacon-auth state, and a display-only current worked-time value when it can be calculated
-- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards so older problem rows are also visible before the table
-- a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
-- a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
-- carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
-- one shared in-page correction or review sheet that owns carry-over correction, pending edit or withdraw, review-reason visibility, and reviewed-request resubmission for `/attendance`
+- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards only for older rows that still show `정정 필요`, finalized `결근`, or an active pending manual correction so table-level problems stay visible before the ledger without promoting pure lateness-only rows; on employee `/attendance`, a same-target active pending or review-state manual correction must replace duplicate generic correction cards in the rail instead of competing with them, and pending rail cards should use action-specific titles plus the target-date meta
+- one shared in-page correction or review sheet that owns pending edit or withdraw, review-reason visibility, and reviewed-request resubmission for `/attendance`
+- after a manual-attendance create, edit, withdraw, or resubmission succeeds on `/attendance`, the current browser session should immediately reflect the latest employee today and history state from the mock API instead of waiting for a full reload or seed reset
 - same-date manual-attendance duplicate prevention must treat `clock_in`, `clock_out`, and `both` as one governing chain per target date rather than separate action buckets
 - manual-attendance correction entry must collect explicit requested attendance times per action: `clock_in` requires only the requested clock-in time, `clock_out` requires only the requested clock-out time, and `both` requires both
 - clock-out-only correction must be available only when the target date already has an open attendance record; otherwise the flow must steer the employee to `both`
 - visibility into same-day failed attendance attempts, the current derived manual attendance request summary, leave-work conflicts, and dedicated expected-but-missing check-in exception surfaces above history when they still matter operationally
 - separate exception surfaces when an unresolved failed attendance attempt and a same-day expected-but-missing check-in state coexist; the page must not merge them into one generic warning
 - same-day attendance action entry points that deep-link into the existing attendance action UI rather than introducing a second `/attendance`-local clock-in or clock-out owner
-- a rolling 7-day attendance history table ending at the page date, sorted newest first, with each date's special notes, leave usage, recorded check-in and check-out facts, work duration, limited status chips, and row action
+- a rolling 7-day attendance history table ending at the page date, sorted newest first, with each date's special notes, leave usage, recorded check-in and check-out facts, work duration, limited status chips, a compact same-date pending-request summary when one exists, and row action
 - a rolling 30-day view of the same attendance history data, also ending at the page date and keeping the same newest-first ordering
-- compact row-level `정정하기` re-entry actions on every history row so the same correction flow can reopen from any date without replacing or visually competing with the top-of-screen action surfaces
+- compact row-level re-entry actions on every history row so the same correction flow can reopen from any date without replacing or visually competing with the top-of-screen action surfaces; rows with an active pending manual request should switch the primary action to `요청 보기` instead of `정정하기`, and same-row generic `정정 필요` status should yield to `정정 요청됨` while factual chips such as `결근`, `지각`, or `조퇴` remain visible
+- the leave-usage column should keep `연차` and `반차` as single-line labels, while hourly leave should render `시간차` with the used duration on a second line such as `3시간 사용`
 
 Edge cases to keep visible during implementation:
 
@@ -61,10 +60,8 @@ Edge cases to keep visible during implementation:
 - the user checked in but has not checked out yet
 - the user has no successful attendance fact for the current day after the expected check-in time
 - the beacon was not detected or the user opened the app outside the beacon range
-- the user has already submitted a same-day or carry-over manual request that still governs the current attendance state, even if they are switching between `clock_in`, `clock_out`, and `both`
-- the user already has a pending carry-over correction request for a previous-day missing checkout and should be led to request status instead of a duplicate submission path
-- the user sees a previous-day missing checkout and should be led into correction without needing to decode the history table first
-- the previous day's record is still open because checkout is missing
+- the user has already submitted a same-day manual request that still governs the current attendance state, even if they are switching between `clock_in`, `clock_out`, and `both`
+- a previous workday row is still open because checkout is missing, and that issue should remain visible only on the affected row rather than being promoted into a current-day exception surface
 - the user has a rejected or `revision_requested` manual request and should see the review reason plus a resubmission path above history
 - the user should be told that a reviewed non-approved manual request is no longer admin-writable on the same request record and should instead offer a clear employee-side resubmission path when correction is still needed
 - the user has both an unresolved failed attendance attempt and a same-day expected-but-missing check-in state and should see those causes as separate exception surfaces
@@ -114,12 +111,10 @@ Validation and policy topics that must stay aligned with narrower contract docum
 
 Required UI:
 
-- a default today-first operations mode that renders the page in this order: exception table, one-row summary cards, then full team ledger
-- a top exception table that aggregates unresolved employee-surface exceptions for the day instead of using a left rail, while leaving routine historical `지각` and `조퇴` marks in history or ledger context
-- one horizontal row of summary cards labeled `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`
-- a full team ledger with selectable `기본`, `근무상태별`, and `근태상태별` views using the same underlying data
-- an exception-table-first team list that still includes employees with no successful attendance record for the day once their current operational state becomes relevant
-- visible carry-over warnings for employees whose previous workday is still open because checkout is missing
+- a default today-first operations mode that opens in `today`, `exception-first`, and `entire team`
+- today summary cards for checked-in, not checked-in, late, on-leave, and failed-attempt counts
+- a grouped exception-first operations queue for today rather than a full-team default table
+- an exception-first team list that still includes employees with no successful attendance record for the day once their current operational state becomes relevant
 - visibility into failed attendance attempts, leave-work conflicts, and compact current manual attendance request state where applicable
 - a secondary history review mode inside the same route with page-local controls for search and selected date range
 - a default history range of the last 7 days including today when the admin enters history mode without explicit URL state
@@ -130,15 +125,13 @@ Implementation concerns that must stay aligned with narrower contract documents:
 - whether department filtering is required in the first implementation pass
 - history review should remain a secondary mode inside `/admin/attendance` rather than replacing the today-first default entry behavior
 - mode, date range, and search state should remain URL-shareable when they affect admin attendance queries
-- the today exception table, one-row summary cards, and ledger view groupings should all derive from the same date-level facts so counts and group membership never drift
-- these are presentation-only projections; the public API contract remains unchanged
+- action-needed summary cards and today queue rows should derive from the same date-level facts so counts never drift from the queue
+- contextual summary cards such as checked-in and on-leave should use the same date-level facts as the exception queue, but they do not need 1:1 queue-row parity because the default today surface remains exception-first
 
 Edge cases to keep visible during implementation:
 
-- a no-record employee becomes visible in the top exception table after the adjusted expected start passes even if no attendance row has been created yet
-- a no-record employee with an unresolved failed attempt, carry-over problem, or current manual request may become table-visible before a simple missing check-in warning would apply
-- finalized `결근` rows in the top exception table should read with the same high-risk warning treatment as missing-record rows
-- a prior-workday carry-over correction request may remain embedded on a today row when it still explains the employee's current operational state, and the target date must stay visible
+- a no-record employee becomes visible in the today operations queue after the adjusted expected start passes even if no attendance row has been created yet
+- a no-record employee with an unresolved failed attempt or current manual request may become queue-visible before a simple missing check-in warning would apply
 - an approved manual attendance correction must clear from the today embedded request state once canonical attendance writeback finishes
 
 ### Request Review: `/admin/attendance/requests`
@@ -191,7 +184,7 @@ Decision points for later issue planning:
 - Desktop is the primary experience, but mobile and narrow widths must remain functional.
 - Narrow widths should preserve the same route information architecture by collapsing the shared sidebar into a drawer or sheet instead of introducing a separate mobile navigation tree.
 - Top-of-screen warnings should take priority over buried table-only states when the user needs immediate action.
-- Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, previous-day missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
+- Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, row-local missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
 - Every important state should include the current state, the reason, and the next action.
 - Notification surfaces should be layered and deduplicated: summary cards, exception stacks, queue rows, detail panels, and history rows may repeat the same state only as supporting context; the highest-priority visible surface owns the primary next action.
 - Warning, badge, and CTA cleanup after approvals, rejections, resubmissions, withdrawals, or successful corrections must happen consistently across employee and admin surfaces, and stale lower-priority copies should disappear when the governing state changes.

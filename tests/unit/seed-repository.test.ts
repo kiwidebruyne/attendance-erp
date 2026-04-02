@@ -65,12 +65,14 @@ describe("seed repository", () => {
       employee: {
         id: "emp_001",
       },
-      previousDayOpenRecord: {
-        date: "2026-04-10",
+      todayRecord: {
+        date: "2026-04-13",
+        clockInSource: "beacon",
+        clockOutAt: null,
       },
       display: {
         nextAction: {
-          type: "resolve_previous_day_checkout",
+          type: "clock_out",
         },
       },
     });
@@ -148,7 +150,7 @@ describe("seed repository", () => {
     ).toMatchObject({
       date: "2026-04-13",
       summary: {
-        previousDayOpenCount: 1,
+        checkedInCount: 9,
       },
     });
 
@@ -161,7 +163,7 @@ describe("seed repository", () => {
     expect(parsedListResponse.filters).toEqual({
       name: "minji",
     });
-    expect(parsedListResponse.total).toBe(4);
+    expect(parsedListResponse.total).toBe(3);
     expect(parsedListResponse.records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

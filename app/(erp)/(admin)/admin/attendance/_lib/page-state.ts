@@ -23,7 +23,6 @@ export type AdminAttendanceTodayItem =
   import("@/lib/contracts/admin-attendance").AdminAttendanceTodayResponse["items"][number];
 
 export type AdminAttendanceTodayRowGroups = {
-  previousDayOpen: AdminAttendanceTodayItem[];
   failedAttempts: AdminAttendanceTodayItem[];
   manualRequests: AdminAttendanceTodayItem[];
   operationalRows: AdminAttendanceTodayItem[];
@@ -100,18 +99,12 @@ export function groupAdminAttendanceTodayRows(
   items: AdminAttendanceTodayItem[],
 ): AdminAttendanceTodayRowGroups {
   const grouped: AdminAttendanceTodayRowGroups = {
-    previousDayOpen: [],
     failedAttempts: [],
     manualRequests: [],
     operationalRows: [],
   };
 
   for (const item of items) {
-    if (item.previousDayOpenRecord !== null) {
-      grouped.previousDayOpen.push(item);
-      continue;
-    }
-
     if (item.latestFailedAttempt !== null) {
       grouped.failedAttempts.push(item);
       continue;

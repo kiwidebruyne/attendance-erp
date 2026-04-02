@@ -20,6 +20,7 @@ import {
   type AttendanceSurfaceModel,
   buildExceptionSurfaceModels,
   buildHistoryAction,
+  getPendingRequestTitle,
 } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -209,6 +210,33 @@ function getLeaveUsageLabel(record: AttendanceHistoryRecord) {
   }
 }
 
+function getHourlyLeaveDurationLabel(record: AttendanceHistoryRecord) {
+  const leaveCoverage = record.expectedWorkday.leaveCoverage;
+
+  if (leaveCoverage?.leaveType !== "hourly") {
+    return null;
+  }
+
+  const startedAt = new Date(leaveCoverage.startAt).getTime();
+  const endedAt = new Date(leaveCoverage.endAt).getTime();
+
+  if (
+    Number.isNaN(startedAt) ||
+    Number.isNaN(endedAt) ||
+    endedAt <= startedAt
+  ) {
+    return null;
+  }
+
+  const minutes = Math.round((endedAt - startedAt) / 60_000);
+
+  if (minutes % 60 === 0) {
+    return `${minutes / 60}시간 사용`;
+  }
+
+  return `${minutes}분 사용`;
+}
+
 function getHistorySpecialNoteLabel(
   record: AttendanceHistoryRecord,
   todayDate: string,
@@ -234,13 +262,24 @@ function getHistoryStatusChips(
   todayDate: string,
 ): StatusPresentation[] {
   const statuses: StatusPresentation[] = [];
+  const hasPendingManualRequest =
+    record.manualRequest !== null && record.manualRequest.status === "pending";
+
+  if (hasPendingManualRequest) {
+    statuses.push({
+      chipClassName: "bg-status-warning-soft text-status-warning",
+      label: "정정 요청됨",
+    });
+  }
 
   if (
-    record.display.activeExceptions.includes("attempt_failed") ||
-    record.display.activeExceptions.includes("not_checked_in") ||
-    record.display.activeExceptions.includes("manual_request_pending") ||
+    (!hasPendingManualRequest &&
+      record.display.activeExceptions.includes("attempt_failed")) ||
+    (!hasPendingManualRequest &&
+      record.display.activeExceptions.includes("not_checked_in")) ||
     record.display.activeExceptions.includes("manual_request_rejected") ||
-    (record.date < todayDate &&
+    (!hasPendingManualRequest &&
+      record.date < todayDate &&
       record.record?.clockInAt !== null &&
       record.record?.clockInAt !== undefined &&
       record.record.clockOutAt === null)
@@ -324,6 +363,24 @@ function hasCorrectionNeededStatus(
   );
 }
 
+function hasPendingRequestStatus(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+) {
+  return getHistoryStatusChips(record, todayDate).some(
+    (status) => status.label === "정정 요청됨",
+  );
+}
+
+function hasEscalatedHistoryStatus(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+) {
+  return getHistoryStatusChips(record, todayDate).some(
+    (status) => status.label === "정정 필요" || status.label === "결근",
+  );
+}
+
 function getHistoricalIssueDescription(issueLabels: string[]) {
   if (issueLabels.length === 1) {
     return `${issueLabels[0]} 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요`;
@@ -332,13 +389,57 @@ function getHistoricalIssueDescription(issueLabels: string[]) {
   return `${issueLabels.join(", ")} 항목이 함께 보여서 이 날짜 기록을 열어서 정정할 수 있어요`;
 }
 
+function deduplicateRailSurfaces(surfaces: AttendanceSurfaceModel[]) {
+  const preferredRequestSurfaceByTargetDate = new Map<
+    string,
+    AttendanceSurfaceModel
+  >();
+
+  for (const surface of surfaces) {
+    if (
+      surface.railTargetDate === null ||
+      surface.railTargetKind !== "request" ||
+      preferredRequestSurfaceByTargetDate.has(surface.railTargetDate)
+    ) {
+      continue;
+    }
+
+    preferredRequestSurfaceByTargetDate.set(surface.railTargetDate, surface);
+  }
+
+  return surfaces.filter((surface) => {
+    if (
+      surface.railTargetDate === null ||
+      surface.railTargetKind === "independent"
+    ) {
+      return true;
+    }
+
+    const preferredRequestSurface = preferredRequestSurfaceByTargetDate.get(
+      surface.railTargetDate,
+    );
+
+    if (preferredRequestSurface === undefined) {
+      return true;
+    }
+
+    return preferredRequestSurface === surface;
+  });
+}
+
 function buildHistoricalIssueSurfaces(
   data: AttendancePageData,
 ): AttendanceSurfaceModel[] {
-  return [...data.history.records]
-    .sort((left, right) => right.date.localeCompare(left.date))
+  const sortedRecords = [...data.history.records].sort((left, right) =>
+    right.date.localeCompare(left.date),
+  );
+  const destructiveSurfaces = sortedRecords
     .filter(
-      (record) => record.date < data.date && hasHistoryIssue(record, data.date),
+      (record) =>
+        record.date < data.date &&
+        hasHistoryIssue(record, data.date) &&
+        hasEscalatedHistoryStatus(record, data.date) &&
+        !hasPendingRequestStatus(record, data.date),
     )
     .flatMap((record) => {
       const historyAction = buildHistoryAction(record);
@@ -359,18 +460,37 @@ function buildHistoricalIssueSurfaces(
         },
       ];
     });
+  const pendingSurfaces = sortedRecords
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .filter(
+      (record) =>
+        record.date < data.date && hasPendingRequestStatus(record, data.date),
+    )
+    .flatMap((record) => {
+      const historyAction = buildHistoryAction(record);
+
+      if (historyAction === null || record.manualRequest === null) {
+        return [];
+      }
+
+      return [
+        {
+          ...historyAction,
+          id: `history-request-${record.date}`,
+          title: getPendingRequestTitle(record.manualRequest.action),
+          description: "제출한 정정 요청 내용을 다시 확인할 수 있어요",
+          tone: "warning" as const,
+        },
+      ];
+    });
+
+  return [...destructiveSurfaces, ...pendingSurfaces];
 }
 
 function getSurfaceMetaLabel(
   surface: AttendanceSurfaceModel,
   data: AttendancePageData,
 ) {
-  if (surface.id === "previous-day-checkout-missing") {
-    return data.today.previousDayOpenRecord === null
-      ? null
-      : formatNumericDateLabel(data.today.previousDayOpenRecord.date);
-  }
-
   if (surface.id.startsWith("attempt-failed")) {
     const failedAttempt = data.today.attempts.findLast(
       (attempt) => attempt.status === "failed",
@@ -383,10 +503,13 @@ function getSurfaceMetaLabel(
 
   if (
     surface.id === "manual-request-summary" &&
-    data.today.manualRequest !== null &&
-    data.today.manualRequest.reviewedAt !== null
+    data.today.manualRequest !== null
   ) {
     return formatNumericDateLabel(data.today.manualRequest.date);
+  }
+
+  if (surface.railTargetKind === "request" && surface.railTargetDate !== null) {
+    return formatNumericDateLabel(surface.railTargetDate);
   }
 
   if (surface.id === "leave-work-conflict") {
@@ -399,10 +522,12 @@ function getSurfaceMetaLabel(
 function getSurfacePresentation(surface: AttendanceSurfaceModel): Readonly<{
   icon: typeof TriangleAlertIcon;
   titleClassName: string;
+  iconClassName: string;
 }> {
   if (surface.id === "leave-work-conflict") {
     return {
       icon: CircleAlertIcon,
+      iconClassName: "text-status-info",
       titleClassName: "text-status-info",
     };
   }
@@ -410,6 +535,15 @@ function getSurfacePresentation(surface: AttendanceSurfaceModel): Readonly<{
   if (surface.id.startsWith("attempt-failed")) {
     return {
       icon: FileWarningIcon,
+      iconClassName: "text-status-warning",
+      titleClassName: "text-status-warning",
+    };
+  }
+
+  if (surface.tone === "warning") {
+    return {
+      icon: CircleAlertIcon,
+      iconClassName: "text-status-warning",
       titleClassName: "text-status-warning",
     };
   }
@@ -417,6 +551,8 @@ function getSurfacePresentation(surface: AttendanceSurfaceModel): Readonly<{
   return {
     icon:
       surface.tone === "destructive" ? TriangleAlertIcon : CalendarClockIcon,
+    iconClassName:
+      surface.tone === "destructive" ? "text-status-danger" : "text-foreground",
     titleClassName:
       surface.tone === "destructive" ? "text-status-danger" : "text-foreground",
   };
@@ -425,6 +561,10 @@ function getSurfacePresentation(surface: AttendanceSurfaceModel): Readonly<{
 function getSurfaceButtonVariant(surface: AttendanceSurfaceModel) {
   if (surface.tone === "destructive") {
     return "destructive";
+  }
+
+  if (surface.tone === "warning") {
+    return "outline";
   }
 
   if (surface.kind === "leave_conflict") {
@@ -436,6 +576,14 @@ function getSurfaceButtonVariant(surface: AttendanceSurfaceModel) {
   }
 
   return "secondary";
+}
+
+function getSurfaceCardClassName(surface: AttendanceSurfaceModel) {
+  if (surface.tone === "warning") {
+    return "border-status-warning/30 bg-status-warning-soft/18";
+  }
+
+  return undefined;
 }
 
 function getTotalWorkTimeLabel(
@@ -572,10 +720,14 @@ function ExceptionStack({
   data,
   onOpenSheet,
 }: Pick<AttendancePageScreenProps, "data" | "onOpenSheet">) {
-  const surfaces = [
-    ...buildExceptionSurfaceModels(data.today),
-    ...buildHistoricalIssueSurfaces(data),
-  ];
+  const todaySurfaces = buildExceptionSurfaceModels(data.today);
+  const historicalSurfaces = buildHistoricalIssueSurfaces(data);
+  const surfaces = deduplicateRailSurfaces([
+    ...todaySurfaces.filter((surface) => surface.tone !== "warning"),
+    ...historicalSurfaces.filter((surface) => surface.tone !== "warning"),
+    ...todaySurfaces.filter((surface) => surface.tone === "warning"),
+    ...historicalSurfaces.filter((surface) => surface.tone === "warning"),
+  ]);
 
   return (
     <section className="flex flex-col gap-4">
@@ -610,20 +762,16 @@ function ExceptionStack({
             const metaLabel = getSurfaceMetaLabel(surface, data);
 
             return (
-              <Card key={surface.id}>
+              <Card
+                key={surface.id}
+                className={getSurfaceCardClassName(surface)}
+              >
                 <CardContent className="space-y-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <presentation.icon
                         aria-hidden="true"
-                        className={cn(
-                          "size-4",
-                          surface.id === "leave-work-conflict"
-                            ? "text-status-info"
-                            : surface.id.startsWith("attempt-failed")
-                              ? "text-status-warning"
-                              : "text-status-danger",
-                        )}
+                        className={cn("size-4", presentation.iconClassName)}
                       />
                       <p
                         className={cn(
@@ -676,7 +824,7 @@ function HistoryRowAction({
       className="ml-auto"
       onClick={() => onOpenSheet(historyAction)}
       size="sm"
-      variant="secondary"
+      variant={historyAction.tone === "warning" ? "outline" : "secondary"}
     >
       {historyAction.label}
     </Button>
@@ -749,17 +897,28 @@ function HistorySection({
             const historyAction = buildHistoryAction(record);
             const specialNote = getHistorySpecialNoteLabel(record, data.date);
             const leaveUsage = getLeaveUsageLabel(record);
+            const hourlyLeaveDuration = getHourlyLeaveDurationLabel(record);
             const statuses = getHistoryStatusChips(record, data.date);
+            const hasPendingRequestRow = hasPendingRequestStatus(
+              record,
+              data.date,
+            );
             const hasCorrectionNeededRow = hasCorrectionNeededStatus(
               record,
               data.date,
+            );
+            const hasAbsentRow = getHistoryStatusChips(record, data.date).some(
+              (status) => status.label === "결근",
             );
 
             return (
               <TableRow
                 key={record.date}
                 className={cn(
-                  hasCorrectionNeededRow &&
+                  hasPendingRequestRow &&
+                    "bg-status-warning-soft/42 hover:bg-status-warning-soft/56",
+                  !hasPendingRequestRow &&
+                    (hasCorrectionNeededRow || hasAbsentRow) &&
                     "bg-status-danger-soft/42 hover:bg-status-danger-soft/56",
                 )}
               >
@@ -767,7 +926,18 @@ function HistorySection({
                   {formatNumericDateLabel(record.date)}
                 </TableCell>
                 <TableCell className="text-foreground">{specialNote}</TableCell>
-                <TableCell className="text-foreground">{leaveUsage}</TableCell>
+                <TableCell className="text-foreground">
+                  {hourlyLeaveDuration === null ? (
+                    leaveUsage
+                  ) : (
+                    <div className="space-y-0.5">
+                      <p>{leaveUsage}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {hourlyLeaveDuration}
+                      </p>
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="whitespace-nowrap text-foreground tabular-nums">
                   {formatAttendanceTime(record.record?.clockInAt ?? null)}
                 </TableCell>

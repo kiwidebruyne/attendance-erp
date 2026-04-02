@@ -14,7 +14,6 @@ import type {
   AttendanceDisplay,
   AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
-  PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 
 const navigation = vi.hoisted(() => ({
@@ -28,6 +27,8 @@ const navigation = vi.hoisted(() => ({
 }));
 
 const api = vi.hoisted(() => ({
+  getAttendanceHistory: vi.fn(),
+  getAttendanceToday: vi.fn(),
   createManualAttendanceRequest: vi.fn(),
   updateManualAttendanceRequest: vi.fn(),
 }));
@@ -51,6 +52,8 @@ vi.mock("@/lib/attendance/api-client", async () => {
 
   return {
     ...actual,
+    getAttendanceHistory: api.getAttendanceHistory,
+    getAttendanceToday: api.getAttendanceToday,
     createManualAttendanceRequest: api.createManualAttendanceRequest,
     updateManualAttendanceRequest: api.updateManualAttendanceRequest,
   };
@@ -86,18 +89,6 @@ function createDisplay(
   };
 }
 
-function createPreviousDayOpenRecord(
-  overrides: Partial<PreviousDayOpenRecord> = {},
-): PreviousDayOpenRecord {
-  return {
-    date: "2026-04-10",
-    clockInAt: "2026-04-10T09:04:00+09:00",
-    clockOutAt: null,
-    expectedClockOutAt: "2026-04-10T18:00:00+09:00",
-    ...overrides,
-  };
-}
-
 function createFailedAttempt(
   overrides: Partial<Extract<AttendanceAttempt, { status: "failed" }>> = {},
 ): Extract<AttendanceAttempt, { status: "failed" }> {
@@ -109,6 +100,19 @@ function createFailedAttempt(
     status: "failed",
     failureReason: "BLE beacon not detected",
     ...overrides,
+  };
+}
+
+function createAttendanceAttemptSuccess(
+  attemptedAt: string,
+): AttendanceAttempt {
+  return {
+    id: "attempt_success_001",
+    date: "2026-04-13",
+    action: "clock_in",
+    attemptedAt,
+    status: "success",
+    failureReason: null,
   };
 }
 
@@ -160,14 +164,21 @@ function createPageData(
         department: "Operations",
       },
       expectedWorkday: createExpectedWorkday(),
-      previousDayOpenRecord: createPreviousDayOpenRecord(),
-      todayRecord: null,
-      attempts: [],
+      todayRecord: {
+        id: "attendance_record_emp_001_2026-04-13",
+        date: "2026-04-13",
+        clockInAt: "2026-04-13T09:02:00+09:00",
+        clockInSource: "beacon",
+        clockOutAt: null,
+        clockOutSource: null,
+        workMinutes: null,
+      },
+      attempts: [createAttendanceAttemptSuccess("2026-04-13T09:02:00+09:00")],
       manualRequest: null,
       display: createDisplay({
-        activeExceptions: ["previous_day_checkout_missing", "not_checked_in"],
+        phase: "working",
         nextAction: {
-          type: "resolve_previous_day_checkout",
+          type: "clock_out",
           relatedRequestId: null,
         },
       }),
@@ -179,9 +190,22 @@ function createPageData(
         {
           date: "2026-04-13",
           expectedWorkday: createExpectedWorkday(),
-          record: null,
+          record: {
+            id: "attendance_record_emp_001_2026-04-13",
+            date: "2026-04-13",
+            clockInAt: "2026-04-13T09:02:00+09:00",
+            clockInSource: "beacon",
+            clockOutAt: null,
+            clockOutSource: null,
+            workMinutes: null,
+          },
+          manualRequest: null,
           display: createDisplay({
-            activeExceptions: ["not_checked_in"],
+            phase: "working",
+            nextAction: {
+              type: "clock_out",
+              relatedRequestId: null,
+            },
           }),
         },
         {
@@ -193,6 +217,7 @@ function createPageData(
             adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
           }),
           record: null,
+          manualRequest: null,
           display: createDisplay({
             activeExceptions: ["absent"],
             nextAction: {
@@ -207,10 +232,104 @@ function createPageData(
   };
 }
 
+function createSameDayCorrectionPageData(
+  overrides: Partial<AttendancePageData> = {},
+): AttendancePageData {
+  const baseData = createPageData();
+
+  return {
+    ...baseData,
+    today: {
+      ...baseData.today,
+      todayRecord: null,
+      attempts: [],
+      manualRequest: null,
+      display: createDisplay({
+        activeExceptions: ["not_checked_in"],
+        nextAction: {
+          type: "submit_manual_request",
+          relatedRequestId: null,
+        },
+      }),
+    },
+    history: {
+      ...baseData.history,
+      records: [
+        {
+          date: "2026-04-13",
+          expectedWorkday: createExpectedWorkday(),
+          record: null,
+          manualRequest: null,
+          display: createDisplay({
+            activeExceptions: ["not_checked_in"],
+            nextAction: {
+              type: "submit_manual_request",
+              relatedRequestId: null,
+            },
+          }),
+        },
+        ...baseData.history.records.filter(
+          (record) => record.date !== "2026-04-13",
+        ),
+      ],
+    },
+    ...overrides,
+  };
+}
+
+function createSameDayPendingPageData(
+  requestOverrides: Partial<AttendanceSurfaceManualRequestResource> = {},
+  overrides: Partial<AttendancePageData> = {},
+): AttendancePageData {
+  const baseData = createSameDayCorrectionPageData();
+  const request = createManualRequest(requestOverrides);
+
+  return {
+    ...baseData,
+    today: {
+      ...baseData.today,
+      todayRecord: null,
+      attempts: [],
+      manualRequest: request,
+      display: createDisplay({
+        activeExceptions: ["manual_request_pending", "not_checked_in"],
+        nextAction: {
+          type: "review_request_status",
+          relatedRequestId: request.id,
+        },
+      }),
+    },
+    history: {
+      ...baseData.history,
+      records: [
+        {
+          date: "2026-04-13",
+          expectedWorkday: createExpectedWorkday(),
+          record: null,
+          manualRequest: createManualRequest(requestOverrides),
+          display: createDisplay({
+            activeExceptions: ["manual_request_pending", "not_checked_in"],
+            nextAction: {
+              type: "review_request_status",
+              relatedRequestId: request.id,
+            },
+          }),
+        },
+        ...baseData.history.records.filter(
+          (record) => record.date !== "2026-04-13",
+        ),
+      ],
+    },
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
   navigation.pathname = "/attendance";
+  api.getAttendanceToday.mockResolvedValue(createPageData().today);
+  api.getAttendanceHistory.mockResolvedValue(createPageData().history);
   api.createManualAttendanceRequest.mockResolvedValue({});
   api.updateManualAttendanceRequest.mockResolvedValue({});
 });
@@ -220,16 +339,14 @@ afterEach(() => {
 });
 
 describe("AttendancePageClient", () => {
-  it("renders the today card above the carry-over exception stack", () => {
+  it("renders the today card and baseline working status", () => {
     render(<AttendancePageClient initialData={createPageData()} />);
 
     expect(screen.getByText("근태 관리")).toBeInTheDocument();
     expect(
       screen.getByText("오늘의 근무 상태와 기록을 확인하고 관리합니다"),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("어제 퇴근 기록이 아직 없어요"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("근무 중")).toBeInTheDocument();
     expect(screen.getByText("출퇴근 이력")).toBeInTheDocument();
   });
 
@@ -281,6 +398,7 @@ describe("AttendancePageClient", () => {
               adjustedClockOutAt: null,
             }),
             record: null,
+            manualRequest: null,
             display: createDisplay({
               phase: "non_workday",
               activeExceptions: [],
@@ -301,6 +419,26 @@ describe("AttendancePageClient", () => {
               },
             }),
             record: null,
+            manualRequest: null,
+            display: createDisplay({
+              nextAction: {
+                type: "wait",
+                relatedRequestId: null,
+              },
+            }),
+          },
+          {
+            date: "2026-04-10",
+            expectedWorkday: createExpectedWorkday({
+              leaveCoverage: {
+                requestId: "leave_request_hourly_001",
+                leaveType: "hourly",
+                startAt: "2026-04-10T13:00:00+09:00",
+                endAt: "2026-04-10T16:00:00+09:00",
+              },
+            }),
+            record: null,
+            manualRequest: null,
             display: createDisplay({
               nextAction: {
                 type: "wait",
@@ -317,7 +455,7 @@ describe("AttendancePageClient", () => {
     expect(
       screen.getByRole("columnheader", { name: "특이사항" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "정정하기" })).toHaveLength(2);
+    expect(screen.getAllByRole("button", { name: "정정하기" })).toHaveLength(3);
     expect(
       screen.getByRole("columnheader", { name: "휴가 사용" }),
     ).toBeInTheDocument();
@@ -333,9 +471,14 @@ describe("AttendancePageClient", () => {
 
     const holidayRow = screen.getByText("휴일").closest("tr");
     const annualLeaveRow = screen.getByText("연차").closest("tr");
+    const hourlyLeaveRow = screen.getByText("시간차").closest("tr");
 
     expect(holidayRow).not.toBeNull();
     expect(annualLeaveRow).not.toBeNull();
+    expect(hourlyLeaveRow).not.toBeNull();
+    expect(
+      within(hourlyLeaveRow as HTMLElement).getByText("3시간 사용"),
+    ).toBeInTheDocument();
     expect(
       within(holidayRow as HTMLElement).getAllByText("-").length,
     ).toBeGreaterThan(0);
@@ -363,9 +506,13 @@ describe("AttendancePageClient", () => {
               clockOutSource: null,
               workMinutes: null,
             },
+            manualRequest: null,
             display: createDisplay({
               flags: ["late"],
-              activeExceptions: ["previous_day_checkout_missing"],
+              nextAction: {
+                type: "wait",
+                relatedRequestId: null,
+              },
             }),
           },
           {
@@ -380,6 +527,7 @@ describe("AttendancePageClient", () => {
               clockOutSource: "beacon",
               workMinutes: 540,
             },
+            manualRequest: null,
             display: createDisplay({
               phase: "checked_out",
               nextAction: {
@@ -397,6 +545,7 @@ describe("AttendancePageClient", () => {
               adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
             }),
             record: null,
+            manualRequest: null,
             display: createDisplay({
               activeExceptions: ["absent"],
               nextAction: {
@@ -436,7 +585,7 @@ describe("AttendancePageClient", () => {
     const absentRow = screen.getByText("결근").closest("tr");
 
     expect(absentRow).not.toBeNull();
-    expect(absentRow).not.toHaveClass("bg-status-danger-soft/42");
+    expect(absentRow).toHaveClass("bg-status-danger-soft/42");
     expect(
       within(rows[1] as HTMLElement).getByText("정상"),
     ).toBeInTheDocument();
@@ -453,7 +602,7 @@ describe("AttendancePageClient", () => {
         initialData={createPageData({
           today: {
             ...createPageData().today,
-            previousDayOpenRecord: null,
+            todayRecord: null,
             attempts: [createFailedAttempt()],
             display: createDisplay({
               activeExceptions: ["attempt_failed", "not_checked_in"],
@@ -469,8 +618,184 @@ describe("AttendancePageClient", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders pending history rows with warning emphasis and a request-view action", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-10",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-10T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-10T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-10T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: createManualRequest({
+                  id: "manual_request_emp_001_2026-04-10_root",
+                  date: "2026-04-10",
+                  action: "both",
+                  requestedClockInAt: "2026-04-10T09:03:00+09:00",
+                  requestedClockOutAt: "2026-04-10T18:04:00+09:00",
+                  reason: "Beacon retry details were attached for review.",
+                  rootRequestId: "manual_request_emp_001_2026-04-10_root",
+                  activeRequestId: "manual_request_emp_001_2026-04-10_root",
+                  effectiveRequestId: "manual_request_emp_001_2026-04-10_root",
+                }),
+                display: createDisplay({
+                  activeExceptions: ["manual_request_pending", "absent"],
+                  nextAction: {
+                    type: "review_request_status",
+                    relatedRequestId: "manual_request_emp_001_2026-04-10_root",
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
+
+    const pendingRow = screen.getByText("정정 요청됨").closest("tr");
+
+    expect(pendingRow).not.toBeNull();
+    expect(pendingRow).toHaveClass("bg-status-warning-soft/42");
+    expect(
+      within(pendingRow as HTMLElement).queryByText("정정 필요"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(pendingRow as HTMLElement).getByText("결근"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(pendingRow as HTMLElement).getByRole("button", {
+        name: "요청 보기",
+      }),
+    );
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    expect(
+      sheet.getByText("Beacon retry details were attached for review."),
+    ).toBeInTheDocument();
+    expect(
+      sheet.getByRole("button", { name: "내용 수정" }),
+    ).toBeInTheDocument();
+  });
+
+  it("suppresses generic correction-needed chips on same-day rows after a pending request is submitted", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-13",
+                expectedWorkday: createExpectedWorkday(),
+                record: null,
+                manualRequest: createManualRequest(),
+                display: createDisplay({
+                  activeExceptions: [
+                    "manual_request_pending",
+                    "not_checked_in",
+                  ],
+                  nextAction: {
+                    type: "review_request_status",
+                    relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
+
+    const pendingRow = screen.getByText("정정 요청됨").closest("tr");
+
+    expect(pendingRow).not.toBeNull();
+    expect(
+      within(pendingRow as HTMLElement).queryByText("정정 필요"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(pendingRow as HTMLElement).getByRole("button", {
+        name: "요청 보기",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("adds historical issue rows into the exception stack", () => {
-    render(<AttendancePageClient initialData={createPageData()} />);
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-13",
+                expectedWorkday: createExpectedWorkday(),
+                record: null,
+                manualRequest: null,
+                display: createDisplay({
+                  activeExceptions: ["not_checked_in"],
+                }),
+              },
+              {
+                date: "2026-04-11",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-11T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-11T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-11T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-11T18:00:00+09:00",
+                }),
+                record: {
+                  id: "attendance_record_emp_001_2026-04-11",
+                  date: "2026-04-11",
+                  clockInAt: "2026-04-11T09:07:00+09:00",
+                  clockInSource: "beacon",
+                  clockOutAt: "2026-04-11T18:02:00+09:00",
+                  clockOutSource: "beacon",
+                  workMinutes: 535,
+                },
+                manualRequest: null,
+                display: createDisplay({
+                  phase: "checked_out",
+                  flags: ["late"],
+                  nextAction: {
+                    type: "wait",
+                    relatedRequestId: null,
+                  },
+                }),
+              },
+              {
+                date: "2026-04-09",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-09T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-09T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-09T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: null,
+                display: createDisplay({
+                  activeExceptions: ["absent"],
+                  nextAction: {
+                    type: "submit_manual_request",
+                    relatedRequestId: null,
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
 
     expect(screen.getByText("지금 확인할 예외가 있어요")).toBeInTheDocument();
     expect(
@@ -478,22 +803,118 @@ describe("AttendancePageClient", () => {
         "결근 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "지각 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
+      ),
+    ).not.toBeInTheDocument();
   });
 
-  it("opens carry-over correction with the prior date and clock-out defaults", () => {
-    render(<AttendancePageClient initialData={createPageData()} />);
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "어제 퇴근 시간 정정 요청" }),
+  it("keeps warning pending-request rail cards below destructive historical issues", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          today: {
+            ...createPageData().today,
+            todayRecord: null,
+            attempts: [],
+            manualRequest: createManualRequest({
+              reason: "Today pending request should stay below red issues.",
+            }),
+            display: createDisplay({
+              activeExceptions: ["manual_request_pending"],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+              },
+            }),
+          },
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-10",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-10T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-10T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-10T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: null,
+                display: createDisplay({
+                  activeExceptions: ["absent"],
+                  nextAction: {
+                    type: "submit_manual_request",
+                    relatedRequestId: null,
+                  },
+                }),
+              },
+              {
+                date: "2026-04-09",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-09T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-09T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-09T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: createManualRequest({
+                  id: "manual_request_emp_001_2026-04-09_root",
+                  date: "2026-04-09",
+                  action: "both",
+                  requestedClockInAt: "2026-04-09T09:04:00+09:00",
+                  requestedClockOutAt: "2026-04-09T18:06:00+09:00",
+                  reason: "History pending request should render as warning.",
+                  rootRequestId: "manual_request_emp_001_2026-04-09_root",
+                  activeRequestId: "manual_request_emp_001_2026-04-09_root",
+                  effectiveRequestId: "manual_request_emp_001_2026-04-09_root",
+                }),
+                display: createDisplay({
+                  activeExceptions: ["manual_request_pending", "absent"],
+                  nextAction: {
+                    type: "review_request_status",
+                    relatedRequestId: "manual_request_emp_001_2026-04-09_root",
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
     );
 
-    const sheet = within(
-      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    const exceptionStack = screen
+      .getByText("지금 확인할 예외가 있어요")
+      .closest("section");
+
+    expect(exceptionStack).not.toBeNull();
+    expect(
+      within(exceptionStack as HTMLElement).getByText(
+        "출근 시간 정정 요청을 확인하고 있어요",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(exceptionStack as HTMLElement).getByText(
+        "근무 기록 정정 요청을 확인하고 있어요",
+      ),
+    ).toBeInTheDocument();
+
+    const stackButtons = within(exceptionStack as HTMLElement).getAllByRole(
+      "button",
+    );
+    const destructiveIndex = stackButtons.findIndex(
+      (button) => button.textContent === "정정하기",
+    );
+    const warningIndices = stackButtons.flatMap((button, index) =>
+      button.textContent === "요청 보기" ? [index] : [],
     );
 
-    expect(sheet.getByText("어제 퇴근 기록이 아직 없어요")).toBeInTheDocument();
-    expect(sheet.getByLabelText("대상 날짜")).toHaveValue("2026-04-10");
-    expect(sheet.getByLabelText("퇴근 시간")).toHaveValue("18:00");
+    expect(destructiveIndex).toBeGreaterThanOrEqual(0);
+    expect(warningIndices.length).toBe(2);
+    expect(warningIndices.every((index) => index > destructiveIndex)).toBe(
+      true,
+    );
   });
 
   it("updates the URL when switching the history range", async () => {
@@ -506,27 +927,74 @@ describe("AttendancePageClient", () => {
     });
   });
 
-  it("opens pending request status, allows edit, and refreshes after save", async () => {
+  it("submits a same-day correction and replaces stale create surfaces with pending status", async () => {
+    const refetchedData = createSameDayPendingPageData({
+      reason: "비콘 재시도 실패로 출근 시간을 정정 요청했어요.",
+    });
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
     render(
-      <AttendancePageClient
-        initialData={createPageData({
-          today: {
-            ...createPageData().today,
-            previousDayOpenRecord: null,
-            manualRequest: createManualRequest(),
-            display: createDisplay({
-              activeExceptions: ["manual_request_pending", "not_checked_in"],
-              nextAction: {
-                type: "review_request_status",
-                relatedRequestId: null,
-              },
-            }),
-          },
-        })}
-      />,
+      <AttendancePageClient initialData={createSameDayCorrectionPageData()} />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "상태 확인" }));
+    fireEvent.click(screen.getByRole("button", { name: "출근 기록 확인" }));
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.change(sheet.getByLabelText("사유"), {
+      target: { value: "비콘 재시도 실패로 출근 시간을 정정 요청했어요." },
+    });
+    fireEvent.click(sheet.getByRole("button", { name: "출근 기록 확인" }));
+
+    await waitFor(() => {
+      expect(api.createManualAttendanceRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-04-13",
+          action: "clock_in",
+          reason: "비콘 재시도 실패로 출근 시간을 정정 요청했어요.",
+        }),
+      );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    expect(
+      screen.getByText("출근 시간 정정 요청을 확인하고 있어요"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("정정 요청됨")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("출근 시간 정정 요청을 확인하고 있어요"),
+    ).toHaveLength(1);
+    expect(
+      screen.queryByRole("button", { name: "출근 기록 확인" }),
+    ).not.toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it("opens pending request status, allows edit, and refreshes current session after save", async () => {
+    const updatedReason = "출근 시도 실패 내용을 조금 더 자세히 남깁니다.";
+    const refetchedData = createSameDayPendingPageData({
+      reason: updatedReason,
+    });
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
+    render(
+      <AttendancePageClient initialData={createSameDayPendingPageData()} />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "출근 기록 확인" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
@@ -539,7 +1007,7 @@ describe("AttendancePageClient", () => {
 
     fireEvent.click(sheet.getByRole("button", { name: "내용 수정" }));
     fireEvent.change(sheet.getByLabelText("사유"), {
-      target: { value: "출근 시도 실패 내용을 조금 더 자세히 남깁니다." },
+      target: { value: updatedReason },
     });
     fireEvent.click(sheet.getByRole("button", { name: "변경 저장" }));
 
@@ -549,12 +1017,25 @@ describe("AttendancePageClient", () => {
         expect.objectContaining({
           date: "2026-04-13",
           action: "clock_in",
-          reason: "출근 시도 실패 내용을 조금 더 자세히 남깁니다.",
+          reason: updatedReason,
           requestedClockInAt: "2026-04-13T09:05:00+09:00",
         }),
       );
-      expect(navigation.refresh).toHaveBeenCalled();
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
     });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
+
+    const updatedSheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    expect(updatedSheet.getByText(updatedReason)).toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
   });
 
   it("drops hidden clock fields when changing a pending request action type", async () => {
@@ -563,7 +1044,8 @@ describe("AttendancePageClient", () => {
         initialData={createPageData({
           today: {
             ...createPageData().today,
-            previousDayOpenRecord: null,
+            todayRecord: null,
+            attempts: [],
             manualRequest: createManualRequest({
               action: "both",
               requestedClockOutAt: "2026-04-13T18:04:00+09:00",
@@ -581,7 +1063,10 @@ describe("AttendancePageClient", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "상태 확인" }));
+    expect(
+      screen.queryByText("오늘 출근 기록이 아직 없어요"),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
@@ -612,13 +1097,100 @@ describe("AttendancePageClient", () => {
     expect(payload).not.toHaveProperty("requestedClockInAt");
   });
 
-  it("shows revision_requested rationale and submits a resubmission follow-up", async () => {
+  it("keeps same-day failed attempts from surfacing as a second red correction after a pending request exists", () => {
     render(
       <AttendancePageClient
         initialData={createPageData({
           today: {
             ...createPageData().today,
-            previousDayOpenRecord: null,
+            attempts: [createFailedAttempt()],
+            todayRecord: null,
+            manualRequest: createManualRequest(),
+            display: createDisplay({
+              activeExceptions: [
+                "attempt_failed",
+                "manual_request_pending",
+                "not_checked_in",
+              ],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+              },
+            }),
+          },
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText("출근 시간 정정 요청을 확인하고 있어요"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("비콘을 찾을 수 없어요")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "출근 기록 확인" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("restores the correction CTA after withdrawing a pending request and refetching current session data", async () => {
+    const refetchedData = createSameDayCorrectionPageData();
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
+    render(
+      <AttendancePageClient initialData={createSameDayPendingPageData()} />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.click(sheet.getByRole("button", { name: "철회" }));
+
+    await waitFor(() => {
+      expect(api.updateManualAttendanceRequest).toHaveBeenCalledWith(
+        "manual_request_emp_001_2026-04-13_root",
+        {
+          status: "withdrawn",
+        },
+      );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    expect(
+      screen.getByRole("button", { name: "출근 기록 확인" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("정정 요청됨")).not.toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it("shows revision_requested rationale and submits a resubmission follow-up", async () => {
+    const refetchedData = createSameDayPendingPageData({
+      id: "manual_request_emp_001_2026-04-13_resubmitted",
+      parentRequestId: "manual_request_emp_001_2026-04-13_revision",
+      rootRequestId: "manual_request_emp_001_2026-04-13_revision",
+      followUpKind: "resubmission",
+      reason: "보완 요청 내용을 반영해서 다시 제출합니다.",
+      effectiveRequestId: "manual_request_emp_001_2026-04-13_resubmitted",
+      activeRequestId: "manual_request_emp_001_2026-04-13_resubmitted",
+    });
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          today: {
+            ...createPageData().today,
+            todayRecord: null,
+            attempts: [],
             manualRequest: createManualRequest({
               id: "manual_request_emp_001_2026-04-13_revision",
               status: "revision_requested",
@@ -670,6 +1242,48 @@ describe("AttendancePageClient", () => {
           followUpKind: "resubmission",
         }),
       );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    expect(
+      screen.getByText("출근 시간 정정 요청을 확인하고 있어요"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "다시 제출" }),
+    ).not.toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it("falls back to router refresh when current-session refetch fails after a successful mutation", async () => {
+    api.getAttendanceToday.mockRejectedValueOnce(new Error("refetch failed"));
+
+    render(
+      <AttendancePageClient initialData={createSameDayCorrectionPageData()} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "출근 기록 확인" }));
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.change(sheet.getByLabelText("사유"), {
+      target: { value: "refetch fallback 확인" },
+    });
+    fireEvent.click(sheet.getByRole("button", { name: "출근 기록 확인" }));
+
+    await waitFor(() => {
+      expect(api.createManualAttendanceRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-04-13",
+          action: "clock_in",
+          reason: "refetch fallback 확인",
+        }),
+      );
       expect(navigation.refresh).toHaveBeenCalled();
     });
   });
@@ -688,7 +1302,7 @@ describe("AttendancePageClient", () => {
     );
 
     expect(screen.getByText("근태 관리")).toBeInTheDocument();
-    expect(sheet.getByText("근무 기록을 정정할 수 있어요")).toBeInTheDocument();
+    expect(sheet.getByText("퇴근 기록을 정정할 수 있어요")).toBeInTheDocument();
     expect(sheet.getByLabelText("대상 날짜")).toHaveValue("2026-04-13");
   });
 
@@ -698,7 +1312,6 @@ describe("AttendancePageClient", () => {
         initialData={createPageData({
           today: {
             ...createPageData().today,
-            previousDayOpenRecord: null,
             expectedWorkday: createExpectedWorkday({
               leaveCoverage: {
                 requestId: "leave_request_001",

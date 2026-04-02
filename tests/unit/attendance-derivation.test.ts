@@ -10,7 +10,6 @@ import type {
   AttendanceRecord,
   AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
-  PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 
 type SuccessfulAttendanceAttempt = Extract<
@@ -81,18 +80,6 @@ function createAttendanceAttempt(
   };
 }
 
-function createPreviousDayOpenRecord(
-  overrides: Partial<PreviousDayOpenRecord> = {},
-): PreviousDayOpenRecord {
-  return {
-    date: "2026-03-29",
-    clockInAt: "2026-03-29T09:00:00+09:00",
-    clockOutAt: null,
-    expectedClockOutAt: "2026-03-29T18:00:00+09:00",
-    ...overrides,
-  };
-}
-
 function createManualRequest(
   overrides: Partial<AttendanceSurfaceManualRequestResource> = {},
 ): AttendanceSurfaceManualRequestResource {
@@ -146,7 +133,6 @@ describe("attendance derivation", () => {
         expectedWorkday: createExpectedWorkday(),
         record: createAttendanceRecord(),
         attempts: [createAttendanceAttempt()],
-        previousDayOpenRecord: null,
       }),
     ).toEqual({
       phase: "working",
@@ -177,7 +163,6 @@ describe("attendance derivation", () => {
             attemptedAt: "2026-03-30T17:30:00+09:00",
           }),
         ],
-        previousDayOpenRecord: null,
       }),
     ).toEqual({
       phase: "checked_out",
@@ -207,7 +192,6 @@ describe("attendance derivation", () => {
           clockInAt: "2026-03-30T10:30:00+09:00",
         }),
         attempts: [createAttendanceAttempt()],
-        previousDayOpenRecord: null,
       }).flags,
     ).toEqual([]);
   });
@@ -226,7 +210,6 @@ describe("attendance derivation", () => {
         }),
         record: null,
         attempts: [],
-        previousDayOpenRecord: null,
       }).activeExceptions,
     ).not.toContain("leave_work_conflict");
   });
@@ -238,7 +221,6 @@ describe("attendance derivation", () => {
         expectedWorkday: createExpectedWorkday(),
         record: null,
         attempts: [],
-        previousDayOpenRecord: null,
       }),
     ).toEqual({
       phase: "before_check_in",
@@ -257,7 +239,6 @@ describe("attendance derivation", () => {
       expectedWorkday: createExpectedWorkday(),
       record: null,
       attempts: [],
-      previousDayOpenRecord: null,
     });
 
     expect(display.activeExceptions).toEqual(["absent"]);
@@ -271,7 +252,6 @@ describe("attendance derivation", () => {
         expectedWorkday: createExpectedWorkday(),
         record: null,
         attempts: [],
-        previousDayOpenRecord: null,
       }).nextAction,
     ).toEqual({
       type: "submit_manual_request",
@@ -292,52 +272,51 @@ describe("attendance derivation", () => {
             failureReason: "BLE beacon not detected",
           }),
         ],
-        previousDayOpenRecord: null,
       }).activeExceptions,
     ).toEqual(["attempt_failed", "not_checked_in"]);
   });
 
-  it("does not turn a carry-over checkout attempt into the new day's checkout state", () => {
+  it("keeps failed attempts when the repository passes them through", () => {
     expect(
       deriveAttendanceDisplay({
-        now: "2026-03-31T08:30:00+09:00",
+        now: "2026-03-30T09:15:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [
+          createAttendanceAttempt({
+            status: "failed",
+            date: "2026-03-29",
+            attemptedAt: "2026-03-29T18:05:00+09:00",
+            failureReason: "BLE beacon not detected",
+          }),
+        ],
+      }).activeExceptions,
+    ).toEqual(["attempt_failed", "not_checked_in"]);
+  });
+
+  it("keeps same-workday attempts when UTC now falls on the prior calendar date", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-29T15:05:00Z",
         expectedWorkday: createExpectedWorkday({
-          expectedClockInAt: "2026-03-31T09:00:00+09:00",
-          expectedClockOutAt: "2026-03-31T18:00:00+09:00",
-          adjustedClockInAt: "2026-03-31T09:00:00+09:00",
-          adjustedClockOutAt: "2026-03-31T18:00:00+09:00",
+          isWorkday: false,
+          expectedClockInAt: null,
+          expectedClockOutAt: null,
+          adjustedClockInAt: null,
+          adjustedClockOutAt: null,
+          countsTowardAdminSummary: false,
         }),
         record: null,
         attempts: [
           createAttendanceAttempt({
+            status: "failed",
             date: "2026-03-30",
-            action: "clock_out",
-            attemptedAt: "2026-03-31T08:30:00+09:00",
+            attemptedAt: "2026-03-30T00:05:00+09:00",
+            failureReason: "BLE beacon not detected",
           }),
         ],
-        previousDayOpenRecord: null,
-      }).phase,
-    ).toBe("before_check_in");
-  });
-
-  it("surfaces previous_day_checkout_missing after the carry-over cutoff", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-30T09:01:00+09:00",
-        expectedWorkday: createExpectedWorkday(),
-        record: null,
-        attempts: [],
-        previousDayOpenRecord: createPreviousDayOpenRecord(),
-      }),
-    ).toEqual({
-      phase: "before_check_in",
-      flags: [],
-      activeExceptions: ["previous_day_checkout_missing", "not_checked_in"],
-      nextAction: {
-        type: "resolve_previous_day_checkout",
-        relatedRequestId: null,
-      },
-    });
+      }).activeExceptions,
+    ).toEqual(["attempt_failed"]);
   });
 
   it("surfaces pending manual requests in attendance exceptions", () => {
@@ -347,7 +326,6 @@ describe("attendance derivation", () => {
         expectedWorkday: createExpectedWorkday(),
         record: null,
         attempts: [],
-        previousDayOpenRecord: null,
         manualRequest: createManualRequest(),
       }),
     ).toEqual({
@@ -368,7 +346,6 @@ describe("attendance derivation", () => {
         expectedWorkday: createExpectedWorkday(),
         record: null,
         attempts: [],
-        previousDayOpenRecord: null,
         manualRequest: createManualRequest({
           id: "req_manual_002",
           status: "rejected",
@@ -393,14 +370,13 @@ describe("attendance derivation", () => {
     });
   });
 
-  it("treats revision_requested manual requests as request-owned top state", () => {
+  it("treats revision_requested manual requests as request-owned state", () => {
     expect(
       deriveAttendanceDisplay({
         now: "2026-03-30T18:05:00+09:00",
         expectedWorkday: createExpectedWorkday(),
         record: null,
         attempts: [],
-        previousDayOpenRecord: null,
         manualRequest: createManualRequest({
           id: "req_manual_003",
           status: "revision_requested",
@@ -425,140 +401,6 @@ describe("attendance derivation", () => {
     });
   });
 
-  it("does not surface previous_day_checkout_missing for an already closed prior day", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-30T09:01:00+09:00",
-        expectedWorkday: createExpectedWorkday(),
-        record: null,
-        attempts: [],
-        previousDayOpenRecord: createPreviousDayOpenRecord({
-          clockOutAt: "2026-03-29T18:05:00+09:00",
-        }),
-      }),
-    ).toEqual({
-      phase: "before_check_in",
-      flags: [],
-      activeExceptions: ["not_checked_in"],
-      nextAction: {
-        type: "clock_in",
-        relatedRequestId: null,
-      },
-    });
-  });
-
-  it("does not keep prior-day failed attempts operational once the prior day is closed", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-30T09:01:00+09:00",
-        expectedWorkday: createExpectedWorkday(),
-        record: null,
-        attempts: [
-          createAttendanceAttempt({
-            id: "attempt_003",
-            date: "2026-03-29",
-            action: "clock_out",
-            attemptedAt: "2026-03-30T08:30:00+09:00",
-            status: "failed",
-            failureReason: "BLE beacon not detected",
-          }),
-        ],
-        previousDayOpenRecord: createPreviousDayOpenRecord({
-          clockOutAt: "2026-03-29T18:05:00+09:00",
-        }),
-      }).activeExceptions,
-    ).toEqual(["not_checked_in"]);
-  });
-
-  it("uses the attendance timezone when evaluating the carry-over cutoff", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-30T00:01:00Z",
-        expectedWorkday: createExpectedWorkday(),
-        record: null,
-        attempts: [],
-        previousDayOpenRecord: createPreviousDayOpenRecord(),
-      }).activeExceptions,
-    ).toEqual(["previous_day_checkout_missing", "not_checked_in"]);
-  });
-
-  it("keeps same-workday attempts when UTC now falls on the prior calendar date", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-29T15:05:00Z",
-        expectedWorkday: createExpectedWorkday({
-          isWorkday: false,
-          expectedClockInAt: null,
-          expectedClockOutAt: null,
-          adjustedClockInAt: null,
-          adjustedClockOutAt: null,
-          countsTowardAdminSummary: false,
-        }),
-        record: null,
-        attempts: [
-          createAttendanceAttempt({
-            status: "failed",
-            date: "2026-03-30",
-            attemptedAt: "2026-03-30T00:05:00+09:00",
-            failureReason: "BLE beacon not detected",
-          }),
-        ],
-        previousDayOpenRecord: null,
-      }).activeExceptions,
-    ).toEqual(["attempt_failed"]);
-  });
-
-  it("ignores stale closed-day attempts when deriving a non-workday display", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-30T12:00:00+09:00",
-        expectedWorkday: createExpectedWorkday({
-          isWorkday: false,
-          expectedClockInAt: null,
-          expectedClockOutAt: null,
-          adjustedClockInAt: null,
-          adjustedClockOutAt: null,
-          countsTowardAdminSummary: false,
-        }),
-        record: null,
-        attempts: [
-          createAttendanceAttempt({
-            status: "failed",
-            date: "2026-03-29",
-            attemptedAt: "2026-03-29T08:30:00+09:00",
-            failureReason: "BLE beacon not detected",
-          }),
-        ],
-        previousDayOpenRecord: null,
-      }).activeExceptions,
-    ).toEqual([]);
-  });
-
-  it("keeps unresolved carry-over failed attempts visible after the cutoff", () => {
-    expect(
-      deriveAttendanceDisplay({
-        now: "2026-03-30T09:01:00+09:00",
-        expectedWorkday: createExpectedWorkday(),
-        record: null,
-        attempts: [
-          createAttendanceAttempt({
-            id: "attempt_002",
-            date: "2026-03-29",
-            action: "clock_out",
-            attemptedAt: "2026-03-30T08:30:00+09:00",
-            status: "failed",
-            failureReason: "BLE beacon not detected",
-          }),
-        ],
-        previousDayOpenRecord: createPreviousDayOpenRecord(),
-      }).activeExceptions,
-    ).toEqual([
-      "previous_day_checkout_missing",
-      "attempt_failed",
-      "not_checked_in",
-    ]);
-  });
-
   it("prefers working over non_workday when same-day facts exist", () => {
     expect(
       deriveAttendanceDisplay({
@@ -575,7 +417,6 @@ describe("attendance derivation", () => {
           clockInAt: "2026-03-30T10:00:00+09:00",
         }),
         attempts: [],
-        previousDayOpenRecord: null,
       }).phase,
     ).toBe("working");
   });
@@ -621,17 +462,6 @@ describe("attendance derivation", () => {
             activeExceptions: ["attempt_failed", "not_checked_in"],
           }),
         },
-        {
-          expectedWorkday: createExpectedWorkday(),
-          todayRecord: null,
-          display: createDisplay({
-            activeExceptions: ["previous_day_checkout_missing"],
-            nextAction: {
-              type: "resolve_previous_day_checkout",
-              relatedRequestId: null,
-            },
-          }),
-        },
       ]),
     ).toEqual({
       checkedInCount: 1,
@@ -639,7 +469,6 @@ describe("attendance derivation", () => {
       lateCount: 1,
       onLeaveCount: 1,
       failedAttemptCount: 1,
-      previousDayOpenCount: 1,
     });
   });
 
@@ -660,11 +489,7 @@ describe("attendance derivation", () => {
           display: createDisplay({
             phase: "working",
             flags: ["late"],
-            activeExceptions: [
-              "attempt_failed",
-              "not_checked_in",
-              "previous_day_checkout_missing",
-            ],
+            activeExceptions: ["attempt_failed", "not_checked_in"],
           }),
         },
       ]),
@@ -674,7 +499,6 @@ describe("attendance derivation", () => {
       lateCount: 0,
       onLeaveCount: 0,
       failedAttemptCount: 1,
-      previousDayOpenCount: 1,
     });
   });
 });

@@ -14,14 +14,12 @@ import {
   type AdminAttendanceUrlState,
   normalizeAdminAttendanceUrlState,
 } from "../_lib/page-state";
-import type { AdminAttendanceTodayExceptionRow } from "../_lib/today-exception-rows";
 import { AdminAttendanceHistoryView } from "./admin-attendance-history-view";
 import { AdminAttendanceTodayView } from "./admin-attendance-today-view";
 
 type AdminAttendanceWorkspaceProps = {
   historyResponse?: AdminAttendanceListResponse;
   state: AdminAttendanceUrlState;
-  todayExceptionRows?: AdminAttendanceTodayExceptionRow[];
   todayResponse?: AdminAttendanceTodayResponse;
 };
 
@@ -69,7 +67,6 @@ function getNextModeFromKey(
 export function AdminAttendanceWorkspace({
   historyResponse,
   state,
-  todayExceptionRows,
   todayResponse,
 }: AdminAttendanceWorkspaceProps) {
   const router = useRouter();
@@ -133,21 +130,8 @@ export function AdminAttendanceWorkspace({
       </TabsList>
 
       <TabsContent className="mt-0" value="today">
-        {todayResponse === undefined ||
-        todayExceptionRows === undefined ? null : (
-          <AdminAttendanceTodayView
-            exceptionRows={todayExceptionRows}
-            name={state.name}
-            onNameChange={(name) =>
-              replaceState({
-                mode: "today",
-                ...(withOptionalName(name) === undefined
-                  ? { name: undefined }
-                  : { name: withOptionalName(name) }),
-              })
-            }
-            response={todayResponse}
-          />
+        {todayResponse === undefined ? null : (
+          <AdminAttendanceTodayView response={todayResponse} />
         )}
       </TabsContent>
 

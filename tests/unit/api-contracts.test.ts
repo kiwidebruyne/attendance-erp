@@ -54,7 +54,6 @@ describe("shared contract schemas", () => {
       "attempt_failed",
       "not_checked_in",
       "absent",
-      "previous_day_checkout_missing",
       "leave_work_conflict",
       "manual_request_pending",
       "manual_request_rejected",
@@ -63,7 +62,6 @@ describe("shared contract schemas", () => {
       "clock_in",
       "clock_out",
       "submit_manual_request",
-      "resolve_previous_day_checkout",
       "review_request_status",
       "review_leave_conflict",
       "wait",
@@ -147,7 +145,6 @@ describe("shared contract schemas", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: null,
         attempts: [
           {
@@ -189,7 +186,6 @@ describe("shared contract schemas", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: null,
         attempts: [
           {
@@ -430,7 +426,6 @@ describe("employee attendance contracts", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: {
           id: "att_20260330_emp_001",
           date: "2026-03-30",
@@ -493,7 +488,6 @@ describe("employee attendance contracts", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: null,
         attempts: [],
         manualRequest: {
@@ -567,6 +561,7 @@ describe("employee attendance contracts", () => {
               clockOutSource: null,
               workMinutes: null,
             },
+            manualRequest: null,
             display: {
               phase: "working",
               flags: ["late"],
@@ -582,6 +577,63 @@ describe("employee attendance contracts", () => {
     ).toMatchObject({
       records: [{ display: { phase: "working" } }],
     });
+  });
+
+  it("rejects reviewed manualRequest payloads in attendance history rows", () => {
+    expect(() =>
+      attendanceHistoryResponseSchema.parse({
+        from: "2026-03-24",
+        to: "2026-03-24",
+        records: [
+          {
+            date: "2026-03-24",
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-24T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-24T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-24T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-24T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            record: null,
+            manualRequest: {
+              id: "req_manual_001",
+              requestType: "manual_attendance",
+              action: "clock_in",
+              date: "2026-03-24",
+              submittedAt: "2026-03-24T09:10:00+09:00",
+              requestedClockInAt: "2026-03-24T09:00:00+09:00",
+              requestedClockOutAt: null,
+              reason: "Beacon was not detected at the office entrance.",
+              status: "rejected",
+              reviewedAt: "2026-03-24T11:00:00+09:00",
+              reviewComment: "Please clarify the retry details.",
+              governingReviewComment: "Please clarify the retry details.",
+              rootRequestId: "req_manual_001",
+              parentRequestId: null,
+              followUpKind: null,
+              supersededByRequestId: null,
+              activeRequestId: null,
+              activeStatus: null,
+              effectiveRequestId: "req_manual_001",
+              effectiveStatus: "rejected",
+              hasActiveFollowUp: false,
+              nextAction: "none",
+            },
+            display: {
+              phase: "before_check_in",
+              flags: [],
+              activeExceptions: ["manual_request_rejected"],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: "req_manual_001",
+              },
+            },
+          },
+        ],
+      }),
+    ).toThrow();
   });
 
   it("accepts the documented manual attendance create payload", () => {
@@ -1397,7 +1449,6 @@ describe("admin attendance contracts", () => {
           lateCount: 1,
           onLeaveCount: 1,
           failedAttemptCount: 1,
-          previousDayOpenCount: 1,
         },
         items: [
           {
@@ -1434,7 +1485,6 @@ describe("admin attendance contracts", () => {
               },
             },
             latestFailedAttempt: null,
-            previousDayOpenRecord: null,
             manualRequest: null,
           },
         ],
@@ -1457,7 +1507,6 @@ describe("admin attendance contracts", () => {
           lateCount: 1,
           onLeaveCount: 1,
           failedAttemptCount: 1,
-          previousDayOpenCount: 1,
         },
         items: [
           {
@@ -1493,7 +1542,6 @@ describe("admin attendance contracts", () => {
               status: "success",
               failureReason: null,
             },
-            previousDayOpenRecord: null,
             manualRequest: null,
           },
         ],
@@ -1511,7 +1559,6 @@ describe("admin attendance contracts", () => {
           lateCount: 1,
           onLeaveCount: 1,
           failedAttemptCount: 1,
-          previousDayOpenCount: 1,
         },
         items: [
           {
@@ -1540,7 +1587,6 @@ describe("admin attendance contracts", () => {
               },
             },
             latestFailedAttempt: null,
-            previousDayOpenRecord: null,
             manualRequest: {
               id: "req_manual_001",
               requestType: "manual_attendance",
