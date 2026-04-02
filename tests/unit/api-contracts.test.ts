@@ -1096,6 +1096,18 @@ describe("leave contracts", () => {
     });
   });
 
+  it("rejects hourly leave request bodies with inverted intervals", () => {
+    expect(() =>
+      leaveRequestBodySchema.parse({
+        leaveType: "hourly",
+        date: "2026-04-03",
+        startAt: "2026-04-03T15:00:00+09:00",
+        endAt: "2026-04-03T13:00:00+09:00",
+        reason: "Medical appointment moved later.",
+      }),
+    ).toThrow();
+  });
+
   it("requires leave follow-up fields to be paired", () => {
     expect(() =>
       leaveRequestBodySchema.parse({
@@ -1185,6 +1197,17 @@ describe("leave contracts", () => {
       leaveContracts.leaveRequestPatchBodySchema?.parse({
         leaveType: "half_day_am",
         endAt: "2026-04-03T15:00:00+09:00",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects leave patch bodies with inverted hourly intervals", () => {
+    expect(leaveContracts.leaveRequestPatchBodySchema).toBeDefined();
+
+    expect(() =>
+      leaveContracts.leaveRequestPatchBodySchema?.parse({
+        startAt: "2026-04-03T15:00:00+09:00",
+        endAt: "2026-04-03T13:00:00+09:00",
       }),
     ).toThrow();
   });

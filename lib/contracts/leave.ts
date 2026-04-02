@@ -83,6 +83,27 @@ function validateLeavePatchTimingFields(
   }
 }
 
+function validateHourlyLeaveInterval(
+  value: {
+    startAt?: z.infer<typeof apiDateTimeSchema>;
+    endAt?: z.infer<typeof apiDateTimeSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.startAt === undefined || value.endAt === undefined) {
+    return;
+  }
+
+  if (Date.parse(value.endAt) <= Date.parse(value.startAt)) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["endAt"],
+      message:
+        'Invalid input: "endAt" must be later than "startAt" for hourly leave intervals',
+    });
+  }
+}
+
 const hourlyLeaveRequestBodySchema = z.strictObject({
   leaveType: z.literal("hourly"),
   date: apiDateSchema,
@@ -116,7 +137,13 @@ export const leaveRequestBodySchema = z
     hourlyLeaveRequestBodySchema,
     nonHourlyLeaveRequestBodySchema,
   ])
-  .superRefine(validateLeaveFollowUpFields);
+  .superRefine((value, ctx) => {
+    validateLeaveFollowUpFields(value, ctx);
+
+    if (value.leaveType === "hourly") {
+      validateHourlyLeaveInterval(value, ctx);
+    }
+  });
 
 export const leaveRequestPatchBodySchema = z
   .strictObject({
@@ -149,6 +176,7 @@ export const leaveRequestPatchBodySchema = z
     }
 
     validateLeavePatchTimingFields(value, ctx);
+    validateHourlyLeaveInterval(value, ctx);
 
     if (value.status === undefined && !hasEditableFields) {
       ctx.addIssue({
