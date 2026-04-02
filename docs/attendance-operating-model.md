@@ -148,9 +148,10 @@ Priority guidance for same-day admin exception review:
 - Opening the app must never create attendance facts by itself.
 - Employee and admin views must stay synchronized on the same date-level facts and request state.
 - Important states must not stay buried in history tables when immediate action is needed.
+- When the same attendance fact or request state appears on multiple employee or admin surfaces, the highest-priority operational surface owns the next action and lower-priority copies are supporting context only.
 - Different causes must remain distinguishable. Failed attempts, missing check-ins, finalized absences, previous-day carry-over problems, leave conflicts, and request states are not interchangeable labels.
 - Every important attendance state should preserve the current state, the reason, and the next action.
-- A resolved approval, rejection, resubmission, or successful attendance correction must clear or replace stale warnings, badges, and CTAs.
+- A resolved approval, rejection, resubmission, withdrawal, or successful attendance correction must clear or replace stale warnings, badges, and CTAs.
 
 ### Forbidden Behaviors
 
