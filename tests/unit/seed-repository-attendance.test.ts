@@ -63,6 +63,44 @@ function createCanceledLeaveWorld() {
   return world;
 }
 
+function createPastDueNoShowWorld() {
+  const world = structuredClone(canonicalSeedWorld);
+
+  world.attendanceRecords = world.attendanceRecords.filter(
+    (record) =>
+      !(record.employeeId === "emp_002" && record.date === "2026-04-10"),
+  );
+  world.attendanceAttempts = world.attendanceAttempts.filter(
+    (attempt) =>
+      !(attempt.employeeId === "emp_002" && attempt.date === "2026-04-10"),
+  );
+  world.manualAttendanceRequests = world.manualAttendanceRequests.filter(
+    (request) =>
+      !(request.employeeId === "emp_002" && request.date === "2026-04-10"),
+  );
+  world.leaveRequests = world.leaveRequests.filter(
+    (request) =>
+      !(request.employeeId === "emp_002" && request.date === "2026-04-10"),
+  );
+
+  const expectedWorkday = world.expectedWorkdays.find(
+    (workday) =>
+      workday.employeeId === "emp_002" && workday.date === "2026-04-10",
+  );
+
+  if (expectedWorkday !== undefined) {
+    expectedWorkday.isWorkday = true;
+    expectedWorkday.expectedClockInAt = "2026-04-10T09:00:00+09:00";
+    expectedWorkday.expectedClockOutAt = "2026-04-10T18:00:00+09:00";
+    expectedWorkday.adjustedClockInAt = "2026-04-10T09:00:00+09:00";
+    expectedWorkday.adjustedClockOutAt = "2026-04-10T18:00:00+09:00";
+    expectedWorkday.countsTowardAdminSummary = true;
+    expectedWorkday.leaveCoverage = null;
+  }
+
+  return world;
+}
+
 describe("attendance repository helpers", () => {
   it("builds the carry-over attendance today response for the open prior workday", () => {
     const response = getEmployeeAttendanceToday(canonicalSeedWorld, {
@@ -163,6 +201,47 @@ describe("attendance repository helpers", () => {
     expect(response.records).toHaveLength(4);
   });
 
+  it("marks past unattended workdays as absent in history and admin lists", () => {
+    const world = createPastDueNoShowWorld();
+    const historyResponse = getEmployeeAttendanceHistory(world, {
+      employeeId: "emp_002",
+      from: "2026-04-10",
+      to: "2026-04-10",
+      now: snapshotNow,
+    });
+    const listResponse = getAdminAttendanceList(world, {
+      from: "2026-04-10",
+      to: "2026-04-10",
+      now: snapshotNow,
+    });
+
+    expect(() =>
+      attendanceHistoryResponseSchema.parse(historyResponse),
+    ).not.toThrow();
+    expect(() =>
+      adminAttendanceListResponseSchema.parse(listResponse),
+    ).not.toThrow();
+
+    expect(historyResponse.records).toHaveLength(1);
+    expect(historyResponse.records[0]?.display.activeExceptions).toContain(
+      "absent",
+    );
+    expect(historyResponse.records[0]?.display.activeExceptions).not.toContain(
+      "not_checked_in",
+    );
+
+    const adminRecord = listResponse.records.find(
+      (record) =>
+        record.employee.id === "emp_002" && record.date === "2026-04-10",
+    );
+
+    expect(adminRecord).toBeDefined();
+    expect(adminRecord?.display.activeExceptions).toContain("absent");
+    expect(adminRecord?.display.activeExceptions).not.toContain(
+      "not_checked_in",
+    );
+  });
+
   it("does not keep leave coverage after an approved cancel follow-up becomes effective", () => {
     const response = getEmployeeAttendanceToday(createCanceledLeaveWorld(), {
       employeeId: "emp_002",
@@ -245,5 +324,26 @@ describe("attendance repository helpers", () => {
         ],
       },
     );
+  });
+
+  it("treats a blank admin name filter as unset", () => {
+    const unfilteredResponse = getAdminAttendanceList(canonicalSeedWorld, {
+      from: "2026-04-13",
+      to: "2026-04-13",
+      now: snapshotNow,
+    });
+    const blankFilterResponse = getAdminAttendanceList(canonicalSeedWorld, {
+      from: "2026-04-13",
+      to: "2026-04-13",
+      name: "   ",
+      now: snapshotNow,
+    });
+
+    expect(() =>
+      adminAttendanceListResponseSchema.parse(blankFilterResponse),
+    ).not.toThrow();
+    expect(blankFilterResponse.filters).toEqual({});
+    expect(blankFilterResponse.total).toBe(unfilteredResponse.total);
+    expect(blankFilterResponse.records).toEqual(unfilteredResponse.records);
   });
 });

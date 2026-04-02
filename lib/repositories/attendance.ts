@@ -80,20 +80,12 @@ function assertEmployeeExists(
   return employee;
 }
 
-function getTimePart(value: string) {
-  return value.slice(11, 19);
-}
-
 function getOffsetPart(value: string) {
   return value.endsWith("Z") ? "Z" : value.slice(-6);
 }
 
 function buildDateTime(date: string, time: string, referenceDateTime: string) {
   return `${date}T${time}${getOffsetPart(referenceDateTime)}`;
-}
-
-function getDateScopedNow(date: string, now: string) {
-  return buildDateTime(date, getTimePart(now), now);
 }
 
 function addDays(date: string, delta: number) {
@@ -339,10 +331,9 @@ function resolvePreviousDayOpenRecord(
     return null;
   }
 
-  const currentNow = getDateScopedNow(date, now);
   const cutoff = buildDateTime(date, "09:00:00", latestOpenClockInAt);
 
-  if (new Date(currentNow).getTime() < new Date(cutoff).getTime()) {
+  if (new Date(now).getTime() < new Date(cutoff).getTime()) {
     return null;
   }
 
@@ -551,19 +542,13 @@ function buildAttendanceSurfaceRow(
   now: string,
 ): AttendanceSurfaceRow {
   const employee = assertEmployeeExists(world, employeeId);
-  const rowNow = getDateScopedNow(date, now);
-  const expectedWorkday = resolveExpectedWorkday(
-    world,
-    employeeId,
-    date,
-    rowNow,
-  );
+  const expectedWorkday = resolveExpectedWorkday(world, employeeId, date, now);
   const record = resolveAttendanceRecord(world, employeeId, date);
   const previousDayOpenRecord = resolvePreviousDayOpenRecord(
     world,
     employeeId,
     date,
-    rowNow,
+    now,
   );
   const operationalAttempts = resolveOperationalAttempts(
     world,
@@ -589,7 +574,7 @@ function buildAttendanceSurfaceRow(
     record,
     attempts: operationalAttempts,
     display: deriveAttendanceDisplay({
-      now: rowNow,
+      now,
       expectedWorkday,
       record,
       attempts: operationalAttempts,
@@ -768,7 +753,11 @@ export function getAdminAttendanceList(
   world: AttendanceRepositoryWorld,
   input: AdminAttendanceListInput,
 ): AdminAttendanceListResponse {
-  const nameFilter = input.name?.trim().toLowerCase();
+  const nameFilterValue = input.name?.trim().toLowerCase();
+  const nameFilter =
+    nameFilterValue === undefined || nameFilterValue.length === 0
+      ? undefined
+      : nameFilterValue;
   const rows = getRangeDates(input.from, input.to)
     .flatMap((date) =>
       world.employees.map((employee) =>
