@@ -3,19 +3,20 @@
 ## Purpose
 
 This document is the primary source of truth for the deterministic mock seed world used by the shared attendance, leave, and request surfaces.
-It defines one fixed Asia/Seoul baseline date, one deterministic calendar window, and the minimum seeded scenario mix that the mock API and screens must share.
+It defines one fixed Asia/Seoul baseline timestamp, one deterministic calendar window, and the minimum seeded scenario mix that the mock API and screens must share.
 
 This document does not redefine attendance, request, or leave semantics.
 Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/request-lifecycle-model.md`, `docs/leave-conflict-policy.md`, `docs/feature-requirements.md`, `docs/api-spec.md`, and `docs/database-schema.md`.
 
 ## Baseline
 
-| Setting          | Value                                       | Notes                                                                                        |
-| ---------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| Timezone         | `Asia/Seoul`                                | All seeded datetimes use `+09:00`.                                                           |
-| Baseline date    | `2026-04-13`                                | Fixed current-date anchor for the seed world.                                                |
-| Baseline weekday | Monday                                      | The baseline stays aligned to a workweek start.                                              |
-| Calendar window  | `2026-03-23` through `2026-04-20` inclusive | Deterministic date range that gives about one month of attendance facts around the baseline. |
+| Setting            | Value                                       | Notes                                                                                                 |
+| ------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Timezone           | `Asia/Seoul`                                | All seeded datetimes use `+09:00`.                                                                    |
+| Baseline timestamp | `2026-04-13T12:00:00+09:00`                 | Monday-noon snapshot anchor for the seed world.                                                       |
+| Baseline date      | `2026-04-13`                                | The baseline day reads as a realistic workday already in progress.                                    |
+| Baseline weekday   | Monday                                      | The seed world stays aligned to a workweek start.                                                     |
+| Calendar window    | `2026-03-23` through `2026-04-20` inclusive | Deterministic date range that gives about one month of attendance facts around the baseline snapshot. |
 
 ## Seed Composition
 
@@ -23,6 +24,11 @@ Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/requ
 - Keep the employee set fixed across runs.
 - Seed roughly one month of attendance facts inside the calendar window.
 - Include a realistic mix of normal days, late arrivals, early departures, missing records, failed attendance attempts, leave coverage, and carry-over handling.
+- Keep pre-baseline unresolved issues intentionally sparse so the world does not read like a backlog dump.
+- Keep most pre-baseline workdays populated with normal attendance facts so the admin today exception table does not inflate from synthetic historical absences.
+- Keep the baseline-day same-day attendance mostly populated so the noon snapshot looks like an active Monday rather than an empty fallback table.
+- The intended baseline-day admin summary example is `checkedInCount 9`, `notCheckedInCount 2`, `lateCount 1`, `onLeaveCount 1`, `failedAttemptCount 1`, and `previousDayOpenCount 1`.
+- The intended baseline-day admin today exception table should stay sparse and resolve to at most 10 rows without UI-only truncation.
 - Keep the default `/attendance` employee's rolling week and month history visibly populated across most seeded workdays so the ledger does not read like a mostly empty fallback table.
 - Keep all company-event records read-only seeded inputs.
 

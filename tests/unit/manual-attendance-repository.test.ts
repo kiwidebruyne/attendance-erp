@@ -13,14 +13,27 @@ import {
   updateManualAttendanceRequest,
 } from "@/lib/repositories/manual-attendance";
 import { manualAttendanceRequestEntitySchema } from "@/lib/seed/entities";
+import { buildFixedSeoulDateTime } from "@/lib/seed/seoul-clock";
 import {
-  buildFixedSeoulDateTime,
-  fixedSeoulBaselineDate,
-} from "@/lib/seed/seoul-clock";
-import { type CanonicalSeedWorld, canonicalSeedWorld } from "@/lib/seed/world";
+  type CanonicalSeedWorld,
+  canonicalSeedWorld,
+  seedScenarioAnchors,
+} from "@/lib/seed/world";
 
 function createWorld() {
   return structuredClone(canonicalSeedWorld) as CanonicalSeedWorld;
+}
+
+function getSeedManualAttendanceRequest(requestId: string) {
+  const request = canonicalSeedWorld.manualAttendanceRequests.find(
+    (candidate) => candidate.id === requestId,
+  );
+
+  if (request === undefined) {
+    throw new Error(`Missing manual attendance request "${requestId}"`);
+  }
+
+  return request;
 }
 
 function createPendingManualRequestWorld() {
@@ -79,7 +92,8 @@ function createResubmissionWorld() {
 
   world.manualAttendanceRequests = world.manualAttendanceRequests.filter(
     (request) =>
-      request.id !== "manual_request_emp_009_2026-04-08_resubmission",
+      request.id !==
+      seedScenarioAnchors.manualAttendanceResubmissionChain.activeRequestId,
   );
 
   return world;
@@ -155,26 +169,28 @@ function createPatchDuplicateWorld() {
 
 describe("manual attendance repository helpers", () => {
   it("builds a full resource with the governing review comment preserved on a pending resubmission", () => {
+    const chain = seedScenarioAnchors.manualAttendanceResubmissionChain;
     const resource = buildManualAttendanceRequestResource(
       canonicalSeedWorld,
-      "emp_009",
-      "manual_request_emp_009_2026-04-08_resubmission",
+      chain.employeeId,
+      chain.activeRequestId,
     );
 
     expect(() =>
       manualAttendanceRequestResourceSchema.parse(resource),
     ).not.toThrow();
     expect(resource).toMatchObject({
-      id: "manual_request_emp_009_2026-04-08_resubmission",
+      id: chain.activeRequestId,
       requestType: "manual_attendance",
       status: "pending",
-      governingReviewComment: "Please resubmit with a clearer arrival note.",
-      rootRequestId: "manual_request_emp_009_2026-04-08_root",
-      parentRequestId: "manual_request_emp_009_2026-04-08_root",
+      governingReviewComment:
+        "Please submit a follow-up if the beacon issue continues.",
+      rootRequestId: chain.rootRequestId,
+      parentRequestId: chain.rootRequestId,
       followUpKind: "resubmission",
-      activeRequestId: "manual_request_emp_009_2026-04-08_resubmission",
+      activeRequestId: chain.activeRequestId,
       activeStatus: "pending",
-      effectiveRequestId: "manual_request_emp_009_2026-04-08_resubmission",
+      effectiveRequestId: chain.activeRequestId,
       effectiveStatus: "pending",
       hasActiveFollowUp: true,
       nextAction: "admin_review",
@@ -314,27 +330,29 @@ describe("manual attendance repository helpers", () => {
 
   it("creates a resubmission only from rejected or revision-requested parents and rejects approved parents", () => {
     const world = createResubmissionWorld();
+    const chain = seedScenarioAnchors.manualAttendanceResubmissionChain;
+    const rootRequest = getSeedManualAttendanceRequest(chain.rootRequestId);
 
     const resubmission = createManualAttendanceRequest(
       world,
-      "emp_009",
+      chain.employeeId,
       {
-        date: "2026-04-08",
+        date: rootRequest.date,
         action: "clock_in",
-        requestedClockInAt: "2026-04-08T09:08:00+09:00",
+        requestedClockInAt: rootRequest.requestedClockInAt!,
         reason: "Resubmitting the corrected arrival note.",
-        parentRequestId: "manual_request_emp_009_2026-04-08_root",
+        parentRequestId: chain.rootRequestId,
         followUpKind: "resubmission",
       },
-      "2026-04-08T16:20:00+09:00",
+      buildFixedSeoulDateTime(rootRequest.date, "11:15:00"),
     );
 
     expect(
       manualAttendanceRequestEntitySchema.parse(resubmission),
     ).toMatchObject({
-      id: "manual_request_emp_009_2026-04-08_resubmission",
-      rootRequestId: "manual_request_emp_009_2026-04-08_root",
-      parentRequestId: "manual_request_emp_009_2026-04-08_root",
+      id: chain.activeRequestId,
+      rootRequestId: chain.rootRequestId,
+      parentRequestId: chain.rootRequestId,
       followUpKind: "resubmission",
       status: "pending",
     });
@@ -358,11 +376,12 @@ describe("manual attendance repository helpers", () => {
 
   it("falls back to the last reviewed non-approved outcome after a pending resubmission is withdrawn", () => {
     const world = createWorld();
+    const chain = seedScenarioAnchors.manualAttendanceResubmissionChain;
 
     updateManualAttendanceRequest(
       world,
-      "emp_009",
-      "manual_request_emp_009_2026-04-08_resubmission",
+      chain.employeeId,
+      chain.activeRequestId,
       {
         status: "withdrawn",
       },
@@ -370,59 +389,66 @@ describe("manual attendance repository helpers", () => {
 
     const resource = buildManualAttendanceRequestResource(
       world,
-      "emp_009",
-      "manual_request_emp_009_2026-04-08_resubmission",
+      chain.employeeId,
+      chain.activeRequestId,
     );
 
     expect(manualAttendanceRequestResourceSchema.parse(resource)).toMatchObject(
       {
-        id: "manual_request_emp_009_2026-04-08_resubmission",
+        id: chain.activeRequestId,
         status: "withdrawn",
         activeRequestId: null,
         activeStatus: null,
-        effectiveRequestId: "manual_request_emp_009_2026-04-08_root",
+        effectiveRequestId: chain.rootRequestId,
         effectiveStatus: "rejected",
-        governingReviewComment: "Please resubmit with a clearer arrival note.",
+        governingReviewComment:
+          "Please submit a follow-up if the beacon issue continues.",
         nextAction: "none",
       },
     );
   });
 
   it("keeps follow-up manual-attendance requests on the parent chain target date", () => {
+    const chain = seedScenarioAnchors.manualAttendanceResubmissionChain;
+    const rootRequest = getSeedManualAttendanceRequest(chain.rootRequestId);
+
     expect(() =>
       createManualAttendanceRequest(
         createResubmissionWorld(),
-        "emp_009",
+        chain.employeeId,
         {
-          date: "2026-04-09",
+          date: "2026-04-14",
           action: "clock_in",
-          requestedClockInAt: "2026-04-09T09:08:00+09:00",
+          requestedClockInAt: buildFixedSeoulDateTime("2026-04-14", "09:08:00"),
           reason: "A resubmission must stay on the parent target date.",
-          parentRequestId: "manual_request_emp_009_2026-04-08_root",
+          parentRequestId: chain.rootRequestId,
           followUpKind: "resubmission",
         },
-        "2026-04-08T16:20:00+09:00",
+        buildFixedSeoulDateTime(rootRequest.date, "11:15:00"),
       ),
     ).toThrowError(ManualAttendanceConflictError);
 
     expect(() =>
       updateManualAttendanceRequest(
         createWorld(),
-        "emp_009",
-        "manual_request_emp_009_2026-04-08_resubmission",
+        chain.employeeId,
+        chain.activeRequestId,
         {
-          date: "2026-04-09",
+          date: "2026-04-14",
         },
       ),
     ).toThrowError(ManualAttendanceConflictError);
   });
 
   it("patches a pending request in place, preserves submittedAt, and withdraws without reopening the request", () => {
+    const pendingWithdrawRequest = getSeedManualAttendanceRequest(
+      seedScenarioAnchors.pendingManualWithdraw.requestId,
+    );
     const editWorld = createWorld();
     const edited = updateManualAttendanceRequest(
       editWorld,
-      "emp_011",
-      "manual_request_emp_011_2026-04-07_root",
+      pendingWithdrawRequest.employeeId,
+      pendingWithdrawRequest.id,
       {
         reason: "Beacon retry note clarified before review.",
       },
@@ -430,23 +456,23 @@ describe("manual attendance repository helpers", () => {
     const withdrawWorld = createWorld();
     const withdrawn = updateManualAttendanceRequest(
       withdrawWorld,
-      "emp_011",
-      "manual_request_emp_011_2026-04-07_root",
+      pendingWithdrawRequest.employeeId,
+      pendingWithdrawRequest.id,
       {
         status: "withdrawn",
       },
     );
 
     expect(manualAttendanceRequestEntitySchema.parse(edited)).toMatchObject({
-      id: "manual_request_emp_011_2026-04-07_root",
+      id: pendingWithdrawRequest.id,
       reason: "Beacon retry note clarified before review.",
       status: "pending",
-      submittedAt: "2026-04-07T18:50:00+09:00",
+      submittedAt: pendingWithdrawRequest.submittedAt,
     });
     expect(manualAttendanceRequestEntitySchema.parse(withdrawn)).toMatchObject({
-      id: "manual_request_emp_011_2026-04-07_root",
+      id: pendingWithdrawRequest.id,
       status: "withdrawn",
-      submittedAt: "2026-04-07T18:50:00+09:00",
+      submittedAt: pendingWithdrawRequest.submittedAt,
       reviewedAt: null,
       reviewComment: null,
     });
@@ -538,26 +564,32 @@ describe("manual attendance repository helpers", () => {
   });
 
   it("rejects repository-level create and withdraw shapes that the route contract disallows", () => {
+    const chain = seedScenarioAnchors.manualAttendanceResubmissionChain;
+    const rootRequest = getSeedManualAttendanceRequest(chain.rootRequestId);
+    const pendingWithdrawRequest = getSeedManualAttendanceRequest(
+      seedScenarioAnchors.pendingManualWithdraw.requestId,
+    );
+
     expect(() =>
       createManualAttendanceRequest(
         createResubmissionWorld(),
-        "emp_009",
+        chain.employeeId,
         {
-          date: "2026-04-08",
+          date: rootRequest.date,
           action: "clock_in",
-          requestedClockInAt: "2026-04-08T09:08:00+09:00",
+          requestedClockInAt: rootRequest.requestedClockInAt!,
           reason: "Missing follow-up kind should still fail in the repository.",
-          parentRequestId: "manual_request_emp_009_2026-04-08_root",
+          parentRequestId: chain.rootRequestId,
         },
-        "2026-04-08T16:20:00+09:00",
+        buildFixedSeoulDateTime(rootRequest.date, "11:15:00"),
       ),
     ).toThrowError(ManualAttendanceValidationError);
 
     expect(() =>
       updateManualAttendanceRequest(
         createWorld(),
-        "emp_011",
-        "manual_request_emp_011_2026-04-07_root",
+        pendingWithdrawRequest.employeeId,
+        pendingWithdrawRequest.id,
         {
           status: "withdrawn",
           reason: "Withdrawal should not be combined with edits.",
@@ -579,20 +611,19 @@ describe("manual attendance repository helpers", () => {
   });
 
   it("rejects clock_out-only requests when the target date has no open attendance record", () => {
+    const requestDate = "2026-04-19";
+
     expect(() =>
       createManualAttendanceRequest(
         createWorld(),
         "emp_001",
         {
-          date: fixedSeoulBaselineDate,
+          date: requestDate,
           action: "clock_out",
-          requestedClockOutAt: buildFixedSeoulDateTime(
-            fixedSeoulBaselineDate,
-            "18:00:00",
-          ),
+          requestedClockOutAt: buildFixedSeoulDateTime(requestDate, "18:00:00"),
           reason: "Clock-out alone should require an open attendance record.",
         },
-        buildFixedSeoulDateTime(fixedSeoulBaselineDate, "18:15:00"),
+        buildFixedSeoulDateTime(requestDate, "18:15:00"),
       ),
     ).toThrowError(ManualAttendanceConflictError);
   });

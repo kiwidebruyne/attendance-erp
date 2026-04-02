@@ -200,6 +200,77 @@ function minutesBetween(startAt: string, endAt: string) {
   );
 }
 
+type CompletedAttendanceDaySeed = Readonly<{
+  clockInAt: string;
+  clockOutAt: string;
+  date: string;
+  employeeId: string;
+}>;
+
+function buildCompletedAttendanceDaySeed(input: {
+  clockInTime: string;
+  clockOutTime: string;
+  date: string;
+  employeeId: string;
+}): CompletedAttendanceDaySeed {
+  return {
+    clockInAt: buildFixedSeoulDateTime(input.date, input.clockInTime),
+    clockOutAt: buildFixedSeoulDateTime(input.date, input.clockOutTime),
+    date: input.date,
+    employeeId: input.employeeId,
+  };
+}
+
+const preBaselineAutoAttendanceExclusions = deepFreeze({
+  emp_001: new Set([
+    "2026-03-24",
+    "2026-03-25",
+    "2026-03-26",
+    "2026-03-31",
+    "2026-04-01",
+    "2026-04-02",
+    "2026-04-03",
+    "2026-04-06",
+    "2026-04-07",
+    "2026-04-08",
+    "2026-04-09",
+    "2026-04-10",
+  ]),
+  emp_002: new Set(["2026-04-02"]),
+  emp_004: new Set(["2026-04-01"]),
+  emp_007: new Set(["2026-04-03"]),
+  emp_008: new Set(["2026-04-09"]),
+});
+
+const defaultHistoricalCheckInTimes = ["08:57:00", "08:58:00", "08:59:00"];
+const defaultHistoricalCheckOutTimes = ["18:02:00", "18:03:00", "18:04:00"];
+
+const preBaselineCompletedAttendanceDays = deepFreeze(
+  employees.flatMap((employee, employeeIndex) => {
+    const excludedDates =
+      preBaselineAutoAttendanceExclusions[
+        employee.id as keyof typeof preBaselineAutoAttendanceExclusions
+      ] ?? new Set<string>();
+    const timeIndex = employeeIndex % defaultHistoricalCheckInTimes.length;
+
+    return calendarDates
+      .filter(
+        (date) =>
+          date < fixedSeoulBaselineDate &&
+          !isWeekend(date) &&
+          !excludedDates.has(date),
+      )
+      .map((date) =>
+        buildCompletedAttendanceDaySeed({
+          clockInTime: defaultHistoricalCheckInTimes[timeIndex]!,
+          clockOutTime: defaultHistoricalCheckOutTimes[timeIndex]!,
+          date,
+          employeeId: employee.id,
+        }),
+      );
+  }),
+);
+
 const emp001CompletedAttendanceDays = deepFreeze([
   {
     date: "2026-03-24",
@@ -208,18 +279,18 @@ const emp001CompletedAttendanceDays = deepFreeze([
   },
   {
     date: "2026-03-25",
-    clockInAt: buildFixedSeoulDateTime("2026-03-25", "09:14:00"),
+    clockInAt: buildFixedSeoulDateTime("2026-03-25", "08:59:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-03-25", "18:11:00"),
   },
   {
     date: "2026-03-26",
-    clockInAt: buildFixedSeoulDateTime("2026-03-26", "09:01:00"),
+    clockInAt: buildFixedSeoulDateTime("2026-03-26", "09:00:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-03-26", "18:05:00"),
   },
   {
     date: "2026-03-31",
     clockInAt: buildFixedSeoulDateTime("2026-03-31", "08:57:00"),
-    clockOutAt: buildFixedSeoulDateTime("2026-03-31", "17:34:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-31", "18:04:00"),
   },
   {
     date: "2026-04-01",
@@ -228,7 +299,7 @@ const emp001CompletedAttendanceDays = deepFreeze([
   },
   {
     date: "2026-04-02",
-    clockInAt: buildFixedSeoulDateTime("2026-04-02", "09:10:00"),
+    clockInAt: buildFixedSeoulDateTime("2026-04-02", "08:59:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-04-02", "18:06:00"),
   },
   {
@@ -255,6 +326,54 @@ const emp001CompletedAttendanceDays = deepFreeze([
     date: "2026-04-09",
     clockInAt: buildFixedSeoulDateTime("2026-04-09", "08:59:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-04-09", "17:21:00"),
+  },
+]);
+
+const baselineWorkingCheckIns = deepFreeze([
+  {
+    employeeId: "emp_001",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "08:58:00"),
+  },
+  {
+    employeeId: "emp_002",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "08:59:00"),
+  },
+  {
+    employeeId: "emp_003",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "08:57:00"),
+  },
+  {
+    employeeId: "emp_004",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "09:14:00"),
+  },
+  {
+    employeeId: "emp_006",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "09:00:00"),
+  },
+  {
+    employeeId: "emp_007",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "08:56:00"),
+  },
+  {
+    employeeId: "emp_008",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "08:59:00"),
+  },
+  {
+    employeeId: "emp_009",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "08:58:00"),
+  },
+  {
+    employeeId: "emp_012",
+    date: "2026-04-13",
+    clockInAt: buildFixedSeoulDateTime("2026-04-13", "09:00:00"),
   },
 ]);
 
@@ -307,6 +426,50 @@ const attendanceAttempts = deepFreeze(
       status: "success",
       failureReason: null,
     },
+    ...preBaselineCompletedAttendanceDays.flatMap((day) => [
+      {
+        id: attendanceAttemptId(
+          day.employeeId,
+          day.date,
+          "clock_in",
+          "success",
+        ),
+        employeeId: day.employeeId,
+        date: day.date,
+        action: "clock_in" as const,
+        attemptedAt: day.clockInAt,
+        status: "success" as const,
+        failureReason: null,
+      },
+      {
+        id: attendanceAttemptId(
+          day.employeeId,
+          day.date,
+          "clock_out",
+          "success",
+        ),
+        employeeId: day.employeeId,
+        date: day.date,
+        action: "clock_out" as const,
+        attemptedAt: day.clockOutAt,
+        status: "success" as const,
+        failureReason: null,
+      },
+    ]),
+    ...baselineWorkingCheckIns.map((entry) => ({
+      id: attendanceAttemptId(
+        entry.employeeId,
+        entry.date,
+        "clock_in",
+        "success",
+      ),
+      employeeId: entry.employeeId,
+      date: entry.date,
+      action: "clock_in" as const,
+      attemptedAt: entry.clockInAt,
+      status: "success" as const,
+      failureReason: null,
+    })),
     {
       id: attendanceAttemptId("emp_002", "2026-04-02", "clock_in", "success"),
       employeeId: "emp_002",
@@ -357,7 +520,7 @@ const attendanceAttempts = deepFreeze(
       employeeId: "emp_004",
       date: "2026-04-01",
       action: "clock_in",
-      attemptedAt: buildFixedSeoulDateTime("2026-04-01", "09:17:00"),
+      attemptedAt: buildFixedSeoulDateTime("2026-04-01", "08:59:00"),
       status: "success",
       failureReason: null,
     },
@@ -402,7 +565,7 @@ const attendanceAttempts = deepFreeze(
       employeeId: "emp_006",
       date: "2026-04-04",
       action: "clock_out",
-      attemptedAt: buildFixedSeoulDateTime("2026-04-04", "17:45:00"),
+      attemptedAt: buildFixedSeoulDateTime("2026-04-04", "18:01:00"),
       status: "success",
       failureReason: null,
     },
@@ -420,7 +583,7 @@ const attendanceAttempts = deepFreeze(
       employeeId: "emp_008",
       date: "2026-04-09",
       action: "clock_in",
-      attemptedAt: buildFixedSeoulDateTime("2026-04-09", "09:11:00"),
+      attemptedAt: buildFixedSeoulDateTime("2026-04-09", "08:59:00"),
       status: "success",
       failureReason: null,
     },
@@ -429,7 +592,7 @@ const attendanceAttempts = deepFreeze(
       employeeId: "emp_008",
       date: "2026-04-09",
       action: "clock_out",
-      attemptedAt: buildFixedSeoulDateTime("2026-04-09", "17:12:00"),
+      attemptedAt: buildFixedSeoulDateTime("2026-04-09", "18:02:00"),
       status: "success",
       failureReason: null,
     },
@@ -456,7 +619,7 @@ const attendanceAttempts = deepFreeze(
       employeeId: "emp_011",
       date: "2026-04-11",
       action: "clock_out",
-      attemptedAt: buildFixedSeoulDateTime("2026-04-11", "17:40:00"),
+      attemptedAt: buildFixedSeoulDateTime("2026-04-11", "18:01:00"),
       status: "success",
       failureReason: null,
     },
@@ -519,6 +682,28 @@ const attendanceRecords = deepFreeze(
       ),
       manualRequestId: null,
     },
+    ...preBaselineCompletedAttendanceDays.map((day) => ({
+      id: attendanceRecordId(day.employeeId, day.date),
+      employeeId: day.employeeId,
+      date: day.date,
+      clockInAt: day.clockInAt,
+      clockInSource: "beacon" as const,
+      clockOutAt: day.clockOutAt,
+      clockOutSource: "beacon" as const,
+      workMinutes: minutesBetween(day.clockInAt, day.clockOutAt),
+      manualRequestId: null,
+    })),
+    ...baselineWorkingCheckIns.map((entry) => ({
+      id: attendanceRecordId(entry.employeeId, entry.date),
+      employeeId: entry.employeeId,
+      date: entry.date,
+      clockInAt: entry.clockInAt,
+      clockInSource: "beacon" as const,
+      clockOutAt: null,
+      clockOutSource: null,
+      workMinutes: null,
+      manualRequestId: null,
+    })),
     {
       id: attendanceRecordId("emp_002", "2026-04-02"),
       employeeId: "emp_002",
@@ -551,12 +736,12 @@ const attendanceRecords = deepFreeze(
       id: attendanceRecordId("emp_004", "2026-04-01"),
       employeeId: "emp_004",
       date: "2026-04-01",
-      clockInAt: buildFixedSeoulDateTime("2026-04-01", "09:17:00"),
+      clockInAt: buildFixedSeoulDateTime("2026-04-01", "08:59:00"),
       clockInSource: "beacon",
       clockOutAt: buildFixedSeoulDateTime("2026-04-01", "18:20:00"),
       clockOutSource: "beacon",
       workMinutes: minutesBetween(
-        buildFixedSeoulDateTime("2026-04-01", "09:17:00"),
+        buildFixedSeoulDateTime("2026-04-01", "08:59:00"),
         buildFixedSeoulDateTime("2026-04-01", "18:20:00"),
       ),
       manualRequestId: null,
@@ -581,11 +766,11 @@ const attendanceRecords = deepFreeze(
       date: "2026-04-04",
       clockInAt: buildFixedSeoulDateTime("2026-04-04", "09:01:00"),
       clockInSource: "beacon",
-      clockOutAt: buildFixedSeoulDateTime("2026-04-04", "17:45:00"),
+      clockOutAt: buildFixedSeoulDateTime("2026-04-04", "18:01:00"),
       clockOutSource: "beacon",
       workMinutes: minutesBetween(
         buildFixedSeoulDateTime("2026-04-04", "09:01:00"),
-        buildFixedSeoulDateTime("2026-04-04", "17:45:00"),
+        buildFixedSeoulDateTime("2026-04-04", "18:01:00"),
       ),
       manualRequestId: null,
     },
@@ -607,13 +792,13 @@ const attendanceRecords = deepFreeze(
       id: attendanceRecordId("emp_008", "2026-04-09"),
       employeeId: "emp_008",
       date: "2026-04-09",
-      clockInAt: buildFixedSeoulDateTime("2026-04-09", "09:11:00"),
+      clockInAt: buildFixedSeoulDateTime("2026-04-09", "08:59:00"),
       clockInSource: "beacon",
-      clockOutAt: buildFixedSeoulDateTime("2026-04-09", "17:12:00"),
+      clockOutAt: buildFixedSeoulDateTime("2026-04-09", "18:02:00"),
       clockOutSource: "beacon",
       workMinutes: minutesBetween(
-        buildFixedSeoulDateTime("2026-04-09", "09:11:00"),
-        buildFixedSeoulDateTime("2026-04-09", "17:12:00"),
+        buildFixedSeoulDateTime("2026-04-09", "08:59:00"),
+        buildFixedSeoulDateTime("2026-04-09", "18:02:00"),
       ),
       manualRequestId: null,
     },
@@ -623,11 +808,11 @@ const attendanceRecords = deepFreeze(
       date: "2026-04-11",
       clockInAt: buildFixedSeoulDateTime("2026-04-11", "09:00:00"),
       clockInSource: "beacon",
-      clockOutAt: buildFixedSeoulDateTime("2026-04-11", "17:40:00"),
+      clockOutAt: buildFixedSeoulDateTime("2026-04-11", "18:01:00"),
       clockOutSource: "beacon",
       workMinutes: minutesBetween(
         buildFixedSeoulDateTime("2026-04-11", "09:00:00"),
-        buildFixedSeoulDateTime("2026-04-11", "17:40:00"),
+        buildFixedSeoulDateTime("2026-04-11", "18:01:00"),
       ),
       manualRequestId: null,
     },
@@ -669,76 +854,39 @@ const manualAttendanceRequests = deepFreeze(
       supersededByRequestId: null,
     },
     {
-      id: manualRequestId("emp_009", "2026-04-08", "root"),
-      employeeId: "emp_009",
-      requestType: "manual_attendance",
-      action: "clock_in",
-      date: "2026-04-08",
-      submittedAt: buildFixedSeoulDateTime("2026-04-08", "11:05:00"),
-      requestedClockInAt: buildFixedSeoulDateTime("2026-04-08", "09:08:00"),
-      requestedClockOutAt: null,
-      reason: "The beacon app did not detect the office entrance.",
-      status: "rejected",
-      reviewedAt: buildFixedSeoulDateTime("2026-04-08", "14:20:00"),
-      reviewComment: "Please resubmit with a clearer arrival note.",
-      rootRequestId: manualRequestId("emp_009", "2026-04-08", "root"),
-      parentRequestId: null,
-      followUpKind: null,
-      supersededByRequestId: null,
-    },
-    {
-      id: manualRequestId("emp_009", "2026-04-08", "resubmission"),
-      employeeId: "emp_009",
-      requestType: "manual_attendance",
-      action: "clock_in",
-      date: "2026-04-08",
-      submittedAt: buildFixedSeoulDateTime("2026-04-08", "16:05:00"),
-      requestedClockInAt: buildFixedSeoulDateTime("2026-04-08", "09:08:00"),
-      requestedClockOutAt: null,
-      reason:
-        "I arrived at the office at 09:08 and the beacon still did not register.",
-      status: "pending",
-      reviewedAt: null,
-      reviewComment: null,
-      rootRequestId: manualRequestId("emp_009", "2026-04-08", "root"),
-      parentRequestId: manualRequestId("emp_009", "2026-04-08", "root"),
-      followUpKind: "resubmission",
-      supersededByRequestId: null,
-    },
-    {
-      id: manualRequestId("emp_010", "2026-04-09", "root"),
+      id: manualRequestId("emp_010", "2026-04-17", "root"),
       employeeId: "emp_010",
       requestType: "manual_attendance",
       action: "clock_in",
-      date: "2026-04-09",
-      submittedAt: buildFixedSeoulDateTime("2026-04-09", "11:35:00"),
-      requestedClockInAt: buildFixedSeoulDateTime("2026-04-09", "09:07:00"),
+      date: "2026-04-17",
+      submittedAt: buildFixedSeoulDateTime("2026-04-13", "11:18:00"),
+      requestedClockInAt: buildFixedSeoulDateTime("2026-04-17", "09:07:00"),
       requestedClockOutAt: null,
       reason:
-        "I need to correct the missing morning attendance note before review.",
+        "Keeping the correction editable until the exact arrival note is confirmed.",
       status: "pending",
       reviewedAt: null,
       reviewComment: null,
-      rootRequestId: manualRequestId("emp_010", "2026-04-09", "root"),
+      rootRequestId: manualRequestId("emp_010", "2026-04-17", "root"),
       parentRequestId: null,
       followUpKind: null,
       supersededByRequestId: null,
     },
     {
-      id: manualRequestId("emp_011", "2026-04-07", "root"),
+      id: manualRequestId("emp_011", "2026-04-20", "root"),
       employeeId: "emp_011",
       requestType: "manual_attendance",
       action: "both",
-      date: "2026-04-07",
-      submittedAt: buildFixedSeoulDateTime("2026-04-07", "18:50:00"),
-      requestedClockInAt: buildFixedSeoulDateTime("2026-04-07", "09:04:00"),
-      requestedClockOutAt: buildFixedSeoulDateTime("2026-04-07", "18:01:00"),
+      date: "2026-04-20",
+      submittedAt: buildFixedSeoulDateTime("2026-04-13", "11:42:00"),
+      requestedClockInAt: buildFixedSeoulDateTime("2026-04-20", "09:04:00"),
+      requestedClockOutAt: buildFixedSeoulDateTime("2026-04-20", "18:01:00"),
       reason:
-        "Please correct both attendance facts from the office network outage.",
+        "Keeping the full-day correction open in case the request needs to be withdrawn.",
       status: "pending",
       reviewedAt: null,
       reviewComment: null,
-      rootRequestId: manualRequestId("emp_011", "2026-04-07", "root"),
+      rootRequestId: manualRequestId("emp_011", "2026-04-20", "root"),
       parentRequestId: null,
       followUpKind: null,
       supersededByRequestId: null,
@@ -749,12 +897,12 @@ const manualAttendanceRequests = deepFreeze(
       requestType: "manual_attendance",
       action: "clock_in",
       date: "2026-04-13",
-      submittedAt: buildFixedSeoulDateTime("2026-04-13", "09:20:00"),
+      submittedAt: buildFixedSeoulDateTime("2026-04-13", "09:12:00"),
       requestedClockInAt: buildFixedSeoulDateTime("2026-04-13", "09:08:00"),
       requestedClockOutAt: null,
       reason: "Beacon connectivity failed during baseline check-in.",
       status: "rejected",
-      reviewedAt: buildFixedSeoulDateTime("2026-04-13", "14:00:00"),
+      reviewedAt: buildFixedSeoulDateTime("2026-04-13", "10:05:00"),
       reviewComment: "Please submit a follow-up if the beacon issue continues.",
       rootRequestId: manualRequestId("emp_010", "2026-04-13", "root"),
       parentRequestId: null,
@@ -767,7 +915,7 @@ const manualAttendanceRequests = deepFreeze(
       requestType: "manual_attendance",
       action: "clock_in",
       date: "2026-04-13",
-      submittedAt: buildFixedSeoulDateTime("2026-04-13", "16:35:00"),
+      submittedAt: buildFixedSeoulDateTime("2026-04-13", "10:28:00"),
       requestedClockInAt: buildFixedSeoulDateTime("2026-04-13", "09:08:00"),
       requestedClockOutAt: null,
       reason:
@@ -785,6 +933,24 @@ const manualAttendanceRequests = deepFreeze(
 
 const leaveRequests = deepFreeze(
   leaveRequestEntitySchema.array().parse([
+    {
+      id: leaveRequestId("emp_005", "2026-04-13", "root"),
+      employeeId: "emp_005",
+      requestType: "leave",
+      leaveType: "annual",
+      date: "2026-04-13",
+      startAt: null,
+      endAt: null,
+      reason: "Approved full-day leave for the baseline Monday shift.",
+      requestedAt: buildFixedSeoulDateTime("2026-04-10", "14:10:00"),
+      status: "approved",
+      reviewedAt: buildFixedSeoulDateTime("2026-04-10", "17:20:00"),
+      reviewComment: null,
+      rootRequestId: leaveRequestId("emp_005", "2026-04-13", "root"),
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    },
     {
       id: leaveRequestId("emp_001", "2026-04-15", "root"),
       employeeId: "emp_001",
@@ -903,7 +1069,7 @@ const leaveRequests = deepFreeze(
       startAt: null,
       endAt: null,
       reason: "Inventory audit support is pulling coverage from the team.",
-      requestedAt: buildFixedSeoulDateTime("2026-04-13", "15:10:00"),
+      requestedAt: buildFixedSeoulDateTime("2026-04-13", "10:40:00"),
       status: "pending",
       reviewedAt: null,
       reviewComment: null,
@@ -921,7 +1087,7 @@ const leaveRequests = deepFreeze(
       startAt: null,
       endAt: null,
       reason: "Planned personal leave for the full workday.",
-      requestedAt: buildFixedSeoulDateTime("2026-04-13", "16:20:00"),
+      requestedAt: buildFixedSeoulDateTime("2026-04-13", "11:10:00"),
       status: "approved",
       reviewedAt: buildFixedSeoulDateTime("2026-04-15", "09:10:00"),
       reviewComment: null,
@@ -981,19 +1147,11 @@ const requestReviewEvents = deepFreeze(
       reviewerId: "emp_012",
     },
     {
-      id: "request_review_manual_emp_009_2026-04-08",
-      requestId: manualRequestId("emp_009", "2026-04-08", "root"),
-      decision: "reject",
-      reviewComment: "Please resubmit with a clearer arrival note.",
-      reviewedAt: buildFixedSeoulDateTime("2026-04-08", "14:20:00"),
-      reviewerId: "emp_012",
-    },
-    {
       id: "request_review_manual_emp_010_2026-04-13",
       requestId: manualRequestId("emp_010", "2026-04-13", "root"),
       decision: "reject",
       reviewComment: "Please submit a follow-up if the beacon issue continues.",
-      reviewedAt: buildFixedSeoulDateTime("2026-04-13", "14:00:00"),
+      reviewedAt: buildFixedSeoulDateTime("2026-04-13", "10:05:00"),
       reviewerId: "emp_012",
     },
     {
@@ -1113,17 +1271,17 @@ export const seedScenarioAnchors = deepFreeze({
     leaveRequestId: leaveRequestId("emp_005", "2026-04-18", "root"),
   },
   manualAttendanceResubmissionChain: {
-    employeeId: "emp_009",
-    rootRequestId: manualRequestId("emp_009", "2026-04-08", "root"),
-    activeRequestId: manualRequestId("emp_009", "2026-04-08", "resubmission"),
+    employeeId: "emp_010",
+    rootRequestId: manualRequestId("emp_010", "2026-04-13", "root"),
+    activeRequestId: manualRequestId("emp_010", "2026-04-13", "resubmission"),
   },
   pendingManualEdit: {
     employeeId: "emp_010",
-    requestId: manualRequestId("emp_010", "2026-04-09", "root"),
+    requestId: manualRequestId("emp_010", "2026-04-17", "root"),
   },
   pendingManualWithdraw: {
     employeeId: "emp_011",
-    requestId: manualRequestId("emp_011", "2026-04-07", "root"),
+    requestId: manualRequestId("emp_011", "2026-04-20", "root"),
   },
   approvedManualWriteback: {
     employeeId: "emp_007",

@@ -35,12 +35,12 @@ describe("admin attendance route helpers", () => {
     vi.mocked(fetchAdminAttendanceToday).mockResolvedValueOnce({
       date: "2026-04-13",
       summary: {
-        checkedInCount: 1,
-        notCheckedInCount: 1,
-        lateCount: 0,
-        onLeaveCount: 0,
-        failedAttemptCount: 0,
-        previousDayOpenCount: 0,
+        checkedInCount: 9,
+        notCheckedInCount: 2,
+        lateCount: 1,
+        onLeaveCount: 1,
+        failedAttemptCount: 1,
+        previousDayOpenCount: 1,
       },
       items: [],
     });
