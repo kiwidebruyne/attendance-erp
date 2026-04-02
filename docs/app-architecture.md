@@ -71,7 +71,9 @@ app/
 - The global sidebar should own only the four assignment routes.
 - Keep page-local tabs and filters inside their route UI. Queue views such as `needs_review`, `completed`, and `all`, plus attendance history toggles such as week and month, must not become global navigation items.
 - Keep `/admin/attendance` today and history switching inside the same route as page-local view state instead of creating additional child routes for those modes.
+- Keep `/admin/attendance/requests` queue selection, selected-date context, detail state, and `all`/`completed` section emphasis as page-local route state rather than separate child routes or shell-level controls.
 - Narrow-width fallback should preserve the same information architecture through a collapsible drawer or sheet pattern instead of a separate mobile route tree.
+- On `/admin/attendance/requests`, preserve queue-first IA at narrow widths by moving selected-date context and detail into sheet or stacked-panel treatment instead of inventing a different mobile reading order.
 - Use private folders such as `_components`, `_lib`, or `_constants` for colocated implementation files that should never become routes.
 
 ## Rendering Boundaries

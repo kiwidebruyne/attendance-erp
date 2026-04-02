@@ -127,24 +127,30 @@ Required UI:
 
 - a request table covering manual attendance requests and leave requests
 - filter tabs for needs review, completed, and all
-- approve, reject, and request-revision actions with confirmation UI
+- a queue-first review workspace where the request table is the primary entry surface and the selected request drives supporting selected-date context plus detail
+- approve, reject, and request-revision actions anchored in actionable request detail rather than queue rows
 - explicit review-comment input when rejecting a request or requesting revision
 - visible request-chain context that shows the active request, the effective status, and any earlier review comment that still explains the current state
+- queue rows that explain why the request matters before detail is opened, while final review actions remain detail-only
 - reviewed non-approved requests should be described as completed review history on the admin side rather than as admin-writable pending work on the same request record
 - reviewed non-approved requests should appear in `completed` and `all` only, never in `needs_review`
 - within `completed` and `all`, reviewed non-approved requests should remain visible as history/context rather than as a separate admin queue state
+- `completed` should keep the same workspace grammar as `needs_review`, but with lower emphasis and history-first reading
+- `all` should section actionable review work ahead of completed review history rather than mixing both into one undifferentiated list
+- within `completed`, approved or withdrawn results should remain visually distinct from reviewed non-approved history and should appear ahead of that history section
 - admin-side next action for reviewed non-approved history should be treated as no further admin action on the same record, even when employee pages still expose a page-local resubmission path
+- admin completed-history detail should remain read-only, use quiet outcome footing, and should not show employee-resubmit CTA copy or employee-only suppression metadata
 - post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval
 - approved-state follow-up `change` and `cancel` flows are in current scope for leave requests only; approved manual-attendance follow-up changes remain out of current scope
+- manual attendance and leave requests should share the route but use different review summaries: manual review should lead with correction summary, target workday, and current/effective state, while leave review should lead with the current request, effective leave, and risk summary
 - visible company-event, effective approved leave, pending leave context, and staffing-cap risk before approving a leave request; see `docs/leave-conflict-policy.md`
-- explicit confirmation UI when approving a leave request that still carries a company-event or staffing-cap warning
+- a second confirmation surface only when approving a leave request that still carries a company-event or staffing-cap warning
+- selected-date context should stay available across `needs_review`, `completed`, and `all`, while completed-history context uses lower-emphasis historical treatment rather than the same pressure styling as actionable review work
 
 Decision points for later issue planning:
 
 - whether bulk approval is needed in the first pass
 - whether any future product phase should allow exceptional administrative revocation of approved requests beyond current scope; see issue `#53`
-- how much detail should be visible inline versus in a modal or side panel
-- how request review surfaces should clean up stale warnings and badges after an approval, rejection, or follow-up submission
 
 ## Cross-Screen UX Expectations
 

@@ -76,9 +76,28 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Do not frame reviewed non-approved admin rows or detail surfaces as "waiting for employee".
 - Do not show employee-resubmit CTA copy or guidance inside admin detail for those reviewed-history cases.
 - Keep their rationale visible without implying new admin action on the same record.
+- Use a queue-first workspace on `/admin/attendance/requests`: the queue is the primary entry surface, and the current queue selection should drive both selected-date context and detail.
+- Treat the selected-date context calendar as a supporting surface attached to detail rather than a third equal primary column.
+- Keep the same workspace grammar across `needs_review`, `completed`, and `all`, but lower the visual emphasis of `completed` so it reads as review history rather than current action pressure.
+- In `all`, section actionable review work ahead of completed review history instead of mixing both into one undifferentiated list.
+- In `all`, use the meaning-first section labels `검토 필요` and `완료된 검토 기록` rather than state-machine jargon.
+- In `completed`, separate approved or withdrawn results from reviewed non-approved history while keeping both inside the same route-local workspace, place the approved or withdrawn section first, and use the internal section labels `승인/철회 완료` and `반려·보완 요청 기록`.
+- `needs_review` rows should use one primary status plus at most two secondary chips, not multiple equal badges. Use fact-led rationale copy that reads as current state plus why it matters now, keep the default to one line, and allow at most a two-line clamp.
+- Show one primary target date in a row by default, and add a secondary date only when date mismatch is important to understanding the request.
+- Prioritize row chips as follows: show active/effective mismatch first when present, then one type-specific chip. Leave rows should prioritize staffing-risk, then company-event, then pending same-date pressure. Manual-attendance rows should prioritize unresolved governing-rationale signal as the second chip.
+- Completed-history rows should keep the same basic row skeleton as `needs_review`, but lighter. Show the outcome plus one-line reason without adding a separate history badge.
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
 - When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface. If the projection points at a prior-workday correction, show the target date explicitly.
+- Keep manual-attendance and leave review structures distinct inside the same route. Manual detail should lead with correction summary, target workday, and current/effective state before showing attendance-fact comparison. Leave detail should lead with current request, effective leave, and risk summary before showing rationale and chain history.
+- Order leave risk summary from effective leave to company-event, staffing-risk, and then pending same-date pressure so the current governing state is read before derived operational pressure.
+- Show `governingReviewComment` as a row-level signal when earlier rationale still governs, and keep the full unresolved rationale visible in detail rather than hiding it behind hover-only disclosure.
+- Use a compact chain timeline in detail instead of a full audit-log table. In completed-history detail, show the result and rationale before that timeline.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
+- Let reviewed `revision_requested` history read as correction-oriented and reviewed `rejected` history read as refusal-oriented without implying an admin-side next step.
+- For actionable review detail, keep review actions in a sticky footer rather than in the queue row. Hide those actions entirely on completed-history detail and replace them with quiet read-only outcome copy that owns the admin display of `nextAction = none`.
+- After a review action, update the queue row, selected detail state, and calendar annotations immediately. When another actionable item remains in the current view, advance to it automatically.
+- Keep selected-date context visible in every queue view, but reduce its visual emphasis in `completed` so historical annotations read as context rather than current pressure.
+- Use dim or outlined historical calendar marks for completed-history items rather than the same style used for active review pressure.
 - On `/attendance/leave`, the top correction tier should filter candidates to reviewed `rejected` or `revision_requested` leave requests with no active follow-up and `isTopSurfaceSuppressed = false`.
 - Treat leave top-surface suppression as a candidate filter only. History must remain the required recovery surface, and request-context or selected-date context may add restore or resubmission entry points without replacing history.
 - A later resubmission or later reviewed outcome must be re-evaluated as a new top-correction candidate rather than inheriting an older request record's suppressed state.
