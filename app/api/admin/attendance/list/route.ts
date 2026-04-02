@@ -15,17 +15,18 @@ function normalizeSearchParams(searchParams: URLSearchParams) {
 
 export async function GET(request: Request) {
   const searchParams = new URL(request.url).searchParams;
+  const normalizedSearchParams = normalizeSearchParams(searchParams);
   const parsed = parseSearchParams(
     adminAttendanceListQuerySchema,
-    normalizeSearchParams(searchParams),
+    normalizedSearchParams,
   );
 
   if (!parsed.success) {
     const requestLogger = createRequestLogger(request, {
       bindings: {
-        from: searchParams.get("from") ?? undefined,
-        to: searchParams.get("to") ?? undefined,
-        name: searchParams.get("name")?.trim() || undefined,
+        from: normalizedSearchParams.get("from") ?? undefined,
+        to: normalizedSearchParams.get("to") ?? undefined,
+        name: normalizedSearchParams.get("name") ?? undefined,
       },
     });
 

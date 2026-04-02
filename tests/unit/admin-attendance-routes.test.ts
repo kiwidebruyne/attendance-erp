@@ -272,26 +272,56 @@ describe("admin attendance route handlers", () => {
     [
       "missing from",
       "https://example.com/api/admin/attendance/list?to=2026-04-13",
+      {
+        from: undefined,
+        to: "2026-04-13",
+        name: undefined,
+      },
       "from",
     ],
     [
       "missing to",
       "https://example.com/api/admin/attendance/list?from=2026-04-10",
+      {
+        from: "2026-04-10",
+        to: undefined,
+        name: undefined,
+      },
       "to",
     ],
     [
       "empty name",
       "https://example.com/api/admin/attendance/list?from=2026-04-10&to=2026-04-13&name=",
+      {
+        from: "2026-04-10",
+        to: "2026-04-13",
+        name: "",
+      },
       "name",
     ],
     [
       "whitespace-only name",
       "https://example.com/api/admin/attendance/list?from=2026-04-10&to=2026-04-13&name=%20%20%20",
+      {
+        from: "2026-04-10",
+        to: "2026-04-13",
+        name: "",
+      },
+      "name",
+    ],
+    [
+      "duplicate name with blank last value",
+      "https://example.com/api/admin/attendance/list?from=2026-04-10&to=2026-04-13&name=alex&name=%20%20%20",
+      {
+        from: "2026-04-10",
+        to: "2026-04-13",
+        name: "",
+      },
       "name",
     ],
   ])(
     "returns the shared validation envelope for %s and logs the invalid query",
-    async (_label, url, paramName) => {
+    async (_label, url, expectedBindings, paramName) => {
       const GET = await loadListRoute();
       const response = await GET(new Request(url));
       const body = await response.json();
@@ -303,7 +333,7 @@ describe("admin attendance route handlers", () => {
       expect(mocks.createRequestLoggerMock).toHaveBeenCalledWith(
         expect.any(Request),
         {
-          bindings: expect.any(Object),
+          bindings: expectedBindings,
         },
       );
       expect(mocks.requestLogger.info).not.toHaveBeenCalled();
