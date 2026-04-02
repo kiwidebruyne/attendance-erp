@@ -2,11 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCarryOverDraft,
+  buildExceptionSurfaceModels,
   buildHistoryAction,
   buildHistoryCorrectionDraft,
 } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
-import type { AttendanceHistoryResponse } from "@/lib/contracts/attendance";
 import type {
+  AttendanceHistoryResponse,
+  AttendanceTodayResponse,
+} from "@/lib/contracts/attendance";
+import type {
+  AttendanceAttempt,
   AttendanceDisplay,
   AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
@@ -56,6 +61,20 @@ function createHistoryRecord(
   };
 }
 
+function createFailedAttempt(
+  overrides: Partial<Extract<AttendanceAttempt, { status: "failed" }>> = {},
+): Extract<AttendanceAttempt, { status: "failed" }> {
+  return {
+    id: "attempt_failed_001",
+    date: "2026-04-13",
+    action: "clock_in",
+    attemptedAt: "2026-04-13T09:05:00+09:00",
+    status: "failed",
+    failureReason: "BLE beacon not detected",
+    ...overrides,
+  };
+}
+
 function createManualRequest(
   overrides: Partial<AttendanceSurfaceManualRequestResource> = {},
 ): AttendanceSurfaceManualRequestResource {
@@ -82,6 +101,32 @@ function createManualRequest(
     governingReviewComment: null,
     hasActiveFollowUp: false,
     nextAction: "admin_review",
+    ...overrides,
+  };
+}
+
+function createTodayResponse(
+  overrides: Partial<AttendanceTodayResponse> = {},
+): AttendanceTodayResponse {
+  return {
+    date: "2026-04-13",
+    employee: {
+      id: "emp_001",
+      name: "Minji Park",
+      department: "Operations",
+    },
+    expectedWorkday: createExpectedWorkday(),
+    previousDayOpenRecord: null,
+    todayRecord: null,
+    attempts: [],
+    manualRequest: null,
+    display: createDisplay({
+      activeExceptions: ["not_checked_in"],
+      nextAction: {
+        type: "submit_manual_request",
+        relatedRequestId: null,
+      },
+    }),
     ...overrides,
   };
 }
@@ -241,5 +286,33 @@ describe("attendance page view model", () => {
         id: "manual_request_emp_001_2026-04-09_root",
       },
     });
+  });
+
+  it("suppresses duplicate same-day correction surfaces when a pending request exists", () => {
+    expect(
+      buildExceptionSurfaceModels(
+        createTodayResponse({
+          attempts: [createFailedAttempt()],
+          manualRequest: createManualRequest(),
+          display: createDisplay({
+            activeExceptions: [
+              "attempt_failed",
+              "manual_request_pending",
+              "not_checked_in",
+            ],
+            nextAction: {
+              type: "review_request_status",
+              relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+            },
+          }),
+        }),
+      ),
+    ).toMatchObject([
+      {
+        id: "manual-request-summary",
+        kind: "pending",
+        title: "정정 요청중이에요",
+      },
+    ]);
   });
 });

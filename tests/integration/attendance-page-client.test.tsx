@@ -522,6 +522,9 @@ describe("AttendancePageClient", () => {
     expect(pendingRow).not.toBeNull();
     expect(pendingRow).toHaveClass("bg-status-warning-soft/42");
     expect(
+      within(pendingRow as HTMLElement).queryByText("정정 필요"),
+    ).not.toBeInTheDocument();
+    expect(
       within(pendingRow as HTMLElement).getByText("결근"),
     ).toBeInTheDocument();
 
@@ -540,6 +543,48 @@ describe("AttendancePageClient", () => {
     ).toBeInTheDocument();
     expect(
       sheet.getByRole("button", { name: "내용 수정" }),
+    ).toBeInTheDocument();
+  });
+
+  it("suppresses generic correction-needed chips on same-day rows after a pending request is submitted", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-13",
+                expectedWorkday: createExpectedWorkday(),
+                record: null,
+                manualRequest: createManualRequest(),
+                display: createDisplay({
+                  activeExceptions: [
+                    "manual_request_pending",
+                    "not_checked_in",
+                  ],
+                  nextAction: {
+                    type: "review_request_status",
+                    relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
+
+    const pendingRow = screen.getByText("정정 요청됨").closest("tr");
+
+    expect(pendingRow).not.toBeNull();
+    expect(
+      within(pendingRow as HTMLElement).queryByText("정정 필요"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(pendingRow as HTMLElement).getByRole("button", {
+        name: "요청 보기",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -768,6 +813,9 @@ describe("AttendancePageClient", () => {
       />,
     );
 
+    expect(
+      screen.queryByRole("button", { name: "출근 기록 확인" }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "요청 보기" }));
 
     const sheet = within(
@@ -823,6 +871,9 @@ describe("AttendancePageClient", () => {
       />,
     );
 
+    expect(
+      screen.queryByText("오늘 출근 기록이 아직 없어요"),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "요청 보기" }));
 
     const sheet = within(
@@ -852,6 +903,38 @@ describe("AttendancePageClient", () => {
       requestedClockOutAt: "2026-04-13T18:04:00+09:00",
     });
     expect(payload).not.toHaveProperty("requestedClockInAt");
+  });
+
+  it("keeps same-day failed attempts from surfacing as a second red correction after a pending request exists", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          today: {
+            ...createPageData().today,
+            previousDayOpenRecord: null,
+            attempts: [createFailedAttempt()],
+            manualRequest: createManualRequest(),
+            display: createDisplay({
+              activeExceptions: [
+                "attempt_failed",
+                "manual_request_pending",
+                "not_checked_in",
+              ],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+              },
+            }),
+          },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("정정 요청중이에요")).toBeInTheDocument();
+    expect(screen.queryByText("비콘을 찾을 수 없어요")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "출근 기록 확인" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows revision_requested rationale and submits a resubmission follow-up", async () => {

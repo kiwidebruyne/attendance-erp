@@ -404,6 +404,12 @@ export function buildExceptionSurfaceModels(
   )
     ? today.manualRequest
     : null;
+  const sameDayPendingRequest =
+    today.manualRequest !== null &&
+    today.manualRequest.status === "pending" &&
+    today.manualRequest.date === today.date
+      ? today.manualRequest
+      : null;
 
   if (
     today.display.activeExceptions.includes("previous_day_checkout_missing") &&
@@ -434,7 +440,10 @@ export function buildExceptionSurfaceModels(
   if (today.display.activeExceptions.includes("attempt_failed")) {
     const latestFailedAttempt = getLatestFailedAttempt(today.attempts);
 
-    if (latestFailedAttempt?.status === "failed") {
+    if (
+      latestFailedAttempt?.status === "failed" &&
+      latestFailedAttempt.date !== sameDayPendingRequest?.date
+    ) {
       surfaces.push(buildFailedAttemptSurface(today, latestFailedAttempt));
     }
   }
@@ -467,41 +476,45 @@ export function buildExceptionSurfaceModels(
   }
 
   if (today.display.activeExceptions.includes("not_checked_in")) {
-    surfaces.push(
-      buildCreateSurfaceModel({
-        id: "not-checked-in",
-        draft: {
-          date: today.date,
-          action: "clock_in",
-          requestedClockInAt: getTodayPreferredClockInAt(today),
-          requestedClockOutAt: null,
-          reason: "",
-        },
-        title: "오늘 출근 기록이 아직 없어요",
-        description: "출근이 늦어졌거나 기록이 빠졌다면 확인해 주세요",
-        ctaLabel: "출근 기록 확인",
-        tone: "destructive",
-      }),
-    );
+    if (sameDayPendingRequest === null) {
+      surfaces.push(
+        buildCreateSurfaceModel({
+          id: "not-checked-in",
+          draft: {
+            date: today.date,
+            action: "clock_in",
+            requestedClockInAt: getTodayPreferredClockInAt(today),
+            requestedClockOutAt: null,
+            reason: "",
+          },
+          title: "오늘 출근 기록이 아직 없어요",
+          description: "출근이 늦어졌거나 기록이 빠졌다면 확인해 주세요",
+          ctaLabel: "출근 기록 확인",
+          tone: "destructive",
+        }),
+      );
+    }
   }
 
   if (today.display.activeExceptions.includes("absent")) {
-    surfaces.push(
-      buildCreateSurfaceModel({
-        id: "absent",
-        draft: {
-          date: today.date,
-          action: "both",
-          requestedClockInAt: getTodayPreferredClockInAt(today),
-          requestedClockOutAt: getTodayPreferredClockOutAt(today),
-          reason: "",
-        },
-        title: "오늘 근무 기록이 비어 있어요",
-        description: "출근과 퇴근 시간이 모두 빠졌다면 정정 요청해 주세요",
-        ctaLabel: "근무 기록 정정",
-        tone: "destructive",
-      }),
-    );
+    if (sameDayPendingRequest === null) {
+      surfaces.push(
+        buildCreateSurfaceModel({
+          id: "absent",
+          draft: {
+            date: today.date,
+            action: "both",
+            requestedClockInAt: getTodayPreferredClockInAt(today),
+            requestedClockOutAt: getTodayPreferredClockOutAt(today),
+            reason: "",
+          },
+          title: "오늘 근무 기록이 비어 있어요",
+          description: "출근과 퇴근 시간이 모두 빠졌다면 정정 요청해 주세요",
+          ctaLabel: "근무 기록 정정",
+          tone: "destructive",
+        }),
+      );
+    }
   }
 
   return surfaces;

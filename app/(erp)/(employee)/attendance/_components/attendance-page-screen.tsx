@@ -245,10 +245,13 @@ function getHistoryStatusChips(
   }
 
   if (
-    record.display.activeExceptions.includes("attempt_failed") ||
-    record.display.activeExceptions.includes("not_checked_in") ||
+    (!hasPendingManualRequest &&
+      record.display.activeExceptions.includes("attempt_failed")) ||
+    (!hasPendingManualRequest &&
+      record.display.activeExceptions.includes("not_checked_in")) ||
     record.display.activeExceptions.includes("manual_request_rejected") ||
-    (record.date < todayDate &&
+    (!hasPendingManualRequest &&
+      record.date < todayDate &&
       record.record?.clockInAt !== null &&
       record.record?.clockInAt !== undefined &&
       record.record.clockOutAt === null)

@@ -49,7 +49,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - `/attendance` history should keep special notes, leave usage, check-in time, check-out time, total work time, status, and CTA in separate columns instead of merging actual facts into one dense cell.
 - Sort `/attendance` history newest first within the selected rolling window.
 - Use `-` for missing attendance fact values in the ledger, use `휴일` for non-workday rows, and keep leave usage in its own column with `연차`, `반차`, or `시간차`.
-- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, `정정 필요`, and `정정 요청됨`, but allow more than one chip on the same row when multiple attendance interpretations coexist.
+- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, `정정 필요`, and `정정 요청됨`, but allow more than one chip on the same row when multiple attendance interpretations coexist. When a same-row pending manual request exists, suppress duplicate generic `정정 필요` chips and keep `정정 요청됨` plus any factual chips such as `결근`, `지각`, or `조퇴`.
 - Place carry-over missing-checkout context on the affected workday row itself, for example through a `퇴근 누락` special note, rather than repeating that note on later dates.
 - Tint history rows whose visible status set includes `정정 필요` or `결근` with a subtle red-family background, and tint rows with `정정 요청됨` with a subtle yellow-family background. When `정정 요청됨` coexists with `결근`, the yellow pending-request treatment should win for the row tint and primary action.
 - On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
@@ -69,6 +69,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
 - On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window only when those rows still show `정정 필요`, `결근`, or `정정 요청됨`, so table-level problems stay discoverable before the ledger without promoting pure lateness-only rows.
+- On employee `/attendance`, if a same-date pending manual request already covers a correction path, let that pending-request surface replace duplicate red correction surfaces for the same target. Keep unrelated exception meanings such as leave-work conflict visible.
 - Historical `정정 요청됨` rail cards should use a yellow warning treatment, the title `정정 요청중이에요`, and the CTA `요청 보기`.
 - Keep destructive historical issue cards such as `정정 필요` or `결근` above yellow pending-request cards in the rail ordering.
 - Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
