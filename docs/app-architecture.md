@@ -90,6 +90,8 @@ app/
 ## State Placement
 
 - Use the URL for shareable screen state such as date ranges, search text, and view tabs when that state affects data queries.
+- `/attendance` should keep `view=week|month` in the URL because that state changes the employee history query window.
+- `/attendance` should default `view=week` and interpret `week` and `month` as rolling `7` and `30` day windows ending at the current route date.
 - `/admin/attendance` should keep its mode (`today` or `history`), date-range state, and search text in the URL because those values change the active admin attendance query.
 - `/admin/attendance` should default to `today` mode, and entering history mode without explicit URL state should initialize the range to the last 7 days including today.
 - Use local client state for ephemeral UI concerns such as open modals, draft form values, and inline filter widgets.

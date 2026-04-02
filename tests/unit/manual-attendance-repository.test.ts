@@ -274,7 +274,6 @@ describe("manual attendance repository helpers", () => {
 
     expect(summary).toBeNull();
   });
-
   it("creates a root request and rejects a second governing request for the same date even when the action differs", () => {
     const world = createWorld();
     const created = createManualAttendanceRequest(
@@ -566,7 +565,6 @@ describe("manual attendance repository helpers", () => {
       ),
     ).toThrowError(ManualAttendanceValidationError);
   });
-
   it("rejects a pending patch that moves the request onto a date already governed by another chain", () => {
     expect(() =>
       updateManualAttendanceRequest(

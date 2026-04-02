@@ -525,7 +525,6 @@ describe("employee attendance route handlers", () => {
       "manual_request_pending",
     );
   });
-
   it("returns not-found and lifecycle conflicts for invalid patch targets", async () => {
     const missingResponse = await patchManualAttendance(
       new Request("https://example.com/api/attendance/manual/req_missing", {

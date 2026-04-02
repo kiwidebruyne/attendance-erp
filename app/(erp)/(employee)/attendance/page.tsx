@@ -1,12 +1,19 @@
-import { PageRouteStub } from "@/components/shell/page-route-stub";
+import { AttendancePageClient } from "@/app/(erp)/(employee)/attendance/_components/attendance-page-client";
+import { getAttendancePageData } from "@/lib/attendance/page-data";
 
-export default function AttendancePage() {
-  return (
-    <PageRouteStub
-      eyebrow="Employee"
-      title="My attendance"
-      description="This route boundary is ready for the employee attendance overview and its in-page controls."
-      route="/attendance"
-    />
-  );
+type AttendancePageProps = {
+  searchParams: Promise<{
+    view?: string | string[];
+  }>;
+};
+
+export default async function AttendancePage({
+  searchParams,
+}: AttendancePageProps) {
+  const { view } = await searchParams;
+  const pageData = getAttendancePageData({
+    view,
+  });
+
+  return <AttendancePageClient initialData={pageData} />;
 }

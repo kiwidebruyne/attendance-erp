@@ -255,7 +255,10 @@ function deriveActiveExceptions({
     activeExceptions.push("manual_request_pending");
   }
 
-  if (manualRequest?.effectiveStatus === "rejected") {
+  if (
+    manualRequest?.effectiveStatus === "rejected" ||
+    manualRequest?.effectiveStatus === "revision_requested"
+  ) {
     activeExceptions.push("manual_request_rejected");
   }
 

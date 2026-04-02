@@ -306,7 +306,6 @@ function resolvePatchedClockFields(
       input.requestedClockOutAt ?? request.requestedClockOutAt,
   };
 }
-
 function validateClockOutOpenRecordRule(
   world: CanonicalSeedWorld,
   employeeId: string,
@@ -578,7 +577,6 @@ export function updateManualAttendanceRequest(
   }
 
   validateManualAttendancePatchBody(request, input);
-
   if (input.status === "withdrawn") {
     request.status = "withdrawn";
     return request;
