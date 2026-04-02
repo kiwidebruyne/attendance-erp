@@ -200,6 +200,19 @@ export const manualAttendanceRequestResourceSchema = z
   })
   .merge(requestChainProjectionSchema);
 
+const attendanceSurfaceManualRequestStatusSchema = requestStatusSchema.extract([
+  "pending",
+  "revision_requested",
+  "rejected",
+]);
+
+export const attendanceSurfaceManualRequestResourceSchema =
+  manualAttendanceRequestResourceSchema.extend({
+    status: attendanceSurfaceManualRequestStatusSchema,
+    activeStatus: requestStatusSchema.extract(["pending"]).nullable(),
+    effectiveStatus: attendanceSurfaceManualRequestStatusSchema,
+  });
+
 export const errorResponseSchema = z.object({
   error: z.object({
     code: errorCodeSchema,
@@ -250,5 +263,8 @@ export type RequestChainProjection = z.infer<
 >;
 export type ManualAttendanceRequestResource = z.infer<
   typeof manualAttendanceRequestResourceSchema
+>;
+export type AttendanceSurfaceManualRequestResource = z.infer<
+  typeof attendanceSurfaceManualRequestResourceSchema
 >;
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;

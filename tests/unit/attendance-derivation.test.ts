@@ -307,6 +307,29 @@ describe("attendance derivation", () => {
     });
   });
 
+  it("does not keep prior-day failed attempts operational once the prior day is closed", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T09:01:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [
+          createAttendanceAttempt({
+            id: "attempt_003",
+            date: "2026-03-29",
+            action: "clock_out",
+            attemptedAt: "2026-03-30T08:30:00+09:00",
+            status: "failed",
+            failureReason: "BLE beacon not detected",
+          }),
+        ],
+        previousDayOpenRecord: createPreviousDayOpenRecord({
+          clockOutAt: "2026-03-29T18:05:00+09:00",
+        }),
+      }).activeExceptions,
+    ).toEqual(["not_checked_in"]);
+  });
+
   it("uses the attendance timezone when evaluating the carry-over cutoff", () => {
     expect(
       deriveAttendanceDisplay({

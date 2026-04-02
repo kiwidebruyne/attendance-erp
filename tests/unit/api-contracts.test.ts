@@ -173,6 +173,62 @@ describe("employee attendance contracts", () => {
     });
   });
 
+  it("rejects approved manualRequest payloads in the attendance today response", () => {
+    expect(() =>
+      attendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        employee: {
+          id: "emp_001",
+          name: "Alex Kim",
+          department: "Product",
+        },
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: null,
+        attempts: [],
+        manualRequest: {
+          id: "req_manual_001",
+          requestType: "manual_attendance",
+          action: "clock_in",
+          date: "2026-03-30",
+          requestedAt: "2026-03-30T09:00:00+09:00",
+          reason: "Beacon was not detected at the office entrance.",
+          status: "approved",
+          reviewedAt: "2026-03-30T11:00:00+09:00",
+          reviewComment: null,
+          governingReviewComment: null,
+          rootRequestId: "req_manual_001",
+          parentRequestId: null,
+          followUpKind: null,
+          supersededByRequestId: null,
+          activeRequestId: null,
+          activeStatus: null,
+          effectiveRequestId: "req_manual_001",
+          effectiveStatus: "approved",
+          hasActiveFollowUp: false,
+          nextAction: "none",
+        },
+        display: {
+          phase: "before_check_in",
+          flags: [],
+          activeExceptions: [],
+          nextAction: {
+            type: "clock_in",
+            relatedRequestId: null,
+          },
+        },
+      }),
+    ).toThrow();
+  });
+
   it("requires from and to in the attendance history query", () => {
     expect(() =>
       attendanceHistoryQuerySchema.parse({
@@ -559,6 +615,74 @@ describe("admin attendance contracts", () => {
             },
             previousDayOpenRecord: null,
             manualRequest: null,
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects withdrawn manualRequest payloads in admin today rows", () => {
+    expect(() =>
+      adminAttendanceTodayResponseSchema.parse({
+        date: "2026-03-30",
+        summary: {
+          checkedInCount: 8,
+          notCheckedInCount: 2,
+          lateCount: 1,
+          onLeaveCount: 1,
+          failedAttemptCount: 1,
+          previousDayOpenCount: 1,
+        },
+        items: [
+          {
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            todayRecord: null,
+            display: {
+              phase: "before_check_in",
+              flags: [],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_in",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: null,
+            previousDayOpenRecord: null,
+            manualRequest: {
+              id: "req_manual_001",
+              requestType: "manual_attendance",
+              action: "clock_in",
+              date: "2026-03-30",
+              requestedAt: "2026-03-30T09:00:00+09:00",
+              reason: "Beacon was not detected at the office entrance.",
+              status: "withdrawn",
+              reviewedAt: null,
+              reviewComment: null,
+              governingReviewComment: null,
+              rootRequestId: "req_manual_001",
+              parentRequestId: null,
+              followUpKind: null,
+              supersededByRequestId: null,
+              activeRequestId: null,
+              activeStatus: null,
+              effectiveRequestId: "req_manual_001",
+              effectiveStatus: "withdrawn",
+              hasActiveFollowUp: false,
+              nextAction: "none",
+            },
           },
         ],
       }),

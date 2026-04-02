@@ -88,12 +88,16 @@ function getOperationalAttempts(
   requestedDate: string,
   previousDayOpenRecord: PreviousDayOpenRecord | null,
 ): AttendanceAttempt[] {
+  const hasOpenPreviousDayRecord = previousDayOpenRecord?.clockOutAt === null;
+
   return attempts.filter((attempt) => {
     if (attempt.date === requestedDate) {
       return true;
     }
 
-    return previousDayOpenRecord?.date === attempt.date;
+    return (
+      hasOpenPreviousDayRecord && previousDayOpenRecord?.date === attempt.date
+    );
   });
 }
 

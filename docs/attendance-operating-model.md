@@ -71,6 +71,10 @@ Important model rule:
 | Failed check-out attempt on an open workday       | append `attendanceAttempt(failed)` with `failureReason`                             | open workday remains open; `attempt_failed` may coexist with the current phase                        | do not silently drop the failed attempt behind the table history                   |
 | Later successful attempt after an earlier failure | append a later `attendanceAttempt(success)` and update `attendanceRecord` if needed | success changes the phase; stale failure warnings should clear if they no longer matter operationally | never leave the user with both a resolved state and a stale unresolved failure CTA |
 
+Important rule:
+
+- A prior-day failed checkout attempt remains operational only while that prior workday is still open. Once the prior-day `clockOutAt` exists, stale failed attempts for that date must stop driving current carry-over exception surfaces.
+
 ### No Successful Check-In After Expected Start
 
 | Moment                                                           | Canonical Fact Changes                    | Derived Result                                        | Required Surface Behavior                                                                      |

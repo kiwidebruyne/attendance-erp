@@ -6,6 +6,7 @@ import {
   attendanceAttemptSchema,
   attendanceDisplaySchema,
   attendanceRecordSchema,
+  attendanceSurfaceManualRequestResourceSchema,
   employeeSummarySchema,
   expectedWorkdaySchema,
   followUpKindSchema,
@@ -28,7 +29,7 @@ export const attendanceTodayResponseSchema = z.object({
   previousDayOpenRecord: previousDayOpenRecordSchema.nullable(),
   todayRecord: attendanceRecordSchema.nullable(),
   attempts: z.array(attendanceAttemptSchema),
-  manualRequest: manualAttendanceRequestResourceSchema.nullable(),
+  manualRequest: attendanceSurfaceManualRequestResourceSchema.nullable(),
   display: attendanceDisplaySchema,
 });
 
