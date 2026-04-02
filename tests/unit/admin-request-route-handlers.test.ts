@@ -354,10 +354,17 @@ describe("admin request route handlers", () => {
       await response.json(),
     );
     const world = getMockSeedWorld();
-    const overview = createSeedRepository({ world }).getEmployeeLeaveOverview({
+    const repository = createSeedRepository({ world });
+    const overview = repository.getEmployeeLeaveOverview({
       employeeId: "emp_004",
       date: "2026-04-16",
     });
+    const completedItem = repository
+      .getAdminRequests({ view: "completed" })
+      .items.find(
+        (item) =>
+          item.rootRequestId === "leave_request_emp_004_2026-04-16_root",
+      );
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
@@ -385,6 +392,14 @@ describe("admin request route handlers", () => {
           }),
         ],
       },
+    });
+    expect(completedItem).toMatchObject({
+      id: "leave_request_emp_004_2026-04-16_change",
+      status: "rejected",
+      reviewComment: "The approved leave should stay unchanged.",
+      governingReviewComment: "The approved leave should stay unchanged.",
+      effectiveRequestId: "leave_request_emp_004_2026-04-16_root",
+      effectiveStatus: "approved",
     });
   });
 

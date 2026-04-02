@@ -461,6 +461,31 @@ function toQueueItem(
   return leaveItem;
 }
 
+function getCompletedQueueRequest(
+  chainRequests: SeedRequest[],
+  projection: RequestChainProjection,
+) {
+  const effectiveRequest =
+    chainRequests.find(
+      (request) => request.id === projection.effectiveRequestId,
+    ) ?? null;
+  const latestRequest = chainRequests.at(-1) ?? null;
+
+  if (
+    latestRequest?.requestType === "leave" &&
+    (latestRequest.status === "rejected" ||
+      latestRequest.status === "revision_requested") &&
+    (latestRequest.followUpKind === "change" ||
+      latestRequest.followUpKind === "cancel") &&
+    projection.effectiveStatus === "approved" &&
+    projection.effectiveRequestId !== latestRequest.id
+  ) {
+    return latestRequest;
+  }
+
+  return effectiveRequest;
+}
+
 export function getAdminRequests(
   world: CanonicalSeedWorld,
   input: { view?: RequestQueueView } = {},
@@ -492,10 +517,10 @@ export function getAdminRequests(
         : (chainRequests.find(
             (request) => request.id === projection.activeRequestId,
           ) ?? null);
-    const effectiveRequest =
-      chainRequests.find(
-        (request) => request.id === projection.effectiveRequestId,
-      ) ?? null;
+    const completedRequest = getCompletedQueueRequest(
+      chainRequests,
+      projection,
+    );
 
     if (activeRequest !== null) {
       return {
@@ -505,18 +530,18 @@ export function getAdminRequests(
       };
     }
 
-    if (effectiveRequest === null) {
+    if (completedRequest === null) {
       return null;
     }
 
     return {
       kind: "completed" as const,
-      item: toQueueItem(world, effectiveRequest, projection),
+      item: toQueueItem(world, completedRequest, projection),
       sortTime:
-        effectiveRequest.status === "withdrawn"
-          ? getRequestSubmissionTime(effectiveRequest)
-          : getRequestReviewTime(effectiveRequest),
-      status: effectiveRequest.status,
+        completedRequest.status === "withdrawn"
+          ? getRequestSubmissionTime(completedRequest)
+          : getRequestReviewTime(completedRequest),
+      status: completedRequest.status,
     };
   });
 
