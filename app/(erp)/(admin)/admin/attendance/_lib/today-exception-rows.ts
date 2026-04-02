@@ -321,7 +321,14 @@ export function buildAdminAttendanceTodayExceptionRows(
 
       return left.employeeName.localeCompare(right.employeeName, "ko-KR");
     })
-    .map<AdminAttendanceTodayExceptionRow>(
-      ({ priority: _priority, ...row }) => row,
-    );
+    .map<AdminAttendanceTodayExceptionRow>((row) => ({
+      department: row.department,
+      detail: row.detail,
+      employeeId: row.employeeId,
+      employeeName: row.employeeName,
+      exceptionType: row.exceptionType,
+      id: row.id,
+      referenceDate: row.referenceDate,
+      specialNote: row.specialNote,
+    }));
 }
