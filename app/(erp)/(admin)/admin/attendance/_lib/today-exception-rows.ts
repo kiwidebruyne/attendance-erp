@@ -142,58 +142,104 @@ function getHistorySpecialNoteLabel(
     return "퇴근 누락";
   }
 
+  if (record.display.activeExceptions.includes("not_checked_in")) {
+    return "출근 누락";
+  }
+
+  if (record.display.activeExceptions.includes("absent")) {
+    return "출근/퇴근 누락";
+  }
+
   return "-";
 }
 
-function getHistoryStatusLabels(
+function getHistoryExceptionTypeLabels(
   record: EmployeeHistoryRecord,
   todayDate: string,
 ) {
   const statuses: string[] = [];
 
   if (
-    record.display.activeExceptions.includes("attempt_failed") ||
-    record.display.activeExceptions.includes("not_checked_in") ||
-    record.display.activeExceptions.includes("manual_request_pending") ||
-    record.display.activeExceptions.includes("manual_request_rejected") ||
-    (record.date < todayDate &&
-      record.record?.clockInAt !== null &&
-      record.record?.clockInAt !== undefined &&
-      record.record.clockOutAt === null)
+    record.date < todayDate &&
+    record.record?.clockInAt !== null &&
+    record.record?.clockInAt !== undefined &&
+    record.record.clockOutAt === null
   ) {
-    statuses.push("정정 필요");
+    statuses.push("전날 미퇴근");
+  }
+
+  if (record.display.activeExceptions.includes("attempt_failed")) {
+    statuses.push("시도 실패");
+  }
+
+  if (record.display.activeExceptions.includes("manual_request_pending")) {
+    statuses.push("정정 요청 검토 중");
+  }
+
+  if (record.display.activeExceptions.includes("manual_request_rejected")) {
+    statuses.push("정정 요청 보완 필요");
+  }
+
+  if (record.display.activeExceptions.includes("not_checked_in")) {
+    statuses.push("출근 기록 없음");
   }
 
   if (record.display.activeExceptions.includes("absent")) {
     statuses.push("결근");
   }
 
-  if (record.display.flags.includes("late")) {
-    statuses.push("지각");
-  }
-
-  if (record.display.flags.includes("early_leave")) {
-    statuses.push("조퇴");
-  }
-
   return [...new Set(statuses)];
 }
 
-function getHistoricalIssueLabels(
+function hasHistoricalIssue(record: EmployeeHistoryRecord, todayDate: string) {
+  return getHistoryExceptionTypeLabels(record, todayDate).length > 0;
+}
+
+function getHistoricalPriority(
+  record: EmployeeHistoryRecord,
+  todayDate: string,
+) {
+  if (
+    record.date < todayDate &&
+    record.record?.clockInAt !== null &&
+    record.record?.clockInAt !== undefined &&
+    record.record.clockOutAt === null
+  ) {
+    return 0;
+  }
+
+  if (record.display.activeExceptions.includes("attempt_failed")) {
+    return 1;
+  }
+
+  if (
+    record.display.activeExceptions.includes("manual_request_pending") ||
+    record.display.activeExceptions.includes("manual_request_rejected")
+  ) {
+    return 2;
+  }
+
+  if (
+    record.display.activeExceptions.includes("not_checked_in") ||
+    record.display.activeExceptions.includes("absent")
+  ) {
+    return 4;
+  }
+
+  return 5;
+}
+
+function getHistoricalIssueDetails(
   record: EmployeeHistoryRecord,
   todayDate: string,
 ) {
   const specialNote = getHistorySpecialNoteLabel(record, todayDate);
   const labels = [
+    ...getHistoryExceptionTypeLabels(record, todayDate),
     specialNote === "-" || specialNote === "휴일" ? null : specialNote,
-    ...getHistoryStatusLabels(record, todayDate),
   ].filter((label): label is string => label !== null);
 
   return [...new Set(labels)];
-}
-
-function hasHistoricalIssue(record: EmployeeHistoryRecord, todayDate: string) {
-  return getHistoricalIssueLabels(record, todayDate).length > 0;
 }
 
 function getHistoricalIssueDescription(issueLabels: string[]) {
@@ -268,7 +314,11 @@ function buildHistoricalRows(input: {
         return [];
       }
 
-      const issueLabels = getHistoricalIssueLabels(record, input.todayDate);
+      const issueLabels = getHistoricalIssueDetails(record, input.todayDate);
+      const exceptionTypeLabels = getHistoryExceptionTypeLabels(
+        record,
+        input.todayDate,
+      );
 
       return [
         {
@@ -276,9 +326,9 @@ function buildHistoricalRows(input: {
           detail: getHistoricalIssueDescription(issueLabels),
           employeeId: input.employeeId,
           employeeName: input.employeeName,
-          exceptionType: getHistoricalExceptionType(issueLabels),
+          exceptionType: getHistoricalExceptionType(exceptionTypeLabels),
           id: `history-${input.employeeId}-${record.date}`,
-          priority: 5,
+          priority: getHistoricalPriority(record, input.todayDate),
           referenceDate: record.date,
           specialNote: getHistorySpecialNoteLabel(record, input.todayDate),
         } satisfies SortableExceptionRow,

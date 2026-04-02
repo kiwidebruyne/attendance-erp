@@ -200,6 +200,77 @@ function minutesBetween(startAt: string, endAt: string) {
   );
 }
 
+type CompletedAttendanceDaySeed = Readonly<{
+  clockInAt: string;
+  clockOutAt: string;
+  date: string;
+  employeeId: string;
+}>;
+
+function buildCompletedAttendanceDaySeed(input: {
+  clockInTime: string;
+  clockOutTime: string;
+  date: string;
+  employeeId: string;
+}): CompletedAttendanceDaySeed {
+  return {
+    clockInAt: buildFixedSeoulDateTime(input.date, input.clockInTime),
+    clockOutAt: buildFixedSeoulDateTime(input.date, input.clockOutTime),
+    date: input.date,
+    employeeId: input.employeeId,
+  };
+}
+
+const preBaselineAutoAttendanceExclusions = deepFreeze({
+  emp_001: new Set([
+    "2026-03-24",
+    "2026-03-25",
+    "2026-03-26",
+    "2026-03-31",
+    "2026-04-01",
+    "2026-04-02",
+    "2026-04-03",
+    "2026-04-06",
+    "2026-04-07",
+    "2026-04-08",
+    "2026-04-09",
+    "2026-04-10",
+  ]),
+  emp_002: new Set(["2026-04-02"]),
+  emp_004: new Set(["2026-04-01"]),
+  emp_007: new Set(["2026-04-03"]),
+  emp_008: new Set(["2026-04-09"]),
+});
+
+const defaultHistoricalCheckInTimes = ["08:57:00", "08:58:00", "08:59:00"];
+const defaultHistoricalCheckOutTimes = ["18:02:00", "18:03:00", "18:04:00"];
+
+const preBaselineCompletedAttendanceDays = deepFreeze(
+  employees.flatMap((employee, employeeIndex) => {
+    const excludedDates =
+      preBaselineAutoAttendanceExclusions[
+        employee.id as keyof typeof preBaselineAutoAttendanceExclusions
+      ] ?? new Set<string>();
+    const timeIndex = employeeIndex % defaultHistoricalCheckInTimes.length;
+
+    return calendarDates
+      .filter(
+        (date) =>
+          date < fixedSeoulBaselineDate &&
+          !isWeekend(date) &&
+          !excludedDates.has(date),
+      )
+      .map((date) =>
+        buildCompletedAttendanceDaySeed({
+          clockInTime: defaultHistoricalCheckInTimes[timeIndex]!,
+          clockOutTime: defaultHistoricalCheckOutTimes[timeIndex]!,
+          date,
+          employeeId: employee.id,
+        }),
+      );
+  }),
+);
+
 const emp001CompletedAttendanceDays = deepFreeze([
   {
     date: "2026-03-24",
@@ -355,6 +426,36 @@ const attendanceAttempts = deepFreeze(
       status: "success",
       failureReason: null,
     },
+    ...preBaselineCompletedAttendanceDays.flatMap((day) => [
+      {
+        id: attendanceAttemptId(
+          day.employeeId,
+          day.date,
+          "clock_in",
+          "success",
+        ),
+        employeeId: day.employeeId,
+        date: day.date,
+        action: "clock_in" as const,
+        attemptedAt: day.clockInAt,
+        status: "success" as const,
+        failureReason: null,
+      },
+      {
+        id: attendanceAttemptId(
+          day.employeeId,
+          day.date,
+          "clock_out",
+          "success",
+        ),
+        employeeId: day.employeeId,
+        date: day.date,
+        action: "clock_out" as const,
+        attemptedAt: day.clockOutAt,
+        status: "success" as const,
+        failureReason: null,
+      },
+    ]),
     ...baselineWorkingCheckIns.map((entry) => ({
       id: attendanceAttemptId(
         entry.employeeId,
@@ -581,6 +682,17 @@ const attendanceRecords = deepFreeze(
       ),
       manualRequestId: null,
     },
+    ...preBaselineCompletedAttendanceDays.map((day) => ({
+      id: attendanceRecordId(day.employeeId, day.date),
+      employeeId: day.employeeId,
+      date: day.date,
+      clockInAt: day.clockInAt,
+      clockInSource: "beacon" as const,
+      clockOutAt: day.clockOutAt,
+      clockOutSource: "beacon" as const,
+      workMinutes: minutesBetween(day.clockInAt, day.clockOutAt),
+      manualRequestId: null,
+    })),
     ...baselineWorkingCheckIns.map((entry) => ({
       id: attendanceRecordId(entry.employeeId, entry.date),
       employeeId: entry.employeeId,

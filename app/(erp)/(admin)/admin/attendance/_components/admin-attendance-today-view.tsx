@@ -412,7 +412,7 @@ function getLedgerRowToneClass(item: TodayItem) {
 }
 
 function getExceptionRowToneClass(row: AdminAttendanceTodayExceptionRow) {
-  if (row.specialNote !== "-") {
+  if (row.specialNote !== "-" || row.exceptionType.includes("결근")) {
     return "bg-status-danger-soft/28 hover:bg-status-danger-soft/40";
   }
 

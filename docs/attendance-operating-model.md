@@ -143,6 +143,7 @@ Additional history-ledger rule:
 Additional `/admin/attendance` today-mode projections:
 
 - `todayExceptionTable` aggregates unresolved employee-surface exceptions for the current date from the same fact set used by the counts above.
+- `todayExceptionTable` should stay focused on unresolved operational exceptions. Routine historical `late` or `early_leave` facts stay in ledger or history context and should not be promoted into the admin top exception table by themselves.
 - `todaySummaryCards` render as `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차` from the same date-level facts.
 - `ledgerViewMode` is a presentation-only grouping over the same ledger rows and must support `기본`, `근무상태별`, and `근태상태별`.
 - These projections do not change the public API contract; they only reorganize the same underlying data for the admin today view.

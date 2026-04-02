@@ -71,15 +71,17 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window so table-level problems stay discoverable before the ledger.
 - Do not use a left exception rail on `/admin/attendance`; aggregate unresolved employee-surface exceptions in the top exception table instead.
 - Use one horizontal summary row on `/admin/attendance` with `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`; these cards are context, not queue entries.
+- Keep the `/admin/attendance` top exception table focused on unresolved operational exceptions. Do not promote routine historical `지각` or `조퇴` rows into that table when they no longer drive current action.
 - The `/admin/attendance` ledger should expose `기본`, `근무상태별`, and `근태상태별` view toggles, and each grouping must come from the same underlying facts.
 - No-record employees should enter the top exception table only when their current operational state needs attention, not as all-day placeholder rows.
+- Use the same danger-family row tint for `/admin/attendance` top-table `결근` rows that you use for other missing-record rows such as `출근 누락` or `퇴근 누락`.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
 - Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
-- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The top exception table should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or late cases so unresolved operational risk is easier to notice than nominal counts.
+- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The top exception table should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or absence cases so unresolved operational risk is easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
 ## Notification Surface Taxonomy

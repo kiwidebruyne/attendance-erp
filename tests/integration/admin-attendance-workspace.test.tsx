@@ -264,4 +264,40 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getByText("지금 누적 예외가 없어요")).toBeInTheDocument();
     expect(screen.getByText("검색 결과가 없어요")).toBeInTheDocument();
   });
+
+  it("uses the danger tint for absent rows in the exception table", () => {
+    render(
+      <AdminAttendanceWorkspace
+        state={createState()}
+        todayExceptionRows={[
+          {
+            department: "Operations",
+            detail: "결근 상태가 남아 있어요",
+            employeeId: "emp_absent",
+            employeeName: "Absent Employee",
+            exceptionType: "결근",
+            id: "exception-absent-row",
+            referenceDate: "2026-04-10",
+            specialNote: "-",
+          },
+        ]}
+        todayResponse={{
+          date: canonicalSeedWorld.baselineDate,
+          summary: {
+            checkedInCount: 0,
+            notCheckedInCount: 0,
+            lateCount: 0,
+            onLeaveCount: 0,
+            failedAttemptCount: 0,
+            previousDayOpenCount: 0,
+          },
+          items: [],
+        }}
+      />,
+    );
+
+    expect(getRowByEmployeeName("Absent Employee")).toHaveClass(
+      "bg-status-danger-soft/28",
+    );
+  });
 });

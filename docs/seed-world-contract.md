@@ -25,8 +25,10 @@ Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/requ
 - Seed roughly one month of attendance facts inside the calendar window.
 - Include a realistic mix of normal days, late arrivals, early departures, missing records, failed attendance attempts, leave coverage, and carry-over handling.
 - Keep pre-baseline unresolved issues intentionally sparse so the world does not read like a backlog dump.
+- Keep most pre-baseline workdays populated with normal attendance facts so the admin today exception table does not inflate from synthetic historical absences.
 - Keep the baseline-day same-day attendance mostly populated so the noon snapshot looks like an active Monday rather than an empty fallback table.
 - The intended baseline-day admin summary example is `checkedInCount 9`, `notCheckedInCount 2`, `lateCount 1`, `onLeaveCount 1`, `failedAttemptCount 1`, and `previousDayOpenCount 1`.
+- The intended baseline-day admin today exception table should stay sparse and resolve to at most 10 rows without UI-only truncation.
 - Keep the default `/attendance` employee's rolling week and month history visibly populated across most seeded workdays so the ledger does not read like a mostly empty fallback table.
 - Keep all company-event records read-only seeded inputs.
 

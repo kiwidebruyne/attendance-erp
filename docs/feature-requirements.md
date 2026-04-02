@@ -113,7 +113,7 @@ Validation and policy topics that must stay aligned with narrower contract docum
 Required UI:
 
 - a default today-first operations mode that renders the page in this order: exception table, one-row summary cards, then full team ledger
-- a top exception table that aggregates unresolved employee-surface exceptions for the day instead of using a left rail
+- a top exception table that aggregates unresolved employee-surface exceptions for the day instead of using a left rail, while leaving routine historical `지각` and `조퇴` marks in history or ledger context
 - one horizontal row of summary cards labeled `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`
 - a full team ledger with selectable `기본`, `근무상태별`, and `근태상태별` views using the same underlying data
 - an exception-table-first team list that still includes employees with no successful attendance record for the day once their current operational state becomes relevant
@@ -135,6 +135,7 @@ Edge cases to keep visible during implementation:
 
 - a no-record employee becomes visible in the top exception table after the adjusted expected start passes even if no attendance row has been created yet
 - a no-record employee with an unresolved failed attempt, carry-over problem, or current manual request may become table-visible before a simple missing check-in warning would apply
+- finalized `결근` rows in the top exception table should read with the same high-risk warning treatment as missing-record rows
 - a prior-workday carry-over correction request may remain embedded on a today row when it still explains the employee's current operational state, and the target date must stay visible
 - an approved manual attendance correction must clear from the today embedded request state once canonical attendance writeback finishes
 
