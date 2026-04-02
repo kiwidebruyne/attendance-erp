@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
 import { AttendancePageScreen } from "@/app/(erp)/(employee)/attendance/_components/attendance-page-screen";
@@ -95,7 +95,6 @@ export function AttendancePageClient({
 }: Readonly<{
   initialData: AttendancePageData;
 }>) {
-  const pathname = usePathname();
   const router = useRouter();
   const [isRouting, startRoutingTransition] = useTransition();
   const [sheetState, setSheetState] = useState<AttendanceSheetState | null>(
@@ -117,7 +116,9 @@ export function AttendancePageClient({
   const handleViewChange = (view: AttendanceHistoryView) => {
     setMutationError(null);
     startRoutingTransition(() => {
-      router.push(`${pathname}?view=${view}`);
+      router.push(
+        view === "month" ? "/attendance?view=month" : "/attendance?view=week",
+      );
     });
   };
 
