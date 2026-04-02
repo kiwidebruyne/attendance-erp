@@ -43,7 +43,10 @@ Required UI:
 - a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and uses independent exception surfaces instead of collapsing all problems into one warning
 - a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
 - a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
-- carry-over recovery behavior that swaps duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
+- carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
+- same-date manual-attendance duplicate prevention must treat `clock_in`, `clock_out`, and `both` as one governing chain per target date rather than separate action buckets
+- manual-attendance correction entry must collect explicit requested attendance times per action: `clock_in` requires only the requested clock-in time, `clock_out` requires only the requested clock-out time, and `both` requires both
+- clock-out-only correction must be available only when the target date already has an open attendance record; otherwise the flow must steer the employee to `both`
 - visibility into same-day failed attendance attempts, the current derived manual attendance request summary, leave-work conflicts, and dedicated expected-but-missing check-in exception surfaces above history when they still matter operationally
 - separate exception surfaces when an unresolved failed attendance attempt and a same-day expected-but-missing check-in state coexist; the page must not merge them into one generic warning
 - same-day attendance action entry points that deep-link into the existing attendance action UI rather than introducing a second `/attendance`-local clock-in or clock-out owner
@@ -57,7 +60,7 @@ Edge cases to keep visible during implementation:
 - the user checked in but has not checked out yet
 - the user has no successful attendance fact for the current day after the expected check-in time
 - the beacon was not detected or the user opened the app outside the beacon range
-- the user has already submitted a same-day or carry-over manual request that still governs the current attendance state
+- the user has already submitted a same-day or carry-over manual request that still governs the current attendance state, even if they are switching between `clock_in`, `clock_out`, and `both`
 - the user already has a pending carry-over correction request for a previous-day missing checkout and should be led to request status instead of a duplicate submission path
 - the user sees a previous-day missing checkout and should be led into correction without needing to decode the history table first
 - the previous day's record is still open because checkout is missing

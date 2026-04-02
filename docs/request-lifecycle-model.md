@@ -19,6 +19,7 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 - The current product does not allow a manager to directly reverse an already approved request.
 - Approved-state follow-up `change` and `cancel` flows are currently formalized only for leave requests.
 - Manual attendance requests currently support pre-review edit and withdrawal plus post-review resubmission, but not approved-state follow-up `change` or `cancel`.
+- Manual attendance root requests are unique per employee and target date. Switching between `clock_in`, `clock_out`, and `both` does not create separate root chains for the same date.
 
 ## Promoted Contract Vocabulary
 
