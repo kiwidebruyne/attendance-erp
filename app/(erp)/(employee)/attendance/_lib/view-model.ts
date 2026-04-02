@@ -23,7 +23,7 @@ export type AttendanceResubmissionDraft = AttendanceManualRequestDraft &
     followUpKind: "resubmission";
   }>;
 
-export type AttendanceSurfaceTone = "default" | "destructive";
+export type AttendanceSurfaceTone = "default" | "destructive" | "warning";
 
 type AttendanceSurfaceBase = Readonly<{
   ctaLabel: string;
@@ -68,7 +68,10 @@ export type AttendanceSurfaceModel =
   | AttendanceReviewSurfaceModel
   | AttendanceLeaveConflictSurfaceModel;
 
-export type AttendanceHistoryAction = AttendanceCreateSurfaceModel &
+export type AttendanceHistoryAction = (
+  | AttendanceCreateSurfaceModel
+  | AttendancePendingSurfaceModel
+) &
   Readonly<{
     label: string;
   }>;
@@ -220,6 +223,8 @@ function buildRequestSurfaceModel(
   request: AttendanceSurfaceManualRequestResource,
   input: {
     id: string;
+    pendingCtaLabel?: string;
+    pendingTone?: AttendanceSurfaceTone;
     pendingTitle: string;
     pendingDescription: string;
     reviewTone?: AttendanceSurfaceTone;
@@ -232,7 +237,8 @@ function buildRequestSurfaceModel(
       draft: buildRequestDraft(request),
       title: input.pendingTitle,
       description: input.pendingDescription,
-      ctaLabel: "상태 확인",
+      ctaLabel: input.pendingCtaLabel ?? "요청 보기",
+      tone: input.pendingTone ?? "default",
     });
   }
 
@@ -442,8 +448,9 @@ export function buildExceptionSurfaceModels(
     surfaces.push(
       buildRequestSurfaceModel(today.manualRequest, {
         id: "manual-request-summary",
-        pendingTitle: "근태 정정 요청을 확인하고 있어요",
-        pendingDescription: "제출한 정정 요청의 진행 상태를 확인할 수 있어요",
+        pendingTitle: "정정 요청중이에요",
+        pendingDescription: "제출한 정정 요청 내용을 다시 확인할 수 있어요",
+        pendingTone: "warning",
       }),
     );
   }
@@ -503,6 +510,24 @@ export function buildExceptionSurfaceModels(
 export function buildHistoryAction(
   record: AttendanceHistoryResponse["records"][number],
 ): AttendanceHistoryAction | null {
+  if (
+    record.manualRequest !== null &&
+    record.manualRequest.status === "pending"
+  ) {
+    return {
+      ...buildPendingSurfaceModel({
+        id: `history-${record.date}`,
+        request: record.manualRequest,
+        draft: buildRequestDraft(record.manualRequest),
+        title: "정정 요청중이에요",
+        description: "제출한 정정 요청 내용을 다시 확인할 수 있어요",
+        ctaLabel: "요청 보기",
+        tone: "warning",
+      }),
+      label: "요청 보기",
+    };
+  }
+
   const draft = buildHistoryCorrectionDraft(record);
 
   if (draft === null) {

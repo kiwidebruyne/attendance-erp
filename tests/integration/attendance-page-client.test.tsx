@@ -180,6 +180,7 @@ function createPageData(
           date: "2026-04-13",
           expectedWorkday: createExpectedWorkday(),
           record: null,
+          manualRequest: null,
           display: createDisplay({
             activeExceptions: ["not_checked_in"],
           }),
@@ -193,6 +194,7 @@ function createPageData(
             adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
           }),
           record: null,
+          manualRequest: null,
           display: createDisplay({
             activeExceptions: ["absent"],
             nextAction: {
@@ -281,6 +283,7 @@ describe("AttendancePageClient", () => {
               adjustedClockOutAt: null,
             }),
             record: null,
+            manualRequest: null,
             display: createDisplay({
               phase: "non_workday",
               activeExceptions: [],
@@ -301,6 +304,7 @@ describe("AttendancePageClient", () => {
               },
             }),
             record: null,
+            manualRequest: null,
             display: createDisplay({
               nextAction: {
                 type: "wait",
@@ -363,6 +367,7 @@ describe("AttendancePageClient", () => {
               clockOutSource: null,
               workMinutes: null,
             },
+            manualRequest: null,
             display: createDisplay({
               flags: ["late"],
               activeExceptions: ["previous_day_checkout_missing"],
@@ -380,6 +385,7 @@ describe("AttendancePageClient", () => {
               clockOutSource: "beacon",
               workMinutes: 540,
             },
+            manualRequest: null,
             display: createDisplay({
               phase: "checked_out",
               nextAction: {
@@ -397,6 +403,7 @@ describe("AttendancePageClient", () => {
               adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
             }),
             record: null,
+            manualRequest: null,
             display: createDisplay({
               activeExceptions: ["absent"],
               nextAction: {
@@ -469,6 +476,73 @@ describe("AttendancePageClient", () => {
     ).toBeInTheDocument();
   });
 
+  it("renders pending history rows with warning emphasis and a request-view action", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-10",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-10T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-10T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-10T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: createManualRequest({
+                  id: "manual_request_emp_001_2026-04-10_root",
+                  date: "2026-04-10",
+                  action: "both",
+                  requestedClockInAt: "2026-04-10T09:03:00+09:00",
+                  requestedClockOutAt: "2026-04-10T18:04:00+09:00",
+                  reason: "Beacon retry details were attached for review.",
+                  rootRequestId: "manual_request_emp_001_2026-04-10_root",
+                  activeRequestId: "manual_request_emp_001_2026-04-10_root",
+                  effectiveRequestId: "manual_request_emp_001_2026-04-10_root",
+                }),
+                display: createDisplay({
+                  activeExceptions: ["manual_request_pending", "absent"],
+                  nextAction: {
+                    type: "review_request_status",
+                    relatedRequestId: "manual_request_emp_001_2026-04-10_root",
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
+
+    const pendingRow = screen.getByText("정정 요청됨").closest("tr");
+
+    expect(pendingRow).not.toBeNull();
+    expect(pendingRow).toHaveClass("bg-status-warning-soft/42");
+    expect(
+      within(pendingRow as HTMLElement).getByText("결근"),
+    ).toBeInTheDocument();
+
+    fireEvent.click(
+      within(pendingRow as HTMLElement).getByRole("button", {
+        name: "요청 보기",
+      }),
+    );
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    expect(
+      sheet.getByText("Beacon retry details were attached for review."),
+    ).toBeInTheDocument();
+    expect(
+      sheet.getByRole("button", { name: "내용 수정" }),
+    ).toBeInTheDocument();
+  });
+
   it("adds historical issue rows into the exception stack", () => {
     render(
       <AttendancePageClient
@@ -480,6 +554,7 @@ describe("AttendancePageClient", () => {
                 date: "2026-04-13",
                 expectedWorkday: createExpectedWorkday(),
                 record: null,
+                manualRequest: null,
                 display: createDisplay({
                   activeExceptions: ["not_checked_in"],
                 }),
@@ -501,6 +576,7 @@ describe("AttendancePageClient", () => {
                   clockOutSource: "beacon",
                   workMinutes: 535,
                 },
+                manualRequest: null,
                 display: createDisplay({
                   phase: "checked_out",
                   flags: ["late"],
@@ -519,6 +595,7 @@ describe("AttendancePageClient", () => {
                   adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
                 }),
                 record: null,
+                manualRequest: null,
                 display: createDisplay({
                   activeExceptions: ["absent"],
                   nextAction: {
@@ -544,6 +621,105 @@ describe("AttendancePageClient", () => {
         "지각 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
       ),
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps warning pending-request rail cards below destructive historical issues", () => {
+    render(
+      <AttendancePageClient
+        initialData={createPageData({
+          today: {
+            ...createPageData().today,
+            previousDayOpenRecord: null,
+            manualRequest: createManualRequest({
+              reason: "Today pending request should stay below red issues.",
+            }),
+            display: createDisplay({
+              activeExceptions: ["manual_request_pending"],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+              },
+            }),
+          },
+          history: {
+            ...createPageData().history,
+            records: [
+              {
+                date: "2026-04-10",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-10T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-10T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-10T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: null,
+                display: createDisplay({
+                  activeExceptions: ["absent"],
+                  nextAction: {
+                    type: "submit_manual_request",
+                    relatedRequestId: null,
+                  },
+                }),
+              },
+              {
+                date: "2026-04-09",
+                expectedWorkday: createExpectedWorkday({
+                  expectedClockInAt: "2026-04-09T09:00:00+09:00",
+                  expectedClockOutAt: "2026-04-09T18:00:00+09:00",
+                  adjustedClockInAt: "2026-04-09T09:00:00+09:00",
+                  adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
+                }),
+                record: null,
+                manualRequest: createManualRequest({
+                  id: "manual_request_emp_001_2026-04-09_root",
+                  date: "2026-04-09",
+                  action: "both",
+                  requestedClockInAt: "2026-04-09T09:04:00+09:00",
+                  requestedClockOutAt: "2026-04-09T18:06:00+09:00",
+                  reason: "History pending request should render as warning.",
+                  rootRequestId: "manual_request_emp_001_2026-04-09_root",
+                  activeRequestId: "manual_request_emp_001_2026-04-09_root",
+                  effectiveRequestId: "manual_request_emp_001_2026-04-09_root",
+                }),
+                display: createDisplay({
+                  activeExceptions: ["manual_request_pending", "absent"],
+                  nextAction: {
+                    type: "review_request_status",
+                    relatedRequestId: "manual_request_emp_001_2026-04-09_root",
+                  },
+                }),
+              },
+            ],
+          },
+        })}
+      />,
+    );
+
+    const exceptionStack = screen
+      .getByText("지금 확인할 예외가 있어요")
+      .closest("section");
+
+    expect(exceptionStack).not.toBeNull();
+    expect(
+      within(exceptionStack as HTMLElement).getAllByText("정정 요청중이에요"),
+    ).toHaveLength(2);
+
+    const stackButtons = within(exceptionStack as HTMLElement).getAllByRole(
+      "button",
+    );
+    const destructiveIndex = stackButtons.findIndex(
+      (button) => button.textContent === "정정하기",
+    );
+    const warningIndices = stackButtons.flatMap((button, index) =>
+      button.textContent === "요청 보기" ? [index] : [],
+    );
+
+    expect(destructiveIndex).toBeGreaterThanOrEqual(0);
+    expect(warningIndices.length).toBe(2);
+    expect(warningIndices.every((index) => index > destructiveIndex)).toBe(
+      true,
+    );
   });
 
   it("opens carry-over correction with the prior date and clock-out defaults", () => {
@@ -592,7 +768,7 @@ describe("AttendancePageClient", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "상태 확인" }));
+    fireEvent.click(screen.getByRole("button", { name: "요청 보기" }));
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
@@ -647,7 +823,7 @@ describe("AttendancePageClient", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "상태 확인" }));
+    fireEvent.click(screen.getByRole("button", { name: "요청 보기" }));
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,

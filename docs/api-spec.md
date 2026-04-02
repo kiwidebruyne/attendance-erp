@@ -340,7 +340,7 @@ Response notes:
 - `previousDayOpenRecord` is `null` unless the prior workday is still open because checkout is missing.
 - `attempts` may include any attempt that still matters for the current card state; each attempt's `date` identifies the target workday.
 - `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for the current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape, keeps `status` and `effectiveStatus` inside that same subset, and may target the requested workday or the prior workday during carry-over handling.
-- Consumers should treat `manualRequest` as a compact row-level projection that exists only on `GET /api/attendance/me` and `GET /api/admin/attendance/today`, rather than a full request detail payload. If its `date` points at the prior workday during carry-over handling, the row should show that target date explicitly.
+- Consumers should treat `manualRequest` as a compact row-level projection rather than a full request detail payload. It appears on `GET /api/attendance/me`, `GET /api/attendance/me/history`, and `GET /api/admin/attendance/today`, but history rows restrict it to same-date `pending` requests only. If the today or admin-today projection points at the prior workday during carry-over handling, the row should show that target date explicitly.
 - If an employee edits or withdraws a pending manual request before review, the row should refresh from the latest projection. Approved manual requests should disappear from this embedded surface once canonical attendance writeback completes.
 - `display.activeExceptions` may contain multiple values at once.
 - `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
@@ -384,6 +384,7 @@ Response:
         "clockOutSource": null,
         "workMinutes": null
       },
+      "manualRequest": null,
       "display": {
         "phase": "working",
         "flags": ["late"],
@@ -402,6 +403,8 @@ Response notes:
 
 - Each row keeps facts and derived display separate.
 - `record` may be `null`.
+- `manualRequest` is `null` unless the same history row currently has a `pending` manual attendance request that still governs that row's date.
+- When present, `manualRequest` reuses the shared `Manual Attendance Request Summary` field set but narrows `status`, `activeStatus`, and `effectiveStatus` to `pending`.
 - `display.activeExceptions` may include `absent` only after day-close finalization.
 - `previous_day_checkout_missing` uses the carry-over cutoff in the workday timezone encoded by the attendance facts for that row.
 
@@ -925,7 +928,7 @@ Response notes:
 - When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape but must keep `status = failed` and a non-empty `failureReason`; its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during carry-over handling.
 - `previousDayOpenRecord` is `null` unless the prior workday is still open. A populated prior-day `clockOutAt` must not derive `previous_day_checkout_missing`.
 - `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for that employee's current attendance state; when present it reuses the shared `Manual Attendance Request Summary` shape, keeps `status` and `effectiveStatus` inside that same subset, and may target the requested workday or the prior workday during carry-over handling.
-- Consumers should treat `manualRequest` as a compact row-level projection that exists only on `GET /api/attendance/me` and `GET /api/admin/attendance/today`, rather than a full request detail payload. If its `date` points at the prior workday during carry-over handling, the row should show that target date explicitly.
+- Consumers should treat `manualRequest` as a compact row-level projection rather than a full request detail payload. It appears on `GET /api/attendance/me`, `GET /api/attendance/me/history`, and `GET /api/admin/attendance/today`, but history rows restrict it to same-date `pending` requests only. If the today or admin-today projection points at the prior workday during carry-over handling, the row should show that target date explicitly.
 - If an employee edits or withdraws a pending manual request before review, the row should refresh from the latest projection. Approved manual requests should disappear from this embedded surface once canonical attendance writeback completes.
 - No-record employees must still appear when they count toward today's expected workday and their current operational state already needs attention, such as after the adjusted expected start or when a failed attempt, carry-over issue, or current manual request is still active.
 

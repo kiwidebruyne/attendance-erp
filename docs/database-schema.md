@@ -331,7 +331,8 @@ This is derived from `Manual Attendance Request` rather than persisted as a seco
 | `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                                             |
 | `nextAction`             | enum           | `Request Next Action`                                                                                                                                   |
 
-This projection is returned only through `GET /api/attendance/me` and `GET /api/admin/attendance/today`. It is not a full request detail payload and is not persisted as a second source of truth.
+This projection is returned through `GET /api/attendance/me`, `GET /api/attendance/me/history`, and `GET /api/admin/attendance/today`. It is not a full request detail payload and is not persisted as a second source of truth.
+History rows use the same compact field set but restrict the surfaced request to the same row date and to `pending` status only.
 
 ### Request Chain Projection
 

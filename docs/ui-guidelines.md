@@ -45,13 +45,13 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Keep every current active exception visible in the stack. Do not collapse lower-priority active exceptions into a badge count, overflow menu, or hidden secondary area while they still matter operationally.
 - Each active exception surface should own its own CTA and explanation.
 - Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
-- Every `/attendance` history row should expose the same compact `정정하기` re-entry action, while still staying less prominent than the top-of-screen surfaces.
+- `/attendance` history rows should keep compact re-entry actions, but the primary label must switch by row state: use `정정하기` for editable correction rows and `요청 보기` for rows that already have an active pending manual request.
 - `/attendance` history should keep special notes, leave usage, check-in time, check-out time, total work time, status, and CTA in separate columns instead of merging actual facts into one dense cell.
 - Sort `/attendance` history newest first within the selected rolling window.
 - Use `-` for missing attendance fact values in the ledger, use `휴일` for non-workday rows, and keep leave usage in its own column with `연차`, `반차`, or `시간차`.
-- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, and `정정 필요`, but allow more than one chip on the same row when multiple attendance interpretations coexist.
+- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, `정정 필요`, and `정정 요청됨`, but allow more than one chip on the same row when multiple attendance interpretations coexist.
 - Place carry-over missing-checkout context on the affected workday row itself, for example through a `퇴근 누락` special note, rather than repeating that note on later dates.
-- Tint only rows whose visible status set includes `정정 필요` or `결근` with a subtle red-family background so correction-needed and finalized-absence rows read as operationally distinct before the user opens the row action.
+- Tint history rows whose visible status set includes `정정 필요` or `결근` with a subtle red-family background, and tint rows with `정정 요청됨` with a subtle yellow-family background. When `정정 요청됨` coexists with `결근`, the yellow pending-request treatment should win for the row tint and primary action.
 - On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
 - If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
@@ -68,7 +68,9 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
-- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window only when those rows still show `정정 필요` or `결근`, so table-level problems stay discoverable before the ledger without promoting pure lateness-only rows.
+- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window only when those rows still show `정정 필요`, `결근`, or `정정 요청됨`, so table-level problems stay discoverable before the ledger without promoting pure lateness-only rows.
+- Historical `정정 요청됨` rail cards should use a yellow warning treatment, the title `정정 요청중이에요`, and the CTA `요청 보기`.
+- Keep destructive historical issue cards such as `정정 필요` or `결근` above yellow pending-request cards in the rail ordering.
 - Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
 - Contextual admin summary cards such as checked-in and on-leave should reuse the same fact set, but they must not be turned into queue-driving pseudo-exceptions just to force 1:1 row parity on the default today surface.
 - No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.
@@ -93,7 +95,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 
 - Every important state should communicate the current state, the reason, and the next action.
 - Warnings should explain why the user is seeing them now, not only what label applies.
-- Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
+- Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer `요청 보기` status visibility rather than a duplicate submission path.
 - On `/admin/attendance/requests`, treat reviewed `rejected` and `revision_requested` items as completed review history/context inside `completed` and `all`, not as a separate employee-waiting queue.
 - Default the route to `needs_review`; initial load should not invent extra text or date filters beyond the selected tab.
 - In `needs_review`, order actionable rows newest pending request first.

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildCarryOverDraft,
+  buildHistoryAction,
   buildHistoryCorrectionDraft,
 } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
 import type { AttendanceHistoryResponse } from "@/lib/contracts/attendance";
 import type {
   AttendanceDisplay,
+  AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
   PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
@@ -49,6 +51,37 @@ function createHistoryRecord(
     expectedWorkday: createExpectedWorkday(),
     record: null,
     display: createDisplay(),
+    manualRequest: null,
+    ...overrides,
+  };
+}
+
+function createManualRequest(
+  overrides: Partial<AttendanceSurfaceManualRequestResource> = {},
+): AttendanceSurfaceManualRequestResource {
+  return {
+    id: "manual_request_emp_001_2026-04-13_root",
+    requestType: "manual_attendance",
+    action: "clock_in",
+    date: "2026-04-13",
+    submittedAt: "2026-04-13T10:05:00+09:00",
+    requestedClockInAt: "2026-04-13T09:05:00+09:00",
+    requestedClockOutAt: null,
+    reason: "Beacon was unavailable during check-in.",
+    status: "pending",
+    reviewedAt: null,
+    reviewComment: null,
+    rootRequestId: "manual_request_emp_001_2026-04-13_root",
+    parentRequestId: null,
+    followUpKind: null,
+    supersededByRequestId: null,
+    activeRequestId: "manual_request_emp_001_2026-04-13_root",
+    activeStatus: "pending",
+    effectiveRequestId: "manual_request_emp_001_2026-04-13_root",
+    effectiveStatus: "pending",
+    governingReviewComment: null,
+    hasActiveFollowUp: false,
+    nextAction: "admin_review",
     ...overrides,
   };
 }
@@ -173,6 +206,40 @@ describe("attendance page view model", () => {
       requestedClockInAt: null,
       requestedClockOutAt: null,
       reason: "",
+    });
+  });
+
+  it("builds a pending history action for rows with an active manual request", () => {
+    expect(
+      buildHistoryAction(
+        createHistoryRecord({
+          date: "2026-04-09",
+          display: createDisplay({
+            activeExceptions: ["manual_request_pending", "absent"],
+            nextAction: {
+              type: "review_request_status",
+              relatedRequestId: "manual_request_emp_001_2026-04-09_root",
+            },
+          }),
+          manualRequest: createManualRequest({
+            id: "manual_request_emp_001_2026-04-09_root",
+            date: "2026-04-09",
+            action: "both",
+            requestedClockInAt: "2026-04-09T09:03:00+09:00",
+            requestedClockOutAt: "2026-04-09T18:04:00+09:00",
+            rootRequestId: "manual_request_emp_001_2026-04-09_root",
+            activeRequestId: "manual_request_emp_001_2026-04-09_root",
+            effectiveRequestId: "manual_request_emp_001_2026-04-09_root",
+          }),
+        }),
+      ),
+    ).toMatchObject({
+      kind: "pending",
+      label: "요청 보기",
+      tone: "warning",
+      request: {
+        id: "manual_request_emp_001_2026-04-09_root",
+      },
     });
   });
 });

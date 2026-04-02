@@ -466,6 +466,21 @@ function sortByDateAndNameDesc(
   return left.employee.name.localeCompare(right.employee.name);
 }
 
+function resolvePendingHistoryManualRequest(
+  world: AttendanceRepositoryWorld,
+  employeeId: string,
+  date: string,
+) {
+  const manualRequest = resolveAttendanceSurfaceManualRequest(
+    world,
+    employeeId,
+    date,
+    null,
+  );
+
+  return manualRequest?.status === "pending" ? manualRequest : null;
+}
+
 export function getEmployeeAttendanceToday(
   world: AttendanceRepositoryWorld,
   input: EmployeeAttendanceTodayInput,
@@ -505,6 +520,11 @@ export function getEmployeeAttendanceHistory(
       date,
       expectedWorkday: row.expectedWorkday,
       record: row.record,
+      manualRequest: resolvePendingHistoryManualRequest(
+        world,
+        input.employeeId,
+        date,
+      ),
       display: row.display,
     };
   });

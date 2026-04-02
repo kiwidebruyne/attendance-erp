@@ -40,7 +40,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 Required UI:
 
 - a stable today card that remains visible even when active exceptions exist and shows the current attendance phase, today's check-in and check-out facts, beacon-auth state, and a display-only current worked-time value when it can be calculated
-- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards only for older rows that still need correction or show finalized absence so table-level problems stay visible before the ledger
+- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards only for older rows that still show `정정 필요`, finalized `결근`, or an active pending manual correction so table-level problems stay visible before the ledger without promoting pure lateness-only rows
 - a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
 - a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
 - carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
@@ -51,9 +51,9 @@ Required UI:
 - visibility into same-day failed attendance attempts, the current derived manual attendance request summary, leave-work conflicts, and dedicated expected-but-missing check-in exception surfaces above history when they still matter operationally
 - separate exception surfaces when an unresolved failed attendance attempt and a same-day expected-but-missing check-in state coexist; the page must not merge them into one generic warning
 - same-day attendance action entry points that deep-link into the existing attendance action UI rather than introducing a second `/attendance`-local clock-in or clock-out owner
-- a rolling 7-day attendance history table ending at the page date, sorted newest first, with each date's special notes, leave usage, recorded check-in and check-out facts, work duration, limited status chips, and row action
+- a rolling 7-day attendance history table ending at the page date, sorted newest first, with each date's special notes, leave usage, recorded check-in and check-out facts, work duration, limited status chips, a compact same-date pending-request summary when one exists, and row action
 - a rolling 30-day view of the same attendance history data, also ending at the page date and keeping the same newest-first ordering
-- compact row-level `정정하기` re-entry actions on every history row so the same correction flow can reopen from any date without replacing or visually competing with the top-of-screen action surfaces
+- compact row-level re-entry actions on every history row so the same correction flow can reopen from any date without replacing or visually competing with the top-of-screen action surfaces; rows with an active pending manual request should switch the primary action to `요청 보기` instead of `정정하기`
 
 Edge cases to keep visible during implementation:
 

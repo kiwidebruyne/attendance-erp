@@ -183,12 +183,14 @@ describe("attendance repository helpers", () => {
       records: expect.arrayContaining([
         expect.objectContaining({
           date: "2026-04-10",
+          manualRequest: null,
           record: expect.objectContaining({
             clockOutAt: null,
           }),
         }),
         expect.objectContaining({
           date: "2026-04-13",
+          manualRequest: null,
           display: expect.objectContaining({
             activeExceptions: [
               "previous_day_checkout_missing",
@@ -199,6 +201,68 @@ describe("attendance repository helpers", () => {
       ]),
     });
     expect(response.records).toHaveLength(4);
+  });
+
+  it("projects only pending manual attendance requests into history rows", () => {
+    const world = structuredClone(canonicalSeedWorld);
+
+    world.manualAttendanceRequests.push(
+      {
+        id: "manual_request_emp_001_2026-04-10_root",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_out",
+        date: "2026-04-10",
+        submittedAt: "2026-04-13T09:20:00+09:00",
+        requestedClockInAt: null,
+        requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+        reason: "Submitting a carry-over checkout correction.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        rootRequestId: "manual_request_emp_001_2026-04-10_root",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+      },
+      {
+        id: "manual_request_emp_001_2026-04-09_reviewed",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-04-09",
+        submittedAt: "2026-04-13T09:25:00+09:00",
+        requestedClockInAt: "2026-04-09T09:03:00+09:00",
+        requestedClockOutAt: null,
+        reason: "Rejected requests should stay out of history projection.",
+        status: "rejected",
+        reviewedAt: "2026-04-13T11:00:00+09:00",
+        reviewComment: "Please clarify the correction context.",
+        rootRequestId: "manual_request_emp_001_2026-04-09_reviewed",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+      },
+    );
+
+    const response = getEmployeeAttendanceHistory(world, {
+      employeeId: "emp_001",
+      from: "2026-04-09",
+      to: "2026-04-10",
+      now: snapshotNow,
+    });
+
+    expect(
+      response.records.find((record) => record.date === "2026-04-10")
+        ?.manualRequest,
+    ).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      status: "pending",
+    });
+    expect(
+      response.records.find((record) => record.date === "2026-04-09")
+        ?.manualRequest,
+    ).toBeNull();
   });
 
   it("keeps the seeded employee history populated across the rolling week and month windows", () => {

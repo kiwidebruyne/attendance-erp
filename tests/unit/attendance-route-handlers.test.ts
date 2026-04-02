@@ -157,7 +157,7 @@ describe("employee attendance route handlers", () => {
     expect(withdrawnBody.manualRequest).toBeNull();
   });
 
-  it("returns facts-first history without embedding raw request history", async () => {
+  it("returns facts-first history rows with an explicit nullable manualRequest projection", async () => {
     const response = await getAttendanceHistory(
       new Request(
         "https://example.com/api/attendance/me/history?from=2026-04-10&to=2026-04-13",
@@ -168,7 +168,69 @@ describe("employee attendance route handlers", () => {
     const body = attendanceHistoryResponseSchema.parse(await response.json());
 
     expect(body.records).toHaveLength(4);
-    expect(Object.hasOwn(body.records[0] ?? {}, "manualRequest")).toBe(false);
+    expect(
+      body.records.every((record) => Object.hasOwn(record, "manualRequest")),
+    ).toBe(true);
+    expect(body.records.every((record) => record.manualRequest === null)).toBe(
+      true,
+    );
+  });
+
+  it("embeds only pending manual-request projections in history rows", async () => {
+    const world = createWorld();
+    addPendingManualRequest(world, {
+      id: "manual_request_emp_001_2026-04-10_root",
+      date: "2026-04-10",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+      submittedAt: "2026-04-13T09:20:00+09:00",
+      reason: "Submitting a carry-over checkout correction.",
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+    });
+    addPendingManualRequest(world, {
+      id: "manual_request_emp_001_2026-04-09_reviewed",
+      date: "2026-04-09",
+      status: "rejected",
+      reviewedAt: "2026-04-13T11:00:00+09:00",
+      reviewComment: "Please clarify the missing checkout details.",
+      rootRequestId: "manual_request_emp_001_2026-04-09_reviewed",
+    });
+    addPendingManualRequest(world, {
+      id: "manual_request_emp_001_2026-04-08_revision",
+      date: "2026-04-08",
+      status: "revision_requested",
+      reviewedAt: "2026-04-13T11:30:00+09:00",
+      reviewComment: "Please attach the beacon retry details.",
+      rootRequestId: "manual_request_emp_001_2026-04-08_revision",
+    });
+    setMockSeedWorldForTests(world);
+
+    const response = await getAttendanceHistory(
+      new Request(
+        "https://example.com/api/attendance/me/history?from=2026-04-08&to=2026-04-10",
+      ),
+    );
+
+    expect(response.status).toBe(200);
+    const body = attendanceHistoryResponseSchema.parse(await response.json());
+
+    expect(
+      body.records.find((record) => record.date === "2026-04-10")
+        ?.manualRequest,
+    ).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      status: "pending",
+      date: "2026-04-10",
+    });
+    expect(
+      body.records.find((record) => record.date === "2026-04-09")
+        ?.manualRequest,
+    ).toBeNull();
+    expect(
+      body.records.find((record) => record.date === "2026-04-08")
+        ?.manualRequest,
+    ).toBeNull();
   });
 
   it("returns validation errors for invalid history query params", async () => {
