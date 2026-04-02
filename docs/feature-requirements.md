@@ -44,14 +44,15 @@ Required UI:
 - a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
 - a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
 - carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
+- one shared in-page correction or review sheet that owns carry-over correction, pending edit or withdraw, review-reason visibility, and reviewed-request resubmission for `/attendance`
 - same-date manual-attendance duplicate prevention must treat `clock_in`, `clock_out`, and `both` as one governing chain per target date rather than separate action buckets
 - manual-attendance correction entry must collect explicit requested attendance times per action: `clock_in` requires only the requested clock-in time, `clock_out` requires only the requested clock-out time, and `both` requires both
 - clock-out-only correction must be available only when the target date already has an open attendance record; otherwise the flow must steer the employee to `both`
 - visibility into same-day failed attendance attempts, the current derived manual attendance request summary, leave-work conflicts, and dedicated expected-but-missing check-in exception surfaces above history when they still matter operationally
 - separate exception surfaces when an unresolved failed attendance attempt and a same-day expected-but-missing check-in state coexist; the page must not merge them into one generic warning
 - same-day attendance action entry points that deep-link into the existing attendance action UI rather than introducing a second `/attendance`-local clock-in or clock-out owner
-- a weekly attendance history table with each date's expected work window summary, recorded check-in and check-out facts, work duration, and derived exceptions
-- a monthly view of the same attendance history data
+- a rolling 7-day attendance history table ending at the page date, with each date's expected work window summary, recorded check-in and check-out facts, work duration, and derived exceptions
+- a rolling 30-day view of the same attendance history data, also ending at the page date
 - compact row-level re-entry actions in the history table that can reopen the same correction or review flows without replacing or visually competing with the top-of-screen action surfaces
 
 Edge cases to keep visible during implementation:

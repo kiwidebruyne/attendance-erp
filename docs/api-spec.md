@@ -346,6 +346,7 @@ Response notes:
 - `display.phase` follows the shared attendance-phase precedence rule, so a non-workday may still render as `working` or `checked_out` when same-day attendance facts exist.
 - `not_checked_in` is a real-time expected-but-missing exception, not a finalized absence.
 - When `display.activeExceptions` includes `absent` and no higher-priority carry-over or request-state override applies, `display.nextAction.type` must be `submit_manual_request` rather than `clock_in`.
+- When `manualRequest.effectiveStatus` is `rejected` or `revision_requested` and no higher-priority carry-over override applies, `display.nextAction.type` must stay `review_request_status` so the employee lands on rationale and resubmission guidance instead of a fresh root submission path.
 
 ### `GET /api/attendance/me/history?from=&to=`
 
