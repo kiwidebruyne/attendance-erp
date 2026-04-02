@@ -66,6 +66,14 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - Admin attendance views should prioritize exceptions over aggregate comfort metrics. The default today queue should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or late cases so unresolved operational risk is easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
+## Notification Surface Taxonomy
+
+- Treat notification surfaces as layered: top summary cards, active exception stacks, queue rows, detail panels, selected-date context, confirmation surfaces, and history re-entry points.
+- One state may appear on more than one layer, but the highest-priority active surface owns the primary CTA; lower layers are supporting context and must not introduce competing primary actions.
+- When the governing state resolves, remove stale copies from lower-priority surfaces promptly instead of leaving duplicate warnings, badges, or CTAs behind.
+- Company-event warnings and staffing-cap risk remain warning/manual-review semantics on leave surfaces as fixed by `docs/leave-conflict-policy.md`; do not hard-block them or invent stronger employee-only admin states here.
+- Employee-only top-surface suppression is an employee visibility control only. Do not expose suppression metadata on admin surfaces.
+
 ## State Messaging Rules
 
 - Every important state should communicate the current state, the reason, and the next action.

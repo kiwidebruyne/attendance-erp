@@ -16,6 +16,7 @@ Those concerns remain in `docs/product-spec-context.md`, `docs/api-spec.md`, `do
 - A reviewed non-approved outcome must keep the prior review comment visible together with any downstream resubmission entry point that page-level IA exposes.
 - A chain may have at most one active employee-submitted follow-up at a time.
 - Employee and admin views must stay synchronized on the same active request, effective status, review rationale, and whether a linked follow-up now governs the chain.
+- When the same request chain appears on more than one surface, the highest-priority active surface owns the primary next action; lower-priority copies are supporting context and must not keep competing CTAs alive after the chain state changes.
 - The current product does not allow a manager to directly reverse an already approved request.
 - Approved-state follow-up `change` and `cancel` flows are currently formalized only for leave requests.
 - Manual attendance requests currently support pre-review edit and withdrawal plus post-review resubmission, but not approved-state follow-up `change` or `cancel`.
@@ -233,6 +234,7 @@ Employee-only leave top-surface suppression is page-level visibility metadata. I
 - Approved manual-attendance requests must not advertise post-approval follow-up `change` or `cancel` in the current scope.
 - Latest activity and effective status must both be explainable from the same visible chain history.
 - Important request-state changes must clear or replace stale warnings, badges, queue states, and CTAs promptly.
+- Stale duplicate surfaces must not survive once the governing request state changes, even when employee and admin pages are both showing the same chain.
 
 ### Forbidden Behaviors
 

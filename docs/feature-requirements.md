@@ -182,7 +182,8 @@ Decision points for later issue planning:
 - Top-of-screen warnings should take priority over buried table-only states when the user needs immediate action.
 - Different causes must remain distinguishable: failed attempt, expected-but-missing check-in, finalized absence, previous-day missing checkout, leave-work conflict, and request-review state must not collapse into one vague warning.
 - Every important state should include the current state, the reason, and the next action.
-- Warning, badge, and CTA cleanup after approvals, rejections, or successful corrections must happen consistently across employee and admin surfaces.
+- Notification surfaces should be layered and deduplicated: summary cards, exception stacks, queue rows, detail panels, selected-date context, and history rows may repeat the same state only as supporting context; the highest-priority visible surface owns the primary next action.
+- Warning, badge, and CTA cleanup after approvals, rejections, resubmissions, withdrawals, or successful corrections must happen consistently across employee and admin surfaces, and stale lower-priority copies should disappear when the governing state changes.
 - Request surfaces should expose the same active request, effective status, and review comment to both employees and admins, while employee resubmission prompting may remain page-local.
 - On admin completed-history surfaces, the "next action" rule should not be interpreted as employee-resubmit guidance inside the admin workspace; those surfaces should read as no further admin action on the same record.
 - Employee and admin surfaces must interpret `rejected` and `revision_requested` as locked non-approved reviewed states on the same request record until a linked follow-up exists. Employee pages may promote resubmission entry points, while admin pages should treat those reviewed outcomes as completed review history rather than active queue work.
