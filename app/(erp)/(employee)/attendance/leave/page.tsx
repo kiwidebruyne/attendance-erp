@@ -1,12 +1,19 @@
-import { PageRouteStub } from "@/components/shell/page-route-stub";
+import { LeavePageClient } from "@/app/(erp)/(employee)/attendance/leave/_components/leave-page-client";
+import { getLeavePageData } from "@/app/(erp)/(employee)/attendance/leave/_lib/page-data";
 
-export default function LeaveRequestPage() {
-  return (
-    <PageRouteStub
-      eyebrow="Employee"
-      title="Leave request"
-      description="This route boundary is ready for leave workflows, balances, and request history inside the shared shell."
-      route="/attendance/leave"
-    />
-  );
+type LeaveRequestPageProps = {
+  searchParams: Promise<{
+    date?: string | string[];
+  }>;
+};
+
+export default async function LeaveRequestPage({
+  searchParams,
+}: LeaveRequestPageProps) {
+  const { date } = await searchParams;
+  const pageData = getLeavePageData({
+    date,
+  });
+
+  return <LeavePageClient initialData={pageData} />;
 }
