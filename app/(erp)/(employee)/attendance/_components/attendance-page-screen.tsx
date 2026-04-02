@@ -361,6 +361,44 @@ function getHistoricalIssueDescription(issueLabels: string[]) {
   return `${issueLabels.join(", ")} 항목이 함께 보여서 이 날짜 기록을 열어서 정정할 수 있어요`;
 }
 
+function deduplicateRailSurfaces(surfaces: AttendanceSurfaceModel[]) {
+  const preferredRequestSurfaceByTargetDate = new Map<
+    string,
+    AttendanceSurfaceModel
+  >();
+
+  for (const surface of surfaces) {
+    if (
+      surface.railTargetDate === null ||
+      surface.railTargetKind !== "request" ||
+      preferredRequestSurfaceByTargetDate.has(surface.railTargetDate)
+    ) {
+      continue;
+    }
+
+    preferredRequestSurfaceByTargetDate.set(surface.railTargetDate, surface);
+  }
+
+  return surfaces.filter((surface) => {
+    if (
+      surface.railTargetDate === null ||
+      surface.railTargetKind === "independent"
+    ) {
+      return true;
+    }
+
+    const preferredRequestSurface = preferredRequestSurfaceByTargetDate.get(
+      surface.railTargetDate,
+    );
+
+    if (preferredRequestSurface === undefined) {
+      return true;
+    }
+
+    return preferredRequestSurface === surface;
+  });
+}
+
 function buildHistoricalIssueSurfaces(
   data: AttendancePageData,
 ): AttendanceSurfaceModel[] {
@@ -659,12 +697,12 @@ function ExceptionStack({
 }: Pick<AttendancePageScreenProps, "data" | "onOpenSheet">) {
   const todaySurfaces = buildExceptionSurfaceModels(data.today);
   const historicalSurfaces = buildHistoricalIssueSurfaces(data);
-  const surfaces = [
+  const surfaces = deduplicateRailSurfaces([
     ...todaySurfaces.filter((surface) => surface.tone !== "warning"),
     ...historicalSurfaces.filter((surface) => surface.tone !== "warning"),
     ...todaySurfaces.filter((surface) => surface.tone === "warning"),
     ...historicalSurfaces.filter((surface) => surface.tone === "warning"),
-  ];
+  ]);
 
   return (
     <section className="flex flex-col gap-4">

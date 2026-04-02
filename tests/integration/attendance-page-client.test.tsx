@@ -936,6 +936,7 @@ describe("AttendancePageClient", () => {
 
     expect(screen.getByText("정정 요청중이에요")).toBeInTheDocument();
     expect(screen.getByText("정정 요청됨")).toBeInTheDocument();
+    expect(screen.getAllByText("정정 요청중이에요")).toHaveLength(1);
     expect(
       screen.queryByRole("button", { name: "출근 기록 확인" }),
     ).not.toBeInTheDocument();
@@ -1129,6 +1130,121 @@ describe("AttendancePageClient", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("정정 요청됨")).not.toBeInTheDocument();
     expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it("deduplicates carry-over rail surfaces when the previous-day correction becomes pending", async () => {
+    const carryOverPendingRequest = createManualRequest({
+      id: "manual_request_emp_001_2026-04-10_root",
+      date: "2026-04-10",
+      action: "clock_out",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-10T18:00:00+09:00",
+      reason: "퇴근 기록 누락으로 정정 요청했습니다.",
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      activeRequestId: "manual_request_emp_001_2026-04-10_root",
+      effectiveRequestId: "manual_request_emp_001_2026-04-10_root",
+    });
+    const refetchedData = createPageData({
+      today: {
+        ...createPageData().today,
+        manualRequest: carryOverPendingRequest,
+        display: createDisplay({
+          activeExceptions: ["previous_day_checkout_missing", "not_checked_in"],
+          nextAction: {
+            type: "review_request_status",
+            relatedRequestId: "manual_request_emp_001_2026-04-10_root",
+          },
+        }),
+      },
+      history: {
+        ...createPageData().history,
+        records: [
+          {
+            date: "2026-04-10",
+            expectedWorkday: createExpectedWorkday({
+              expectedClockInAt: "2026-04-10T09:00:00+09:00",
+              expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+              adjustedClockInAt: "2026-04-10T09:00:00+09:00",
+              adjustedClockOutAt: "2026-04-10T18:00:00+09:00",
+            }),
+            record: {
+              id: "attendance_record_emp_001_2026-04-10",
+              date: "2026-04-10",
+              clockInAt: "2026-04-10T09:04:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            manualRequest: carryOverPendingRequest,
+            display: createDisplay({
+              activeExceptions: ["manual_request_pending"],
+              nextAction: {
+                type: "review_request_status",
+                relatedRequestId: "manual_request_emp_001_2026-04-10_root",
+              },
+            }),
+          },
+          ...createPageData().history.records.filter(
+            (record) => record.date !== "2026-04-10",
+          ),
+        ],
+      },
+    });
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
+    render(<AttendancePageClient initialData={createPageData()} />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "어제 퇴근 시간 정정 요청" }),
+    );
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.change(sheet.getByLabelText("사유"), {
+      target: { value: "퇴근 기록 누락으로 정정 요청했습니다." },
+    });
+    fireEvent.click(
+      sheet.getByRole("button", { name: "어제 퇴근 시간 정정 요청" }),
+    );
+
+    await waitFor(() => {
+      expect(api.createManualAttendanceRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-04-10",
+          action: "clock_out",
+          reason: "퇴근 기록 누락으로 정정 요청했습니다.",
+        }),
+      );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    const exceptionStack = screen
+      .getByText("지금 확인할 예외가 있어요")
+      .closest("section");
+
+    expect(exceptionStack).not.toBeNull();
+    expect(
+      within(exceptionStack as HTMLElement).getByText(
+        "어제 퇴근 기록을 확인하고 있어요",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(exceptionStack as HTMLElement).queryByText("정정 요청중이에요"),
+    ).not.toBeInTheDocument();
+    expect(
+      within(exceptionStack as HTMLElement).getAllByRole("button", {
+        name: "요청 보기",
+      }),
+    ).toHaveLength(1);
   });
 
   it("shows revision_requested rationale and submits a resubmission follow-up", async () => {

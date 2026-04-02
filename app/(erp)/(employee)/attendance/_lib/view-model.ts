@@ -25,10 +25,14 @@ export type AttendanceResubmissionDraft = AttendanceManualRequestDraft &
 
 export type AttendanceSurfaceTone = "default" | "destructive" | "warning";
 
+type AttendanceRailTargetKind = "correction" | "independent" | "request";
+
 type AttendanceSurfaceBase = Readonly<{
   ctaLabel: string;
   description: string;
   id: string;
+  railTargetDate: string | null;
+  railTargetKind: AttendanceRailTargetKind;
   title: string;
   tone: AttendanceSurfaceTone;
 }>;
@@ -156,6 +160,8 @@ function buildCreateSurfaceModel(input: {
   dateEditable?: boolean;
   draft: AttendanceManualRequestDraft;
   id: string;
+  railTargetDate?: string | null;
+  railTargetKind?: AttendanceRailTargetKind;
   submitLabel?: string;
   title: string;
   description: string;
@@ -168,6 +174,8 @@ function buildCreateSurfaceModel(input: {
     draft: input.draft,
     id: input.id,
     kind: "create",
+    railTargetDate: input.railTargetDate ?? input.draft.date,
+    railTargetKind: input.railTargetKind ?? "correction",
     submitLabel: input.submitLabel ?? "정정 요청 보내기",
     title: input.title,
     tone: input.tone ?? "default",
@@ -178,7 +186,9 @@ function buildPendingSurfaceModel(input: {
   ctaLabel: string;
   draft: AttendanceManualRequestDraft;
   id: string;
+  railTargetDate?: string | null;
   request: AttendanceSurfaceManualRequestResource;
+  railTargetKind?: AttendanceRailTargetKind;
   title: string;
   description: string;
   tone?: AttendanceSurfaceTone;
@@ -190,6 +200,8 @@ function buildPendingSurfaceModel(input: {
     draft: input.draft,
     id: input.id,
     kind: "pending",
+    railTargetDate: input.railTargetDate ?? input.request.date,
+    railTargetKind: input.railTargetKind ?? "request",
     request: input.request,
     title: input.title,
     tone: input.tone ?? "default",
@@ -200,7 +212,9 @@ function buildReviewSurfaceModel(input: {
   ctaLabel: string;
   draft: AttendanceResubmissionDraft;
   id: string;
+  railTargetDate?: string | null;
   request: AttendanceSurfaceManualRequestResource;
+  railTargetKind?: AttendanceRailTargetKind;
   submitLabel?: string;
   title: string;
   description: string;
@@ -212,6 +226,8 @@ function buildReviewSurfaceModel(input: {
     draft: input.draft,
     id: input.id,
     kind: "review",
+    railTargetDate: input.railTargetDate ?? input.request.date,
+    railTargetKind: input.railTargetKind ?? "request",
     request: input.request,
     submitLabel: input.submitLabel ?? "다시 제출",
     title: input.title,
@@ -468,6 +484,8 @@ export function buildExceptionSurfaceModels(
     surfaces.push({
       id: "leave-work-conflict",
       kind: "leave_conflict",
+      railTargetDate: null,
+      railTargetKind: "independent",
       title: "휴가 일정과 실제 근무 기록이 함께 있어요",
       description: "휴가 상태와 근무 기록을 함께 확인해 주세요",
       ctaLabel: "충돌 확인",
