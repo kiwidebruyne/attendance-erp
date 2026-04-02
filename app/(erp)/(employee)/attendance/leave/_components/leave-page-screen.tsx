@@ -277,8 +277,6 @@ function formatHistoryRequestDetail(chain: LeaveChainModel) {
       return "오전 일정";
     case "half_pm":
       return "오후 일정";
-    case "hourly":
-      return `${formatLeaveTimeLabel(request.startAt)} ~ ${formatLeaveTimeLabel(request.endAt)}`;
   }
 }
 
@@ -410,6 +408,7 @@ function TopCorrectionTier({
           {viewModel.correctionCandidates.map((candidate) => {
             const companyEventLabel = getCompanyEventLabel(candidate, data);
             const conflictMessages = getConflictMessages(candidate, data);
+            const primaryAction = candidate.primaryAction;
 
             return (
               <TableRow key={candidate.rootRequestId}>
@@ -455,19 +454,15 @@ function TopCorrectionTier({
                 </TableCell>
                 <TableCell className="align-top">
                   <div className="flex justify-end">
-                    {candidate.primaryAction === null ? (
+                    {primaryAction === null ? (
                       <span className="text-sm text-muted-foreground">-</span>
                     ) : (
                       <Button
-                        onClick={() =>
-                          onRunChainAction(candidate.primaryAction)
-                        }
+                        onClick={() => onRunChainAction(primaryAction)}
                         size="sm"
-                        variant={getActionButtonVariant(
-                          candidate.primaryAction,
-                        )}
+                        variant={getActionButtonVariant(primaryAction)}
                       >
-                        {candidate.primaryAction.label}
+                        {primaryAction.label}
                       </Button>
                     )}
                   </div>
@@ -614,6 +609,8 @@ function SelectedDateContextPanel({
     selectedDateConflict.companyEventContext.length === 0
       ? null
       : (selectedDateConflict.companyEventContext[0]?.title ?? null);
+  const primaryAction = primaryChain?.primaryAction ?? null;
+  const secondaryAction = primaryChain?.secondaryAction ?? null;
 
   return (
     <Card>
@@ -730,22 +727,22 @@ function SelectedDateContextPanel({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {primaryChain.primaryAction === null ? null : (
+              {primaryAction === null ? null : (
                 <Button
-                  onClick={() => onRunChainAction(primaryChain.primaryAction)}
+                  onClick={() => onRunChainAction(primaryAction)}
                   size="sm"
-                  variant={getActionButtonVariant(primaryChain.primaryAction)}
+                  variant={getActionButtonVariant(primaryAction)}
                 >
-                  {primaryChain.primaryAction.label}
+                  {primaryAction.label}
                 </Button>
               )}
-              {primaryChain.secondaryAction === null ? null : (
+              {secondaryAction === null ? null : (
                 <Button
-                  onClick={() => onRunChainAction(primaryChain.secondaryAction)}
+                  onClick={() => onRunChainAction(secondaryAction)}
                   size="sm"
-                  variant={getActionButtonVariant(primaryChain.secondaryAction)}
+                  variant={getActionButtonVariant(secondaryAction)}
                 >
-                  {primaryChain.secondaryAction.label}
+                  {secondaryAction.label}
                 </Button>
               )}
             </div>
@@ -1133,66 +1130,69 @@ function HistorySection({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {viewModel.visibleChains.map((chain) => (
-                <TableRow key={chain.rootRequestId}>
-                  <TableCell className="align-top text-sm font-medium text-foreground">
-                    {formatLeaveTypeLabel(chain.latestRequest.leaveType)}
-                  </TableCell>
-                  <TableCell className="align-top text-sm text-secondary">
-                    {formatLeaveDateLabel(chain.effectiveRequest.date)}
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <p className="max-w-[220px] break-words text-sm leading-6 text-secondary whitespace-normal">
-                      {formatHistoryRequestDetail(chain)}
-                    </p>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <Badge variant={getStatusBadgeVariant(chain)}>
-                      {chain.statusLabel}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <div className="max-w-[320px] space-y-2 text-sm leading-6 text-secondary">
-                      <p className="break-words whitespace-normal">
-                        {chain.reasonSummary}
+              {viewModel.visibleChains.map((chain) => {
+                const primaryAction = chain.primaryAction;
+                const secondaryAction = chain.secondaryAction;
+
+                return (
+                  <TableRow key={chain.rootRequestId}>
+                    <TableCell className="align-top text-sm font-medium text-foreground">
+                      {formatLeaveTypeLabel(chain.latestRequest.leaveType)}
+                    </TableCell>
+                    <TableCell className="align-top text-sm text-secondary">
+                      {formatLeaveDateLabel(chain.effectiveRequest.date)}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <p className="max-w-[220px] break-words text-sm leading-6 text-secondary whitespace-normal">
+                        {formatHistoryRequestDetail(chain)}
                       </p>
-                      {chain.reviewComment === null ? null : (
-                        <p className="break-words text-status-danger whitespace-normal">
-                          검토 사유: {chain.reviewComment}
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <Badge variant={getStatusBadgeVariant(chain)}>
+                        {chain.statusLabel}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="max-w-[320px] space-y-2 text-sm leading-6 text-secondary">
+                        <p className="break-words whitespace-normal">
+                          {chain.reasonSummary}
                         </p>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      {chain.primaryAction === null ? (
-                        <span className="text-sm text-muted-foreground">-</span>
-                      ) : (
-                        <Button
-                          onClick={() => onRunChainAction(chain.primaryAction)}
-                          size="sm"
-                          variant={getActionButtonVariant(chain.primaryAction)}
-                        >
-                          {chain.primaryAction.label}
-                        </Button>
-                      )}
-                      {chain.secondaryAction === null ? null : (
-                        <Button
-                          onClick={() =>
-                            onRunChainAction(chain.secondaryAction)
-                          }
-                          size="sm"
-                          variant={getActionButtonVariant(
-                            chain.secondaryAction,
-                          )}
-                        >
-                          {chain.secondaryAction.label}
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                        {chain.reviewComment === null ? null : (
+                          <p className="break-words text-status-danger whitespace-normal">
+                            검토 사유: {chain.reviewComment}
+                          </p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {primaryAction === null ? (
+                          <span className="text-sm text-muted-foreground">
+                            -
+                          </span>
+                        ) : (
+                          <Button
+                            onClick={() => onRunChainAction(primaryAction)}
+                            size="sm"
+                            variant={getActionButtonVariant(primaryAction)}
+                          >
+                            {primaryAction.label}
+                          </Button>
+                        )}
+                        {secondaryAction === null ? null : (
+                          <Button
+                            onClick={() => onRunChainAction(secondaryAction)}
+                            size="sm"
+                            variant={getActionButtonVariant(secondaryAction)}
+                          >
+                            {secondaryAction.label}
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
           <div className="border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">

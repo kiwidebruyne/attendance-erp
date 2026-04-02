@@ -172,7 +172,9 @@ export function getLeaveConflictMessages(leaveConflict: LeaveConflict) {
   return messages;
 }
 
-export function hasMeaningfulLeaveConflict(leaveConflict: LeaveConflict | null) {
+export function hasMeaningfulLeaveConflict(
+  leaveConflict: LeaveConflict | null,
+) {
   if (leaveConflict === null) {
     return false;
   }

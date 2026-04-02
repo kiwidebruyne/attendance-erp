@@ -21,6 +21,7 @@ import {
 import type {
   LeaveRequestBody,
   LeaveRequestPatchBody,
+  LeaveRequestResponse,
 } from "@/lib/contracts/leave";
 import {
   createLeaveRequest,
@@ -53,11 +54,20 @@ function addMonths(month: string, delta: number) {
 
 function upsertLeaveRequestOverview(
   overview: LeavePageData["overview"],
-  request: LeavePageData["overview"]["requests"][number],
+  request: LeaveRequestResponse,
 ) {
+  const previousRequest =
+    overview.requests.find((item) => item.id === request.id) ?? null;
+  const overviewRequest = {
+    ...request,
+    isTopSurfaceSuppressed: previousRequest?.isTopSurfaceSuppressed ?? false,
+    leaveConflict: request.leaveConflict ?? previousRequest?.leaveConflict,
+  };
   const requests = overview.requests.some((item) => item.id === request.id)
-    ? overview.requests.map((item) => (item.id === request.id ? request : item))
-    : [...overview.requests, request];
+    ? overview.requests.map((item) =>
+        item.id === request.id ? overviewRequest : item,
+      )
+    : [...overview.requests, overviewRequest];
 
   return {
     ...overview,
