@@ -34,6 +34,7 @@ import {
   leaveTypeSchema,
   manualAttendanceActionSchema,
   nextActionTypeSchema,
+  requestChainProjectionSchema,
   requestStatusSchema,
   requestTypeSchema,
 } from "@/lib/contracts/shared";
@@ -190,6 +191,32 @@ describe("shared contract schemas", () => {
             relatedRequestId: null,
           },
         },
+      }),
+    ).toThrow();
+  });
+
+  it("requires active request id and active status to be paired", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_001",
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
       }),
     ).toThrow();
   });
@@ -447,6 +474,58 @@ describe("employee attendance contracts", () => {
       status: "pending",
       effectiveStatus: "pending",
     });
+  });
+
+  it("couples reviewed fields to reviewed manual attendance statuses", () => {
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        status: "pending",
+        reviewedAt: "2026-03-30T11:00:00+09:00",
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_001",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualAttendanceRequestResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-03-30",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        status: "rejected",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: "Please clarify the missing clock-out time.",
+        rootRequestId: "req_manual_001",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
   });
 });
 

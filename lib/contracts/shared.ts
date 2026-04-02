@@ -188,7 +188,7 @@ export const leaveRequestSchema = z.union([
   nonHourlyLeaveRequestBaseSchema.merge(rejectedApprovalStateSchema),
 ]);
 
-export const requestChainProjectionSchema = z.object({
+const requestChainProjectionBaseSchema = z.object({
   activeRequestId: z.string().min(1).nullable(),
   activeStatus: requestStatusSchema.nullable(),
   effectiveRequestId: z.string().min(1),
@@ -198,7 +198,33 @@ export const requestChainProjectionSchema = z.object({
   nextAction: requestNextActionSchema,
 });
 
-export const manualAttendanceRequestResourceSchema = z
+function validateRequestChainProjection(
+  value: z.infer<typeof requestChainProjectionBaseSchema>,
+  ctx: z.RefinementCtx,
+) {
+  const hasActiveRequestId = value.activeRequestId !== null;
+  const hasActiveStatus = value.activeStatus !== null;
+
+  if (hasActiveRequestId && !hasActiveStatus) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["activeStatus"],
+      message:
+        'Invalid input: "activeStatus" is required when "activeRequestId" is present',
+    });
+  }
+
+  if (!hasActiveRequestId && hasActiveStatus) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["activeRequestId"],
+      message:
+        'Invalid input: "activeRequestId" is required when "activeStatus" is present',
+    });
+  }
+}
+
+const manualAttendanceRequestResourceBaseSchema = z
   .object({
     id: z.string().min(1),
     requestType: z.literal("manual_attendance"),
@@ -214,7 +240,64 @@ export const manualAttendanceRequestResourceSchema = z
     followUpKind: followUpKindSchema.nullable(),
     supersededByRequestId: z.string().min(1).nullable(),
   })
-  .merge(requestChainProjectionSchema);
+  .merge(requestChainProjectionBaseSchema);
+
+function validateManualAttendanceReviewState(
+  value: z.infer<typeof manualAttendanceRequestResourceBaseSchema>,
+  ctx: z.RefinementCtx,
+) {
+  const requiresReviewedAt =
+    value.status === "approved" ||
+    value.status === "rejected" ||
+    value.status === "revision_requested";
+  const requiresReviewComment =
+    value.status === "rejected" || value.status === "revision_requested";
+
+  if (requiresReviewedAt && value.reviewedAt === null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reviewedAt"],
+      message:
+        'Invalid input: "reviewedAt" is required for approved or reviewed manual attendance requests',
+    });
+  }
+
+  if (!requiresReviewedAt && value.reviewedAt !== null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reviewedAt"],
+      message:
+        'Invalid input: "reviewedAt" must be null for unreviewed manual attendance requests',
+    });
+  }
+
+  if (requiresReviewComment && value.reviewComment === null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reviewComment"],
+      message:
+        'Invalid input: "reviewComment" is required for rejected or revision-requested manual attendance requests',
+    });
+  }
+
+  if (!requiresReviewComment && value.reviewComment !== null) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["reviewComment"],
+      message:
+        'Invalid input: "reviewComment" must be null unless the manual attendance request is rejected or revision_requested',
+    });
+  }
+}
+
+export const requestChainProjectionSchema =
+  requestChainProjectionBaseSchema.superRefine(validateRequestChainProjection);
+
+export const manualAttendanceRequestResourceSchema =
+  manualAttendanceRequestResourceBaseSchema.superRefine((value, ctx) => {
+    validateRequestChainProjection(value, ctx);
+    validateManualAttendanceReviewState(value, ctx);
+  });
 
 const attendanceSurfaceManualRequestStatusSchema = requestStatusSchema.extract([
   "pending",
@@ -223,11 +306,16 @@ const attendanceSurfaceManualRequestStatusSchema = requestStatusSchema.extract([
 ]);
 
 export const attendanceSurfaceManualRequestResourceSchema =
-  manualAttendanceRequestResourceSchema.extend({
-    status: attendanceSurfaceManualRequestStatusSchema,
-    activeStatus: requestStatusSchema.extract(["pending"]).nullable(),
-    effectiveStatus: attendanceSurfaceManualRequestStatusSchema,
-  });
+  manualAttendanceRequestResourceBaseSchema
+    .extend({
+      status: attendanceSurfaceManualRequestStatusSchema,
+      activeStatus: requestStatusSchema.extract(["pending"]).nullable(),
+      effectiveStatus: attendanceSurfaceManualRequestStatusSchema,
+    })
+    .superRefine((value, ctx) => {
+      validateRequestChainProjection(value, ctx);
+      validateManualAttendanceReviewState(value, ctx);
+    });
 
 export const errorResponseSchema = z.object({
   error: z.object({
