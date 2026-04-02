@@ -23,6 +23,7 @@ Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/requ
 - Keep the employee set fixed across runs.
 - Seed roughly one month of attendance facts inside the calendar window.
 - Include a realistic mix of normal days, late arrivals, early departures, missing records, failed attendance attempts, leave coverage, and carry-over handling.
+- Keep the default `/attendance` employee's rolling week and month history visibly populated across most seeded workdays so the ledger does not read like a mostly empty fallback table.
 - Keep all company-event records read-only seeded inputs.
 
 ## Required Scenario Coverage

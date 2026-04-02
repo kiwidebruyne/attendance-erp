@@ -7,6 +7,20 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-shell-canvas: var(--shell-canvas);
+  --color-shell-topbar: var(--shell-topbar);
+  --color-shell-sidebar-strong: var(--shell-sidebar-strong);
+  --color-shell-sidebar-muted: var(--shell-sidebar-muted);
+  --color-action-strong: var(--action-strong);
+  --color-status-success: var(--status-success);
+  --color-status-success-soft: var(--status-success-soft);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-soft: var(--status-warning-soft);
+  --color-status-danger: var(--status-danger);
+  --color-status-danger-soft: var(--status-danger-soft);
+  --color-status-info: var(--status-info);
+  --color-status-info-soft: var(--status-info-soft);
   --font-sans:
     var(--font-pretendard), var(--font-inter), -apple-system,
     BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI",
@@ -58,39 +72,53 @@
 }
 
 :root {
-  --background: #f8f9fa;
+  --background: #f5f7fa;
   --foreground: #1e293b;
   --card: #ffffff;
   --card-foreground: #1e293b;
   --popover: #ffffff;
   --popover-foreground: #1e293b;
-  --primary: #5c59e8;
+  --primary: #4f46e5;
   --primary-foreground: #ffffff;
   --secondary: #64748b;
   --secondary-foreground: #ffffff;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f1f5f9;
+  --accent: #eef2ff;
   --accent-foreground: #1e293b;
-  --destructive: #ffb4ab;
-  --destructive-foreground: #3f1d20;
+  --destructive: #e11d48;
+  --destructive-foreground: #ffffff;
   --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #5c59e8;
-  --chart-1: #93c5fd;
-  --chart-2: #2dd4bf;
-  --chart-3: #a78bfa;
-  --chart-4: #fb923c;
-  --chart-5: #94a3b8;
-  --radius: 0.75rem;
-  --sidebar: #2e3856;
+  --input: #dbe5f0;
+  --ring: #6366f1;
+  --chart-1: #4f46e5;
+  --chart-2: #0f766e;
+  --chart-3: #ea580c;
+  --chart-4: #e11d48;
+  --chart-5: #64748b;
+  --radius: 1rem;
+  --surface-subtle: #f8fafc;
+  --shell-canvas: #f5f7fa;
+  --shell-topbar: #ffffff;
+  --shell-sidebar-strong: #3d4e6e;
+  --shell-sidebar-muted: #94a3b8;
+  --action-strong: #162847;
+  --status-success: #047857;
+  --status-success-soft: #ecfdf5;
+  --status-warning: #ea580c;
+  --status-warning-soft: #fff7ed;
+  --status-danger: #e11d48;
+  --status-danger-soft: #ffe4e6;
+  --status-info: #4f46e5;
+  --status-info-soft: #eef2ff;
+  --sidebar: #2d3e5e;
   --sidebar-foreground: #e2e8f0;
-  --sidebar-primary: #5c59e8;
+  --sidebar-primary: #4f46e5;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #3a4668;
+  --sidebar-accent: #3d4e6e;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #44506d;
-  --sidebar-ring: #7b78ff;
+  --sidebar-border: #475569;
+  --sidebar-ring: #6366f1;
 }
 
 .dark {
@@ -138,7 +166,7 @@
   }
 
   body {
-    @apply bg-background font-sans text-foreground;
+    @apply bg-background font-sans text-foreground antialiased;
   }
 
   h1,

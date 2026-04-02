@@ -200,6 +200,64 @@ function minutesBetween(startAt: string, endAt: string) {
   );
 }
 
+const emp001CompletedAttendanceDays = deepFreeze([
+  {
+    date: "2026-03-24",
+    clockInAt: buildFixedSeoulDateTime("2026-03-24", "08:58:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-24", "18:02:00"),
+  },
+  {
+    date: "2026-03-25",
+    clockInAt: buildFixedSeoulDateTime("2026-03-25", "09:14:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-25", "18:11:00"),
+  },
+  {
+    date: "2026-03-26",
+    clockInAt: buildFixedSeoulDateTime("2026-03-26", "09:01:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-26", "18:05:00"),
+  },
+  {
+    date: "2026-03-31",
+    clockInAt: buildFixedSeoulDateTime("2026-03-31", "08:57:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-03-31", "17:34:00"),
+  },
+  {
+    date: "2026-04-01",
+    clockInAt: buildFixedSeoulDateTime("2026-04-01", "09:00:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-01", "18:08:00"),
+  },
+  {
+    date: "2026-04-02",
+    clockInAt: buildFixedSeoulDateTime("2026-04-02", "09:10:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-02", "18:06:00"),
+  },
+  {
+    date: "2026-04-03",
+    clockInAt: buildFixedSeoulDateTime("2026-04-03", "08:55:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-03", "18:03:00"),
+  },
+  {
+    date: "2026-04-06",
+    clockInAt: buildFixedSeoulDateTime("2026-04-06", "08:59:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-06", "18:00:00"),
+  },
+  {
+    date: "2026-04-07",
+    clockInAt: buildFixedSeoulDateTime("2026-04-07", "08:57:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-07", "18:04:00"),
+  },
+  {
+    date: "2026-04-08",
+    clockInAt: buildFixedSeoulDateTime("2026-04-08", "09:18:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-08", "18:02:00"),
+  },
+  {
+    date: "2026-04-09",
+    clockInAt: buildFixedSeoulDateTime("2026-04-09", "08:59:00"),
+    clockOutAt: buildFixedSeoulDateTime("2026-04-09", "17:21:00"),
+  },
+]);
+
 const attendanceAttempts = deepFreeze(
   attendanceAttemptEntitySchema.array().parse([
     {
@@ -211,6 +269,26 @@ const attendanceAttempts = deepFreeze(
       status: "success",
       failureReason: null,
     },
+    ...emp001CompletedAttendanceDays.flatMap((day) => [
+      {
+        id: attendanceAttemptId("emp_001", day.date, "clock_in", "success"),
+        employeeId: "emp_001",
+        date: day.date,
+        action: "clock_in" as const,
+        attemptedAt: day.clockInAt,
+        status: "success" as const,
+        failureReason: null,
+      },
+      {
+        id: attendanceAttemptId("emp_001", day.date, "clock_out", "success"),
+        employeeId: "emp_001",
+        date: day.date,
+        action: "clock_out" as const,
+        attemptedAt: day.clockOutAt,
+        status: "success" as const,
+        failureReason: null,
+      },
+    ]),
     {
       id: attendanceAttemptId("emp_001", "2026-04-11", "clock_in", "success"),
       employeeId: "emp_001",
@@ -416,6 +494,17 @@ const attendanceRecords = deepFreeze(
       workMinutes: null,
       manualRequestId: null,
     },
+    ...emp001CompletedAttendanceDays.map((day) => ({
+      id: attendanceRecordId("emp_001", day.date),
+      employeeId: "emp_001",
+      date: day.date,
+      clockInAt: day.clockInAt,
+      clockInSource: "beacon" as const,
+      clockOutAt: day.clockOutAt,
+      clockOutSource: "beacon" as const,
+      workMinutes: minutesBetween(day.clockInAt, day.clockOutAt),
+      manualRequestId: null,
+    })),
     {
       id: attendanceRecordId("emp_001", "2026-04-11"),
       employeeId: "emp_001",

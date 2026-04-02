@@ -11,6 +11,7 @@ When implementing or modifying any UI component, page, or layout, agents **must*
 4. Always consider using the shadcn mcp and shadcn skills first when creating components or UI. Follow the mcp and skill's CLI and registry workflow, prefer shadcn components over hand-rolled UI, and only build custom UI after checking the existing shadcn options.
 
 The originating reference image is stored at `docs/assets/erp-reference-dashboard.webp` and is cataloged from `docs/raw-assignment.md`.
+For the attendance-shell refresh, the provided Figma frame is the higher-priority visual authority. Use the local screenshot as a secondary ERP-tone reference only when the Figma frame does not answer the question.
 
 ## Overall Direction
 
@@ -23,9 +24,11 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 ## Shared Shell Interpretation
 
-- Treat `docs/assets/erp-reference-dashboard.webp` as a reference for the shared ERP chrome, not as a literal module-launcher layout to duplicate.
-- Reuse the reference image's persistent dark sidebar, light content canvas, restrained top utility bar, and white card surfaces.
-- Keep the shared page chrome consistent: each route should present a page title and one brief context line near the top of the content area.
+- Treat the provided attendance Figma frame as the primary shell reference and `docs/assets/erp-reference-dashboard.webp` as a supporting tone reference.
+- Reuse the Figma frame's 200px dark sidebar, 56px white utility bar, pale content canvas, and white card surfaces.
+- On desktop, the sidebar may collapse into a thin rail as long as the menu re-open control remains visible at the top and the same four-route IA stays intact.
+- Do not reserve the top utility bar for helper filler copy. If no route-level helper is needed, leave the left side visually quiet.
+- Keep the shared page chrome consistent: each route should present a page title near the top of the content area, and a brief context line only when that extra sentence clarifies the page better than the first surface already does.
 - Global navigation should stay limited to the four assignment routes. Do not promote request queue views or attendance history view toggles into the sidebar.
 - Keep `/admin/attendance` today-versus-history switching inside the page itself rather than promoting it into separate navigation.
 - Narrow-width behavior should preserve the same information architecture through a drawer or sheet version of the sidebar instead of inventing a second mobile IA.
@@ -33,14 +36,22 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 ## Employee Attendance First View
 
+- `/attendance` should follow the Figma composition: page header, one daily briefing row with a 3:1 main briefing/metric split, then a lower two-column area with a fixed-width exception rail and a larger ledger panel.
 - `/attendance` should use a stable today card plus a separate active-exception stack before any history table or secondary summary.
 - Keep the today card visible even when multiple critical exceptions are active. The card provides the user's current context; exception surfaces should not replace it.
-- The today card should summarize the adjusted expected work window, current phase, next action, and current active exceptions.
+- The today card should summarize the current phase, current in or out facts, beacon-auth state, and a display-only "today worked time" value derived from the current open workday when possible.
+- Keep active-exception CTA language and exception badges out of the today card once the left-side exception rail exists. The rail owns exception wording and recovery actions.
 - Treat active exceptions as independent surfaces rather than a single combined warning area.
 - Keep every current active exception visible in the stack. Do not collapse lower-priority active exceptions into a badge count, overflow menu, or hidden secondary area while they still matter operationally.
 - Each active exception surface should own its own CTA and explanation.
 - Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
-- History rows may expose the same recovery or review flows, but row actions should be compact re-entry points that stay less prominent than the top-of-screen surfaces.
+- Every `/attendance` history row should expose the same compact `정정하기` re-entry action, while still staying less prominent than the top-of-screen surfaces.
+- `/attendance` history should keep special notes, leave usage, check-in time, check-out time, total work time, status, and CTA in separate columns instead of merging actual facts into one dense cell.
+- Sort `/attendance` history newest first within the selected rolling window.
+- Use `-` for missing attendance fact values in the ledger, use `휴일` for non-workday rows, and keep leave usage in its own column with `연차`, `반차`, or `시간차`.
+- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, and `정정 필요`, but allow more than one chip on the same row when multiple attendance interpretations coexist.
+- Place carry-over missing-checkout context on the affected workday row itself, for example through a `퇴근 누락` special note, rather than repeating that note on later dates.
+- Tint only rows whose visible status set includes `정정 필요` with a subtle red-family background so correction-needed rows read as operationally distinct before the user opens the row action.
 - On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
 - If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
@@ -53,9 +64,11 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
 - Treat `/admin/attendance` as a today-first operations surface. Historical review should stay secondary to the same-day exception workflow.
+- On `/attendance`, keep exception surfaces in their own left-side rail rather than merging them into the same card grid as the ledger.
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
+- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window so table-level problems stay discoverable before the ledger.
 - Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
 - Contextual admin summary cards such as checked-in and on-leave should reuse the same fact set, but they must not be turned into queue-driving pseudo-exceptions just to force 1:1 row parity on the default today surface.
 - No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.
@@ -141,6 +154,7 @@ The originating reference image is stored at `docs/assets/erp-reference-dashboar
 - The shared shell owns navigation, overall page framing, and the ERP tone of the application chrome.
 - Attendance and request pages own the active exception state, review state, and next-action messaging that appears inside the shell.
 - Do not use the shell to collapse distinct attendance or request states into one vague global status indicator. Keep those states in each page's top-priority content area.
+- `/admin/attendance` should share the same shell tokens and surface grammar as `/attendance`, even though its internal content stays queue-first instead of ledger-first.
 
 ## Employee And Admin Tone
 

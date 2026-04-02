@@ -127,4 +127,52 @@ describe("attendance page view model", () => {
       reason: "",
     });
   });
+
+  it("prefills fully recorded workdays as an editable both-times correction", () => {
+    expect(
+      buildHistoryCorrectionDraft(
+        createHistoryRecord({
+          date: "2026-04-08",
+          record: {
+            id: "attendance_record_emp_001_2026-04-08",
+            date: "2026-04-08",
+            clockInAt: "2026-04-08T09:06:00+09:00",
+            clockInSource: "beacon",
+            clockOutAt: "2026-04-08T18:02:00+09:00",
+            clockOutSource: "beacon",
+            workMinutes: 536,
+          },
+        }),
+      ),
+    ).toEqual({
+      date: "2026-04-08",
+      action: "both",
+      requestedClockInAt: "2026-04-08T09:06:00+09:00",
+      requestedClockOutAt: "2026-04-08T18:02:00+09:00",
+      reason: "",
+    });
+  });
+
+  it("creates a correction draft for empty non-workdays", () => {
+    expect(
+      buildHistoryCorrectionDraft(
+        createHistoryRecord({
+          date: "2026-04-12",
+          expectedWorkday: createExpectedWorkday({
+            isWorkday: false,
+            expectedClockInAt: null,
+            expectedClockOutAt: null,
+            adjustedClockInAt: null,
+            adjustedClockOutAt: null,
+          }),
+        }),
+      ),
+    ).toEqual({
+      date: "2026-04-12",
+      action: "both",
+      requestedClockInAt: null,
+      requestedClockOutAt: null,
+      reason: "",
+    });
+  });
 });

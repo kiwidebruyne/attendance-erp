@@ -80,8 +80,8 @@ export type AttendancePendingEditSurfaceModel = Omit<
   Readonly<{
     ctaLabel: "변경 저장";
     kind: "pending_edit";
-    title: "정정 요청을 수정할 수 있어요.";
-    description: "검토 전에 내용을 수정하거나 철회할 수 있어요.";
+    title: "정정 요청을 수정할 수 있어요";
+    description: "검토 전에 내용을 수정하거나 철회할 수 있어요";
   }>;
 
 export type AttendanceReviewResubmitSurfaceModel = Omit<
@@ -92,8 +92,8 @@ export type AttendanceReviewResubmitSurfaceModel = Omit<
     ctaLabel: "다시 제출";
     dateEditable: false;
     kind: "review_resubmit";
-    title: "사유를 반영해서 다시 제출해 주세요.";
-    description: "남긴 사유를 확인하고 필요한 내용을 보완해 다시 제출할 수 있어요.";
+    title: "사유를 반영해서 다시 제출해 주세요";
+    description: "남긴 사유를 확인하고 필요한 내용을 보완해 다시 제출할 수 있어요";
   }>;
 
 export type AttendanceSheetState =
@@ -241,8 +241,8 @@ function buildRequestSurfaceModel(
       id: input.id,
       request,
       draft: buildResubmissionDraft(request),
-      title: "보완이 필요해요.",
-      description: "남긴 사유를 확인하고 수정해서 다시 제출해 주세요.",
+      title: "보완이 필요해요",
+      description: "남긴 사유를 확인하고 수정해서 다시 제출해 주세요",
       ctaLabel: "다시 제출",
       tone: input.reviewTone ?? "destructive",
     });
@@ -252,8 +252,8 @@ function buildRequestSurfaceModel(
     id: input.id,
     request,
     draft: buildResubmissionDraft(request),
-    title: "조정이 필요해요.",
-    description: "사유를 확인하고 수정해서 다시 제출할 수 있어요.",
+    title: "조정이 필요해요",
+    description: "사유를 확인하고 수정해서 다시 제출할 수 있어요",
     ctaLabel: "사유 확인",
     tone: input.reviewTone ?? "destructive",
   });
@@ -303,15 +303,15 @@ function buildFailedAttemptSurface(
     id: `attempt-failed-${failedAttempt.id}`,
     draft: buildFailedAttemptDraft(today, failedAttempt),
     title: isClockOutFailure
-      ? "퇴근 시도가 확인되지 않았어요."
+      ? "퇴근 시도가 확인되지 않았어요"
       : isBeaconFailure
-        ? "비콘을 찾을 수 없어요."
-        : "출근 시도가 확인되지 않았어요.",
+        ? "비콘을 찾을 수 없어요"
+        : "출근 시도가 확인되지 않았어요",
     description: isClockOutFailure
-      ? "필요하면 퇴근 시간을 정정 요청할 수 있어요."
+      ? "필요하면 퇴근 시간을 정정 요청할 수 있어요"
       : isBeaconFailure
-        ? "비콘이 확인되면 출근할 수 있어요. 지금은 정정 요청으로 기록을 남길 수 있어요."
-        : "출근 기록이 빠졌다면 정정 요청으로 확인할 수 있어요.",
+        ? "비콘이 확인되면 출근할 수 있어요, 지금은 정정 요청으로 기록을 남길 수 있어요"
+        : "출근 기록이 빠졌다면 정정 요청으로 확인할 수 있어요",
     ctaLabel: isClockOutFailure ? "퇴근 시간 정정 요청" : "출근 기록 확인",
     tone: "destructive",
   });
@@ -338,6 +338,17 @@ export function buildHistoryCorrectionDraft(
       action: "clock_out",
       requestedClockInAt: null,
       requestedClockOutAt: getPreferredClockOutAt(record),
+      reason: "",
+    };
+  }
+
+  if (record.record !== null) {
+    return {
+      date: record.date,
+      action: "both",
+      requestedClockInAt: record.record.clockInAt,
+      requestedClockOutAt:
+        record.record.clockOutAt ?? getPreferredClockOutAt(record),
       reason: "",
     };
   }
@@ -396,9 +407,8 @@ export function buildExceptionSurfaceModels(
       surfaces.push(
         buildRequestSurfaceModel(carryOverRequest, {
           id: "previous-day-checkout-missing",
-          pendingTitle: "어제 퇴근 기록을 확인하고 있어요.",
-          pendingDescription:
-            "제출한 정정 요청의 진행 상태를 확인할 수 있어요.",
+          pendingTitle: "어제 퇴근 기록을 확인하고 있어요",
+          pendingDescription: "제출한 정정 요청의 진행 상태를 확인할 수 있어요",
         }),
       );
     } else {
@@ -406,8 +416,8 @@ export function buildExceptionSurfaceModels(
         buildCreateSurfaceModel({
           id: "previous-day-checkout-missing",
           draft: buildCarryOverDraft(today.previousDayOpenRecord),
-          title: "어제 퇴근 기록이 아직 없어요.",
-          description: "이미 퇴근했다면 퇴근 시간을 정정 요청할 수 있어요.",
+          title: "어제 퇴근 기록이 아직 없어요",
+          description: "이미 퇴근했다면 퇴근 시간을 정정 요청할 수 있어요",
           ctaLabel: "어제 퇴근 시간 정정 요청",
           tone: "destructive",
         }),
@@ -432,8 +442,8 @@ export function buildExceptionSurfaceModels(
     surfaces.push(
       buildRequestSurfaceModel(today.manualRequest, {
         id: "manual-request-summary",
-        pendingTitle: "근태 정정 요청을 확인하고 있어요.",
-        pendingDescription: "제출한 정정 요청의 진행 상태를 확인할 수 있어요.",
+        pendingTitle: "근태 정정 요청을 확인하고 있어요",
+        pendingDescription: "제출한 정정 요청의 진행 상태를 확인할 수 있어요",
       }),
     );
   }
@@ -442,8 +452,8 @@ export function buildExceptionSurfaceModels(
     surfaces.push({
       id: "leave-work-conflict",
       kind: "leave_conflict",
-      title: "휴가 일정과 실제 근무 기록이 함께 있어요.",
-      description: "휴가 상태와 근무 기록을 함께 확인해 주세요.",
+      title: "휴가 일정과 실제 근무 기록이 함께 있어요",
+      description: "휴가 상태와 근무 기록을 함께 확인해 주세요",
       ctaLabel: "충돌 확인",
       tone: "destructive",
     });
@@ -460,8 +470,8 @@ export function buildExceptionSurfaceModels(
           requestedClockOutAt: null,
           reason: "",
         },
-        title: "오늘 출근 기록이 아직 없어요.",
-        description: "출근이 늦어졌거나 기록이 빠졌다면 확인해 주세요.",
+        title: "오늘 출근 기록이 아직 없어요",
+        description: "출근이 늦어졌거나 기록이 빠졌다면 확인해 주세요",
         ctaLabel: "출근 기록 확인",
         tone: "destructive",
       }),
@@ -479,8 +489,8 @@ export function buildExceptionSurfaceModels(
           requestedClockOutAt: getTodayPreferredClockOutAt(today),
           reason: "",
         },
-        title: "오늘 근무 기록이 비어 있어요.",
-        description: "출근과 퇴근 시간이 모두 빠졌다면 정정 요청해 주세요.",
+        title: "오늘 근무 기록이 비어 있어요",
+        description: "출근과 퇴근 시간이 모두 빠졌다면 정정 요청해 주세요",
         ctaLabel: "근무 기록 정정",
         tone: "destructive",
       }),
@@ -504,12 +514,12 @@ export function buildHistoryAction(
       ...buildCreateSurfaceModel({
         id: `history-${record.date}`,
         draft,
-        title: "퇴근 기록을 정정할 수 있어요.",
-        description: "빠진 퇴근 시간을 확인해서 정정 요청할 수 있어요.",
-        ctaLabel: "퇴근 정정",
+        title: "퇴근 기록을 정정할 수 있어요",
+        description: "빠진 퇴근 시간을 확인해서 정정 요청할 수 있어요",
+        ctaLabel: "정정하기",
         tone: "default",
       }),
-      label: "퇴근 정정",
+      label: "정정하기",
     };
   }
 
@@ -517,13 +527,13 @@ export function buildHistoryAction(
     ...buildCreateSurfaceModel({
       id: `history-${record.date}`,
       draft,
-      title: "근무 기록을 정정할 수 있어요.",
+      title: "근무 기록을 정정할 수 있어요",
       description:
-        "빠진 근무 기록이 있다면 출근과 퇴근 시간을 함께 남겨 주세요.",
-      ctaLabel: "정정 요청",
+        "빠진 근무 기록이 있다면 출근과 퇴근 시간을 함께 남겨 주세요",
+      ctaLabel: "정정하기",
       tone: "default",
     }),
-    label: "정정 요청",
+    label: "정정하기",
   };
 }
 
@@ -533,9 +543,9 @@ export function toPendingEditSurfaceModel(
   return {
     ...surface,
     ctaLabel: "변경 저장",
-    description: "검토 전에 내용을 수정하거나 철회할 수 있어요.",
+    description: "검토 전에 내용을 수정하거나 철회할 수 있어요",
     kind: "pending_edit",
-    title: "정정 요청을 수정할 수 있어요.",
+    title: "정정 요청을 수정할 수 있어요",
   };
 }
 
@@ -547,8 +557,8 @@ export function toReviewResubmitSurfaceModel(
     ctaLabel: "다시 제출",
     dateEditable: false,
     description:
-      "남긴 사유를 확인하고 필요한 내용을 보완해 다시 제출할 수 있어요.",
+      "남긴 사유를 확인하고 필요한 내용을 보완해 다시 제출할 수 있어요",
     kind: "review_resubmit",
-    title: "사유를 반영해서 다시 제출해 주세요.",
+    title: "사유를 반영해서 다시 제출해 주세요",
   };
 }

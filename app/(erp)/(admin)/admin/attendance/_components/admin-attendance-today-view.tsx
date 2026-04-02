@@ -61,22 +61,44 @@ function RowBadges({ item }: { item: TodayItem }) {
   return (
     <div className="flex flex-wrap gap-2">
       {item.previousDayOpenRecord !== null ? (
-        <Badge variant="outline">전날 미퇴근</Badge>
+        <Badge
+          className="bg-status-danger-soft text-status-danger"
+          variant="ghost"
+        >
+          전날 미퇴근
+        </Badge>
       ) : null}
       {item.latestFailedAttempt !== null ? (
-        <Badge variant="outline">시도 실패</Badge>
+        <Badge
+          className="bg-status-warning-soft text-status-warning"
+          variant="ghost"
+        >
+          시도 실패
+        </Badge>
       ) : null}
       {item.manualRequest !== null ? (
-        <Badge variant="secondary">정정 요청</Badge>
+        <Badge variant="default">정정 요청</Badge>
       ) : null}
       {item.display.activeExceptions.includes("not_checked_in") ? (
-        <Badge variant="outline">출근 기록 없음</Badge>
+        <Badge
+          className="bg-status-danger-soft text-status-danger"
+          variant="ghost"
+        >
+          출근 기록 없음
+        </Badge>
       ) : null}
       {item.display.flags.includes("late") ? (
-        <Badge variant="outline">지각</Badge>
+        <Badge
+          className="bg-status-warning-soft text-status-warning"
+          variant="ghost"
+        >
+          지각
+        </Badge>
       ) : null}
       {item.expectedWorkday.leaveCoverage !== null ? (
-        <Badge variant="outline">휴가 반영</Badge>
+        <Badge className="bg-status-info-soft text-status-info" variant="ghost">
+          휴가 반영
+        </Badge>
       ) : null}
     </div>
   );
@@ -90,7 +112,7 @@ function TodayQueueRow({ item }: { item: TodayItem }) {
       : `${formatTimeLabel(item.expectedWorkday.adjustedClockInAt)} ~ ${formatTimeLabel(item.expectedWorkday.adjustedClockOutAt)}`;
 
   return (
-    <li className="rounded-xl border border-border bg-card">
+    <li className="rounded-[14px] border border-border bg-surface-subtle/70">
       <div className="flex flex-col gap-3 p-4">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex flex-col gap-1">
@@ -147,7 +169,7 @@ function TodayQueueRow({ item }: { item: TodayItem }) {
         </dl>
 
         {item.previousDayOpenRecord !== null ? (
-          <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+          <div className="rounded-[12px] bg-white px-3 py-2 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">
               대상일 {formatDateLabel(item.previousDayOpenRecord.date)}
             </p>
@@ -160,7 +182,7 @@ function TodayQueueRow({ item }: { item: TodayItem }) {
         ) : null}
 
         {item.latestFailedAttempt !== null ? (
-          <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+          <div className="rounded-[12px] bg-white px-3 py-2 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">
               마지막 실패{" "}
               {formatTimeLabel(item.latestFailedAttempt.attemptedAt)}
@@ -172,7 +194,7 @@ function TodayQueueRow({ item }: { item: TodayItem }) {
         ) : null}
 
         {item.manualRequest !== null ? (
-          <div className="rounded-lg bg-muted/60 px-3 py-2 text-sm text-muted-foreground">
+          <div className="rounded-[12px] bg-white px-3 py-2 text-sm text-muted-foreground">
             <p className="font-medium text-foreground">
               {getManualRequestActionLabel(item.manualRequest.action)} · 대상일{" "}
               {formatDateLabel(item.manualRequest.date)}
@@ -229,8 +251,13 @@ export function AdminAttendanceTodayView({
 
           return (
             <Card key={group.key}>
-              <CardHeader>
-                <CardTitle>{group.title}</CardTitle>
+              <CardHeader className="gap-2">
+                <div className="flex items-center gap-2">
+                  <CardTitle>{group.title}</CardTitle>
+                  <span className="inline-flex size-5 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-secondary">
+                    {items.length}
+                  </span>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {group.description}
                 </p>

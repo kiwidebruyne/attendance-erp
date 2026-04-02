@@ -40,18 +40,13 @@ export default async function AdminAttendancePage(
 
   return (
     <div className="flex flex-1 flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <p className="text-xs font-medium tracking-[0.14em] text-secondary uppercase">
-          Admin
+      <header className="space-y-1">
+        <h1 className="text-[32px] font-medium tracking-[-0.04em] text-foreground">
+          팀 근태 운영
+        </h1>
+        <p className="max-w-3xl text-sm leading-6 text-secondary">
+          오늘 운영 상태를 먼저 보고, 필요한 이력은 같은 화면에서 바로 비교해요.
         </p>
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            팀 근태 대시보드
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-            오늘 운영 상태와 최근 이력을 같은 화면에서 바로 비교해요.
-          </p>
-        </div>
       </header>
 
       <AdminAttendanceWorkspace

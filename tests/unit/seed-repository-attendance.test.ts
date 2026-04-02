@@ -201,6 +201,50 @@ describe("attendance repository helpers", () => {
     expect(response.records).toHaveLength(4);
   });
 
+  it("keeps the seeded employee history populated across the rolling week and month windows", () => {
+    const weekResponse = getEmployeeAttendanceHistory(canonicalSeedWorld, {
+      employeeId: "emp_001",
+      from: "2026-04-07",
+      to: "2026-04-13",
+      now: snapshotNow,
+    });
+    const monthResponse = getEmployeeAttendanceHistory(canonicalSeedWorld, {
+      employeeId: "emp_001",
+      from: "2026-03-24",
+      to: "2026-04-13",
+      now: snapshotNow,
+    });
+
+    expect(
+      weekResponse.records.find((record) => record.date === "2026-04-07")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-04-07T08:57:00+09:00",
+      clockOutAt: "2026-04-07T18:04:00+09:00",
+    });
+    expect(
+      weekResponse.records.find((record) => record.date === "2026-04-08")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-04-08T09:18:00+09:00",
+      clockOutAt: "2026-04-08T18:02:00+09:00",
+    });
+    expect(
+      weekResponse.records.find((record) => record.date === "2026-04-09")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-04-09T08:59:00+09:00",
+      clockOutAt: "2026-04-09T17:21:00+09:00",
+    });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-24")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-03-24T08:58:00+09:00",
+      clockOutAt: "2026-03-24T18:02:00+09:00",
+    });
+  });
+
   it("marks past unattended workdays as absent in history and admin lists", () => {
     const world = createPastDueNoShowWorld();
     const historyResponse = getEmployeeAttendanceHistory(world, {
