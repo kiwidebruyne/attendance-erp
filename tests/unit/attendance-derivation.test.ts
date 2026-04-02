@@ -378,4 +378,39 @@ describe("attendance derivation", () => {
       previousDayOpenCount: 1,
     });
   });
+
+  it("skips non-counting rows for admin summary totals except queue-only counters", () => {
+    expect(
+      deriveAdminAttendanceSummary([
+        {
+          expectedWorkday: createExpectedWorkday({
+            countsTowardAdminSummary: false,
+            leaveCoverage: {
+              requestId: "req_leave_002",
+              leaveType: "annual",
+              startAt: "2026-03-30T09:00:00+09:00",
+              endAt: "2026-03-30T18:00:00+09:00",
+            },
+          }),
+          todayRecord: createAttendanceRecord(),
+          display: createDisplay({
+            phase: "working",
+            flags: ["late"],
+            activeExceptions: [
+              "attempt_failed",
+              "not_checked_in",
+              "previous_day_checkout_missing",
+            ],
+          }),
+        },
+      ]),
+    ).toEqual({
+      checkedInCount: 0,
+      notCheckedInCount: 0,
+      lateCount: 0,
+      onLeaveCount: 0,
+      failedAttemptCount: 1,
+      previousDayOpenCount: 1,
+    });
+  });
 });

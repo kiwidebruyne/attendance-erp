@@ -235,6 +235,46 @@ describe("employee attendance contracts", () => {
     ).toThrow();
   });
 
+  it("rejects a follow-up kind without a parent request id", () => {
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        followUpKind: "resubmission",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a parent request id without a follow-up kind", () => {
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        parentRequestId: "req_manual_000",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts a resubmission only when parent and follow-up fields are paired", () => {
+    expect(
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+        parentRequestId: "req_manual_000",
+        followUpKind: "resubmission",
+      }),
+    ).toMatchObject({
+      parentRequestId: "req_manual_000",
+      followUpKind: "resubmission",
+    });
+  });
+
   it("parses the documented manual attendance request response", () => {
     expect(
       manualAttendanceRequestResponseSchema.parse({

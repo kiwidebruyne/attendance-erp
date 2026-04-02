@@ -282,19 +282,28 @@ export function deriveAdminAttendanceSummary(
 ) {
   return items.reduce(
     (summary, item) => {
-      if (item.todayRecord?.clockInAt) {
+      const countsTowardAdminSummary =
+        item.expectedWorkday.countsTowardAdminSummary;
+
+      if (countsTowardAdminSummary && item.todayRecord?.clockInAt) {
         summary.checkedInCount += 1;
       }
 
-      if (item.display.activeExceptions.includes("not_checked_in")) {
+      if (
+        countsTowardAdminSummary &&
+        item.display.activeExceptions.includes("not_checked_in")
+      ) {
         summary.notCheckedInCount += 1;
       }
 
-      if (item.display.flags.includes("late")) {
+      if (countsTowardAdminSummary && item.display.flags.includes("late")) {
         summary.lateCount += 1;
       }
 
-      if (item.expectedWorkday.leaveCoverage !== null) {
+      if (
+        countsTowardAdminSummary &&
+        item.expectedWorkday.leaveCoverage !== null
+      ) {
         summary.onLeaveCount += 1;
       }
 

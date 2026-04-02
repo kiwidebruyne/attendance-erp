@@ -43,14 +43,37 @@ export const attendanceHistoryResponseSchema = z.object({
   records: z.array(attendanceHistoryRecordSchema),
 });
 
-export const manualAttendanceRequestBodySchema = z.object({
-  date: apiDateSchema,
-  action: manualAttendanceActionSchema,
-  requestedAt: apiDateTimeSchema,
-  reason: z.string().min(1),
-  parentRequestId: z.string().min(1).optional(),
-  followUpKind: followUpKindSchema.extract(["resubmission"]).optional(),
-});
+export const manualAttendanceRequestBodySchema = z
+  .object({
+    date: apiDateSchema,
+    action: manualAttendanceActionSchema,
+    requestedAt: apiDateTimeSchema,
+    reason: z.string().min(1),
+    parentRequestId: z.string().min(1).optional(),
+    followUpKind: followUpKindSchema.extract(["resubmission"]).optional(),
+  })
+  .superRefine((value, ctx) => {
+    const hasParentRequestId = value.parentRequestId !== undefined;
+    const hasFollowUpKind = value.followUpKind !== undefined;
+
+    if (hasParentRequestId && !hasFollowUpKind) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["followUpKind"],
+        message:
+          'Invalid input: "followUpKind" is required when "parentRequestId" is provided',
+      });
+    }
+
+    if (hasFollowUpKind && !hasParentRequestId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["parentRequestId"],
+        message:
+          'Invalid input: "parentRequestId" is required when "followUpKind" is provided',
+      });
+    }
+  });
 
 export const manualAttendanceRequestResponseSchema =
   manualAttendanceRequestResourceSchema;
