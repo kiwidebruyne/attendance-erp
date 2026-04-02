@@ -307,6 +307,20 @@ describe("shared contract schemas", () => {
     ).toThrow();
   });
 
+  it("rejects governing review comments on approved effective active chains", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_001",
+        effectiveStatus: "approved",
+        governingReviewComment: "Please clarify the earlier mismatch.",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
   it("requires nextAction to match whether active work exists", () => {
     expect(() =>
       requestChainProjectionSchema.parse({
@@ -662,6 +676,22 @@ describe("employee attendance contracts", () => {
         requestedClockOutAt: "2026-03-30T18:00:00+09:00",
       }),
     ).toThrow();
+  });
+
+  it("allows partial manual attendance action edits when provided fields stay compatible", () => {
+    expect(
+      attendanceContracts.manualAttendanceRequestPatchBodySchema,
+    ).toBeDefined();
+
+    expect(
+      attendanceContracts.manualAttendanceRequestPatchBodySchema?.parse({
+        action: "both",
+        requestedClockOutAt: "2026-03-30T18:00:00+09:00",
+      }),
+    ).toMatchObject({
+      action: "both",
+      requestedClockOutAt: "2026-03-30T18:00:00+09:00",
+    });
   });
 
   it("parses the documented manual attendance request response", () => {

@@ -296,6 +296,15 @@ export function validateRequestChainProjection(
           'Invalid input: "effectiveRequestId" must differ from "activeRequestId" when approved work remains effective during an active request',
       });
     }
+
+    if (value.governingReviewComment !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["governingReviewComment"],
+        message:
+          'Invalid input: "governingReviewComment" must be null when approved work remains effective during an active request',
+      });
+    }
   }
 
   if (!hasActiveRequest && value.effectiveStatus === "pending") {

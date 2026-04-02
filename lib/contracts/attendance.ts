@@ -117,6 +117,33 @@ function validateManualAttendanceClockFields(
   }
 }
 
+function validateManualAttendancePatchClockFields(
+  value: {
+    action?: z.infer<typeof manualAttendanceActionSchema>;
+    requestedClockInAt?: z.infer<typeof apiDateTimeSchema>;
+    requestedClockOutAt?: z.infer<typeof apiDateTimeSchema>;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.action === "clock_in" && value.requestedClockOutAt !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["requestedClockOutAt"],
+      message:
+        'Invalid input: "requestedClockOutAt" is not allowed when "action" is "clock_in"',
+    });
+  }
+
+  if (value.action === "clock_out" && value.requestedClockInAt !== undefined) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["requestedClockInAt"],
+      message:
+        'Invalid input: "requestedClockInAt" is not allowed when "action" is "clock_out"',
+    });
+  }
+}
+
 function validateManualAttendanceFollowUpFields(
   value: {
     parentRequestId?: string;
@@ -191,16 +218,7 @@ export const manualAttendanceRequestPatchBodySchema = z
       });
     }
 
-    if (value.action !== undefined) {
-      validateManualAttendanceClockFields(
-        {
-          action: value.action,
-          requestedClockInAt: value.requestedClockInAt,
-          requestedClockOutAt: value.requestedClockOutAt,
-        },
-        ctx,
-      );
-    }
+    validateManualAttendancePatchClockFields(value, ctx);
 
     if (value.status === undefined && !hasEditableFields) {
       ctx.addIssue({
