@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ErpShellFrame } from "@/components/shell/erp-shell-frame";
@@ -11,8 +11,10 @@ describe("ErpShellFrame", () => {
       </ErpShellFrame>,
     );
 
-    expect(screen.getByText("Employee")).toBeInTheDocument();
-    expect(screen.getByText("Admin")).toBeInTheDocument();
+    const navigation = screen.getByRole("navigation");
+
+    expect(within(navigation).getByText("직원")).toBeInTheDocument();
+    expect(within(navigation).getByText("관리자")).toBeInTheDocument();
 
     const navLinks = screen
       .getAllByRole("link")
@@ -25,7 +27,7 @@ describe("ErpShellFrame", () => {
       "/admin/attendance/requests",
     ]);
 
-    expect(screen.getByRole("link", { name: "Leave request" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "휴가 신청" })).toHaveAttribute(
       "aria-current",
       "page",
     );

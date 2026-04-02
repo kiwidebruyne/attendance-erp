@@ -1,14 +1,14 @@
 import {
-  AlertCircleIcon,
+  ArrowUpRightIcon,
   CalendarClockIcon,
-  ClipboardListIcon,
+  CircleAlertIcon,
   Clock3Icon,
   FileWarningIcon,
+  TriangleAlertIcon,
 } from "lucide-react";
 
 import { AttendanceSharedSheet } from "@/app/(erp)/(employee)/attendance/_components/attendance-shared-sheet";
 import {
-  formatAttendanceDate,
   formatAttendanceException,
   formatAttendanceFlag,
   formatAttendancePhase,
@@ -19,27 +19,14 @@ import {
 } from "@/app/(erp)/(employee)/attendance/_lib/format";
 import type { AttendanceManualRequestDraft } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
 import {
+  type AttendanceHistoryAction,
   type AttendanceSheetState,
   type AttendanceSurfaceModel,
   buildExceptionSurfaceModels,
   buildHistoryAction,
 } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
-import {
-  Alert,
-  AlertAction,
-  AlertDescription,
-  AlertTitle,
-} from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -53,6 +40,8 @@ import type {
   AttendanceHistoryView,
   AttendancePageData,
 } from "@/lib/attendance/page-data";
+import type { AttendanceDisplay } from "@/lib/contracts/shared";
+import { cn } from "@/lib/utils";
 
 type AttendancePageScreenProps = {
   data: AttendancePageData;
@@ -68,100 +57,440 @@ type AttendancePageScreenProps = {
   sheetState: AttendanceSheetState | null;
 };
 
-function TodayStatusCard({ data }: Pick<AttendancePageScreenProps, "data">) {
+type StatusPresentation = Readonly<{
+  chipClassName: string;
+  label: string;
+}>;
+
+const numericDateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const weekdayFormatter = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  weekday: "short",
+});
+
+const meridiemTimeFormatter = new Intl.DateTimeFormat("ko-KR", {
+  timeZone: "Asia/Seoul",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: true,
+});
+
+function formatNumericDateLabel(date: string) {
+  const parsedDate = new Date(`${date}T00:00:00+09:00`);
+  const numericDate = numericDateFormatter
+    .format(parsedDate)
+    .replaceAll(" ", "")
+    .replaceAll(". ", ".")
+    .replace(/\.$/, "");
+
+  return `${numericDate} (${weekdayFormatter.format(parsedDate)})`;
+}
+
+function formatSurfaceTimeLabel(isoDateTime: string) {
+  return meridiemTimeFormatter
+    .format(new Date(isoDateTime))
+    .replace(" ", " ")
+    .replace(".", "");
+}
+
+function formatWeeklyMinutes(workMinutes: number) {
+  const hours = Math.floor(workMinutes / 60);
+  const minutes = workMinutes % 60;
+
+  return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+}
+
+function addDays(date: string, delta: number) {
+  const cursor = new Date(`${date}T00:00:00Z`);
+
+  cursor.setUTCDate(cursor.getUTCDate() + delta);
+
+  return cursor.toISOString().slice(0, 10);
+}
+
+function getWeeklyWorkMinutes(data: AttendancePageData) {
+  const weekStart = addDays(data.date, -6);
+
+  return data.history.records.reduce((total, record) => {
+    if (record.date < weekStart || record.date > data.date) {
+      return total;
+    }
+
+    return total + (record.record?.workMinutes ?? 0);
+  }, 0);
+}
+
+function getTodayStatusPresentation(
+  data: AttendancePageData,
+): StatusPresentation {
+  const [firstException] = data.today.display.activeExceptions;
+  const [firstFlag] = data.today.display.flags;
+
+  if (firstException === "manual_request_pending") {
+    return {
+      chipClassName: "bg-status-info-soft text-status-info",
+      label: "검토 중",
+    };
+  }
+
+  if (firstException === "leave_work_conflict") {
+    return {
+      chipClassName: "bg-status-info-soft text-status-info",
+      label: "충돌 확인",
+    };
+  }
+
+  if (
+    firstException === "attempt_failed" ||
+    firstFlag === "late" ||
+    firstFlag === "early_leave"
+  ) {
+    return {
+      chipClassName: "bg-status-warning-soft text-status-warning",
+      label:
+        firstException === "attempt_failed"
+          ? "시도 실패"
+          : formatAttendanceFlag(firstFlag),
+    };
+  }
+
+  if (firstException !== undefined) {
+    return {
+      chipClassName: "bg-status-danger-soft text-status-danger",
+      label: formatAttendanceException(
+        firstException,
+        data.today.manualRequest,
+      ),
+    };
+  }
+
+  if (data.today.display.phase === "working") {
+    return {
+      chipClassName: "bg-status-success-soft text-status-success",
+      label: "정상 근무",
+    };
+  }
+
+  return {
+    chipClassName: "bg-surface-subtle text-secondary",
+    label: formatAttendancePhase(data.today.display.phase),
+  };
+}
+
+function getHistoryStatusPresentation(
+  display: AttendanceDisplay,
+  request: AttendancePageData["today"]["manualRequest"],
+): StatusPresentation {
+  const [firstException] = display.activeExceptions;
+  const [firstFlag] = display.flags;
+
+  if (firstException === "manual_request_pending") {
+    return {
+      chipClassName: "bg-status-info-soft text-status-info",
+      label: "정정 요청",
+    };
+  }
+
+  if (firstException === "leave_work_conflict") {
+    return {
+      chipClassName: "bg-status-info-soft text-status-info",
+      label: "휴가 충돌",
+    };
+  }
+
+  if (firstException === "attempt_failed") {
+    return {
+      chipClassName: "bg-status-warning-soft text-status-warning",
+      label: "시도 실패",
+    };
+  }
+
+  if (firstFlag === "late" || firstFlag === "early_leave") {
+    return {
+      chipClassName: "bg-status-warning-soft text-status-warning",
+      label: formatAttendanceFlag(firstFlag),
+    };
+  }
+
+  if (firstException !== undefined) {
+    return {
+      chipClassName: "bg-status-danger-soft text-status-danger",
+      label: formatAttendanceException(firstException, request),
+    };
+  }
+
+  return {
+    chipClassName: "bg-status-success-soft text-status-success",
+    label: "정상",
+  };
+}
+
+function getSurfaceMetaLabel(
+  surface: AttendanceSurfaceModel,
+  data: AttendancePageData,
+) {
+  if (surface.id === "previous-day-checkout-missing") {
+    return data.today.previousDayOpenRecord === null
+      ? null
+      : formatNumericDateLabel(data.today.previousDayOpenRecord.date);
+  }
+
+  if (surface.id.startsWith("attempt-failed")) {
+    const failedAttempt = data.today.attempts.findLast(
+      (attempt) => attempt.status === "failed",
+    );
+
+    return failedAttempt === undefined
+      ? null
+      : formatSurfaceTimeLabel(failedAttempt.attemptedAt);
+  }
+
+  if (
+    surface.id === "manual-request-summary" &&
+    data.today.manualRequest !== null &&
+    data.today.manualRequest.reviewedAt !== null
+  ) {
+    return formatNumericDateLabel(data.today.manualRequest.date);
+  }
+
+  if (surface.id === "leave-work-conflict") {
+    return formatNumericDateLabel(data.today.date);
+  }
+
+  return null;
+}
+
+function getSurfacePresentation(surface: AttendanceSurfaceModel): Readonly<{
+  icon: typeof TriangleAlertIcon;
+  titleClassName: string;
+}> {
+  if (surface.id === "leave-work-conflict") {
+    return {
+      icon: CircleAlertIcon,
+      titleClassName: "text-status-info",
+    };
+  }
+
+  if (surface.id.startsWith("attempt-failed")) {
+    return {
+      icon: FileWarningIcon,
+      titleClassName: "text-status-warning",
+    };
+  }
+
+  return {
+    icon:
+      surface.tone === "destructive" ? TriangleAlertIcon : CalendarClockIcon,
+    titleClassName:
+      surface.tone === "destructive" ? "text-status-danger" : "text-foreground",
+  };
+}
+
+function getTodayPrimaryAction(surfaces: AttendanceSurfaceModel[]): Readonly<{
+  href?: string;
+  label: string;
+  surface: AttendanceSurfaceModel | null;
+}> {
+  if (surfaces.length > 0) {
+    return {
+      label: `우선 확인: ${surfaces[0].ctaLabel}`,
+      surface: surfaces[0],
+    };
+  }
+
+  return {
+    href: "#history-ledger",
+    label: "출퇴근 이력 보기",
+    surface: null,
+  };
+}
+
+function getActualRecordSummary(
+  record: AttendancePageData["history"]["records"][number],
+) {
+  return `${formatAttendanceTime(record.record?.clockInAt ?? null)} - ${formatAttendanceTime(record.record?.clockOutAt ?? null)}`;
+}
+
+function getWorkMinutesDetail(
+  record: AttendancePageData["history"]["records"][number],
+) {
+  if (
+    record.record?.workMinutes === null ||
+    record.record?.workMinutes === undefined
+  ) {
+    return null;
+  }
+
+  return formatWorkMinutes(record.record.workMinutes);
+}
+
+function StatusChip({
+  className,
+  label,
+}: Readonly<{
+  className: string;
+  label: string;
+}>) {
   return (
-    <Card className="h-full border-border/80 shadow-sm">
-      <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            {formatAttendanceDate(data.today.date)}
-          </Badge>
-          <Badge>{formatAttendancePhase(data.today.display.phase)}</Badge>
+    <span
+      className={cn(
+        "inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-medium",
+        className,
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function TodayBriefingPanel({
+  data,
+  onOpenSheet,
+}: Pick<AttendancePageScreenProps, "data" | "onOpenSheet">) {
+  const surfaces = buildExceptionSurfaceModels(data.today);
+  const weeklyMinutes = getWeeklyWorkMinutes(data);
+  const status = getTodayStatusPresentation(data);
+  const primaryAction = getTodayPrimaryAction(surfaces);
+
+  return (
+    <section className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
+      <Card>
+        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-1 flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
+            <div className="min-w-[184px] space-y-2">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                현재 근무 상태
+              </p>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span
+                  className={cn(
+                    "size-2 rounded-full",
+                    status.label === "정상 근무"
+                      ? "bg-status-success"
+                      : status.label === "검토 중" ||
+                          status.label === "충돌 확인"
+                        ? "bg-status-info"
+                        : status.label === "시도 실패" ||
+                            status.label === "지각"
+                          ? "bg-status-warning"
+                          : "bg-status-danger",
+                  )}
+                />
+                <p className="text-[28px] font-medium tracking-[-0.03em] text-[#162847]">
+                  {formatAttendancePhase(data.today.display.phase)}
+                </p>
+                <StatusChip
+                  className={status.chipClassName}
+                  label={status.label}
+                />
+              </div>
+              <p className="text-sm leading-6 text-secondary">
+                {formatNextAction(data.today.display)}
+              </p>
+            </div>
+
+            <div className="hidden h-10 w-px bg-border xl:block" />
+
+            <div className="grid flex-1 gap-4 sm:grid-cols-3">
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                  출근 시간
+                </p>
+                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground">
+                  {formatAttendanceTime(
+                    data.today.todayRecord?.clockInAt ?? null,
+                  )}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                  예상 퇴근
+                </p>
+                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground">
+                  {formatAttendanceTime(
+                    data.today.expectedWorkday.adjustedClockOutAt ??
+                      data.today.expectedWorkday.expectedClockOutAt,
+                  )}
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                  누적 근무 시간
+                </p>
+                <p className="text-[20px] font-bold tracking-[-0.02em] text-primary">
+                  {formatWorkMinutes(
+                    data.today.todayRecord?.workMinutes ?? null,
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-full flex-col gap-3 xl:w-auto xl:min-w-[176px] xl:items-end">
+            {primaryAction.surface === null ? (
+              <Button asChild className="w-full xl:w-auto">
+                <a href={primaryAction.href}>{primaryAction.label}</a>
+              </Button>
+            ) : (
+              <Button
+                className="w-full xl:w-auto"
+                onClick={() => onOpenSheet(primaryAction.surface)}
+              >
+                {primaryAction.label}
+              </Button>
+            )}
+
+            <div className="flex flex-wrap gap-2 xl:max-w-[260px] xl:justify-end">
+              {data.today.display.activeExceptions.map((exception) => (
+                <StatusChip
+                  key={exception}
+                  className="border border-border bg-white text-secondary"
+                  label={formatAttendanceException(
+                    exception,
+                    data.today.manualRequest,
+                  )}
+                />
+              ))}
+              {data.today.display.flags.map((flag) => (
+                <StatusChip
+                  key={flag}
+                  className="border border-border bg-white text-secondary"
+                  label={formatAttendanceFlag(flag)}
+                />
+              ))}
+              {data.today.display.activeExceptions.length === 0 &&
+              data.today.display.flags.length === 0 ? (
+                <StatusChip
+                  className="border border-border bg-white text-secondary"
+                  label="정상 흐름"
+                />
+              ) : null}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex min-h-[145px] flex-col justify-between rounded-[16px] bg-primary p-6 text-white shadow-[0_12px_24px_rgba(79,70,229,0.24)]">
+        <div className="flex items-start justify-between">
+          <div className="flex size-8 items-center justify-center rounded-full bg-white/12">
+            <Clock3Icon aria-hidden="true" className="size-4" />
+          </div>
+          <StatusChip className="bg-white/10 text-white" label="주간 통계" />
         </div>
         <div className="space-y-1">
-          <CardTitle className="text-xl">오늘 근태</CardTitle>
-          <CardDescription>
-            조정된 근무 시간과 현재 상태를 먼저 확인하고, 필요한 정정 흐름은
-            상단 안내에서 이어서 진행해요.
-          </CardDescription>
-        </div>
-      </CardHeader>
-
-      <CardContent className="grid gap-4 md:grid-cols-2">
-        <div className="space-y-2 rounded-lg border border-border/70 bg-muted/30 p-4">
-          <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-            조정된 근무 시간
+          <p className="text-[11px] text-white/70">이번 주 누적</p>
+          <p className="text-[32px] font-bold tracking-[-0.04em] text-white">
+            {formatWeeklyMinutes(weeklyMinutes)}
           </p>
-          <p className="text-lg font-semibold text-foreground">
-            {formatWorkWindow(data.today.expectedWorkday)}
-          </p>
-          {data.today.expectedWorkday.leaveCoverage !== null ? (
-            <p className="text-sm leading-6 text-muted-foreground">
-              승인된 휴가가 반영된 근무 시간이 표시돼요.
-            </p>
-          ) : null}
         </div>
-
-        <div className="space-y-2 rounded-lg border border-border/70 bg-card p-4">
-          <p className="text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
-            오늘 기록
-          </p>
-          <dl className="grid gap-3 text-sm md:grid-cols-2">
-            <div className="space-y-1">
-              <dt className="text-muted-foreground">출근</dt>
-              <dd className="font-medium text-foreground">
-                {formatAttendanceTime(
-                  data.today.todayRecord?.clockInAt ?? null,
-                )}
-              </dd>
-            </div>
-            <div className="space-y-1">
-              <dt className="text-muted-foreground">퇴근</dt>
-              <dd className="font-medium text-foreground">
-                {formatAttendanceTime(
-                  data.today.todayRecord?.clockOutAt ?? null,
-                )}
-              </dd>
-            </div>
-            <div className="space-y-1">
-              <dt className="text-muted-foreground">누적 시간</dt>
-              <dd className="font-medium text-foreground">
-                {formatWorkMinutes(data.today.todayRecord?.workMinutes ?? null)}
-              </dd>
-            </div>
-            <div className="space-y-1">
-              <dt className="text-muted-foreground">다음 안내</dt>
-              <dd className="font-medium text-foreground">
-                {formatNextAction(data.today.display)}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </CardContent>
-
-      <CardFooter className="flex flex-col items-start gap-3 border-t border-border/70 bg-muted/30">
-        <div className="flex flex-wrap items-center gap-2">
-          {data.today.display.flags.map((flag) => (
-            <Badge key={flag} variant="outline">
-              {formatAttendanceFlag(flag)}
-            </Badge>
-          ))}
-          {data.today.display.activeExceptions.map((exception) => (
-            <Badge key={exception} variant="outline">
-              {formatAttendanceException(exception, data.today.manualRequest)}
-            </Badge>
-          ))}
-          {data.today.display.flags.length === 0 &&
-          data.today.display.activeExceptions.length === 0 ? (
-            <Badge variant="outline">정상 흐름</Badge>
-          ) : null}
-        </div>
-        <p className="text-sm leading-6 text-muted-foreground">
-          오늘 카드에서는 현재 상태만 요약하고, 실제 정정이나 검토 흐름은 오른쪽
-          예외 안내와 같은 공용 시트에서 처리해요.
-        </p>
-      </CardFooter>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -171,52 +500,108 @@ function ExceptionStack({
 }: Pick<AttendancePageScreenProps, "data" | "onOpenSheet">) {
   const surfaces = buildExceptionSurfaceModels(data.today);
 
-  if (surfaces.length === 0) {
-    return (
-      <Card className="border-border/80 shadow-sm">
-        <CardHeader>
-          <div className="flex items-center gap-2 text-secondary">
-            <ClipboardListIcon aria-hidden="true" className="size-4" />
-            <span className="text-sm font-medium">현재 예외 안내</span>
-          </div>
-          <CardTitle>지금 바로 확인할 예외가 없어요.</CardTitle>
-          <CardDescription>
-            새로운 문제나 검토 결과가 생기면 이 위치에서 먼저 안내해요.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
+  return (
+    <section className="flex flex-col gap-4">
+      <div className="flex items-center gap-2">
+        <TriangleAlertIcon
+          aria-hidden="true"
+          className="size-4 text-status-danger"
+        />
+        <h2 className="text-sm font-medium text-foreground">예외 사항 처리</h2>
+        <span className="inline-flex size-5 items-center justify-center rounded-full bg-status-danger-soft text-[10px] font-medium text-status-danger">
+          {surfaces.length}
+        </span>
+      </div>
+
+      {surfaces.length === 0 ? (
+        <Card>
+          <CardContent className="space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              지금 바로 확인할 예외가 없어요.
+            </p>
+            <p className="text-sm leading-6 text-secondary">
+              새로운 문제나 검토 결과가 생기면 이 영역에서 먼저 보여드려요.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {surfaces.map((surface) => {
+            const presentation = getSurfacePresentation(surface);
+            const metaLabel = getSurfaceMetaLabel(surface, data);
+
+            return (
+              <Card key={surface.id}>
+                <CardContent className="space-y-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <presentation.icon
+                        aria-hidden="true"
+                        className={cn(
+                          "size-4",
+                          surface.id === "leave-work-conflict"
+                            ? "text-status-info"
+                            : surface.id.startsWith("attempt-failed")
+                              ? "text-status-warning"
+                              : "text-status-danger",
+                        )}
+                      />
+                      <p
+                        className={cn(
+                          "text-[13px] font-medium leading-5",
+                          presentation.titleClassName,
+                        )}
+                      >
+                        {surface.title}
+                      </p>
+                    </div>
+                    {metaLabel === null ? null : (
+                      <span className="text-[11px] text-muted-foreground">
+                        {metaLabel}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm leading-6 text-secondary">
+                    {surface.description}
+                  </p>
+                  <Button
+                    className="w-full"
+                    onClick={() => onOpenSheet(surface)}
+                    variant="outline"
+                  >
+                    {surface.ctaLabel}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function HistoryRowAction({
+  historyAction,
+  onOpenSheet,
+}: Readonly<{
+  historyAction: AttendanceHistoryAction | null;
+  onOpenSheet: (surface: AttendanceSurfaceModel) => void;
+}>) {
+  if (historyAction === null) {
+    return <span className="text-sm text-muted-foreground">-</span>;
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {surfaces.map((surface) => (
-        <Alert
-          key={surface.id}
-          className="border-border/80 bg-card shadow-sm"
-          variant={surface.tone === "destructive" ? "destructive" : "default"}
-        >
-          {surface.id === "previous-day-checkout-missing" ? (
-            <CalendarClockIcon aria-hidden="true" className="size-4" />
-          ) : surface.id.startsWith("attempt-failed") ? (
-            <FileWarningIcon aria-hidden="true" className="size-4" />
-          ) : (
-            <AlertCircleIcon aria-hidden="true" className="size-4" />
-          )}
-          <AlertTitle>{surface.title}</AlertTitle>
-          <AlertDescription>{surface.description}</AlertDescription>
-          <AlertAction>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onOpenSheet(surface)}
-            >
-              {surface.ctaLabel}
-            </Button>
-          </AlertAction>
-        </Alert>
-      ))}
-    </div>
+    <Button
+      aria-label={historyAction.label}
+      onClick={() => onOpenSheet(historyAction)}
+      size="icon-xs"
+      variant="ghost"
+    >
+      <ArrowUpRightIcon />
+      <span className="sr-only">{historyAction.label}</span>
+    </Button>
   );
 }
 
@@ -230,20 +615,16 @@ function HistorySection({
   "data" | "isSubmitting" | "onOpenSheet" | "onViewChange"
 >) {
   return (
-    <Card className="border-border/80 shadow-sm">
-      <CardHeader className="gap-4 md:flex-row md:items-start md:justify-between">
+    <Card className="scroll-mt-20" id="history-ledger">
+      <div className="flex flex-col gap-4 border-b border-border/80 px-6 py-5 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <div className="flex items-center gap-2 text-secondary">
-            <Clock3Icon aria-hidden="true" className="size-4" />
-            <span className="text-sm font-medium">근태 이력</span>
-          </div>
-          <CardTitle>
-            최근 {data.view === "week" ? "7일" : "30일"} 기록
-          </CardTitle>
-          <CardDescription>
-            사실 기반 이력을 먼저 보고, 필요한 날짜만 같은 공용 시트로 다시 열
-            수 있어요.
-          </CardDescription>
+          <h2 className="text-xl font-medium tracking-[-0.03em] text-foreground">
+            출퇴근 이력
+          </h2>
+          <p className="text-sm leading-6 text-secondary">
+            최근 {data.view === "week" ? "7일" : "30일"} 기록을 보고 필요한
+            날짜만 다시 열어 확인해요.
+          </p>
         </div>
         <ToggleGroup
           disabled={isSubmitting}
@@ -260,91 +641,68 @@ function HistorySection({
           <ToggleGroupItem value="week">7일</ToggleGroupItem>
           <ToggleGroupItem value="month">30일</ToggleGroupItem>
         </ToggleGroup>
-      </CardHeader>
+      </div>
 
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>날짜</TableHead>
-              <TableHead>예정 시간</TableHead>
-              <TableHead>실제 기록</TableHead>
-              <TableHead>근무 시간</TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead className="text-right">작업</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.history.records.map((record) => {
-              const historyAction = buildHistoryAction(record);
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>날짜</TableHead>
+            <TableHead>예정 시간</TableHead>
+            <TableHead>실제 기록</TableHead>
+            <TableHead>상태</TableHead>
+            <TableHead className="text-right">작업</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {data.history.records.map((record) => {
+            const historyAction = buildHistoryAction(record);
+            const workMinutesDetail = getWorkMinutesDetail(record);
+            const status = getHistoryStatusPresentation(
+              record.display,
+              data.today.manualRequest,
+            );
 
-              return (
-                <TableRow key={record.date}>
-                  <TableCell className="font-medium text-foreground">
-                    {formatAttendanceDate(record.date)}
-                  </TableCell>
-                  <TableCell>
-                    {formatWorkWindow(record.expectedWorkday)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="space-y-1 text-sm">
-                      <p>
-                        출근{" "}
-                        {formatAttendanceTime(record.record?.clockInAt ?? null)}
-                      </p>
-                      <p>
-                        퇴근{" "}
-                        {formatAttendanceTime(
-                          record.record?.clockOutAt ?? null,
-                        )}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {formatWorkMinutes(record.record?.workMinutes ?? null)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1.5">
-                      {record.display.flags.map((flag) => (
-                        <Badge key={`${record.date}-${flag}`} variant="outline">
-                          {formatAttendanceFlag(flag)}
-                        </Badge>
-                      ))}
-                      {record.display.activeExceptions.map((exception) => (
-                        <Badge
-                          key={`${record.date}-${exception}`}
-                          variant="outline"
-                        >
-                          {formatAttendanceException(exception, null)}
-                        </Badge>
-                      ))}
-                      {record.display.flags.length === 0 &&
-                      record.display.activeExceptions.length === 0 ? (
-                        <span className="text-sm text-muted-foreground">
-                          이상 없음
-                        </span>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {historyAction === null ? (
-                      <span className="text-sm text-muted-foreground">-</span>
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onOpenSheet(historyAction)}
-                      >
-                        {historyAction.label}
-                      </Button>
+            return (
+              <TableRow key={record.date}>
+                <TableCell className="font-medium text-foreground">
+                  {formatNumericDateLabel(record.date)}
+                </TableCell>
+                <TableCell>
+                  {formatWorkWindow(record.expectedWorkday)}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2 text-foreground">
+                    <span>{getActualRecordSummary(record)}</span>
+                    {workMinutesDetail === null ? null : (
+                      <span className="text-xs text-muted-foreground">
+                        ({workMinutesDetail})
+                      </span>
                     )}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </CardContent>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <StatusChip
+                    className={status.chipClassName}
+                    label={status.label}
+                  />
+                </TableCell>
+                <TableCell className="text-right">
+                  <HistoryRowAction
+                    historyAction={historyAction}
+                    onOpenSheet={onOpenSheet}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      <div className="flex items-center justify-between border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">
+        <span>최근 {data.history.records.length}건을 표시하고 있어요.</span>
+        <span>
+          {data.historyRange.from} ~ {data.historyRange.to}
+        </span>
+      </div>
     </Card>
   );
 }
@@ -363,33 +721,27 @@ export function AttendancePageScreen({
   sheetState,
 }: AttendancePageScreenProps) {
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <p className="text-xs font-medium tracking-[0.14em] text-secondary uppercase">
-          직원
+    <div className="flex flex-1 flex-col gap-8">
+      <header className="space-y-1">
+        <h1 className="text-[32px] font-medium tracking-[-0.04em] text-foreground">
+          근태 관리
+        </h1>
+        <p className="text-sm leading-6 text-secondary">
+          오늘의 근무 상태와 기록을 확인하고 관리합니다.
         </p>
-        <div className="space-y-1">
-          <h1 className="text-pretty text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            근태
-          </h1>
-          <p className="max-w-3xl text-sm leading-6 text-muted-foreground md:text-base">
-            오늘 상태를 먼저 확인하고, 필요한 정정 요청과 검토 결과는 같은
-            시트에서 이어서 처리해요.
-          </p>
-        </div>
       </header>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <TodayStatusCard data={data} />
-        <ExceptionStack data={data} onOpenSheet={onOpenSheet} />
-      </section>
+      <TodayBriefingPanel data={data} onOpenSheet={onOpenSheet} />
 
-      <HistorySection
-        data={data}
-        isSubmitting={isSubmitting}
-        onOpenSheet={onOpenSheet}
-        onViewChange={onViewChange}
-      />
+      <section className="grid gap-8 xl:grid-cols-[317px_minmax(0,1fr)]">
+        <ExceptionStack data={data} onOpenSheet={onOpenSheet} />
+        <HistorySection
+          data={data}
+          isSubmitting={isSubmitting}
+          onOpenSheet={onOpenSheet}
+          onViewChange={onViewChange}
+        />
+      </section>
 
       <AttendanceSharedSheet
         errorMessage={mutationError}

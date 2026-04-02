@@ -109,9 +109,10 @@ export function AdminAttendanceWorkspace({
   }
 
   return (
-    <Tabs className="gap-4" value={state.mode}>
-      <TabsList variant="line">
+    <Tabs className="gap-6" value={state.mode}>
+      <TabsList className="rounded-[12px] bg-muted p-1">
         <TabsTrigger
+          className="min-w-[88px]"
           onClick={() => handleModeChange("today")}
           onKeyDown={(event) => handleTriggerKeyDown(event.key)}
           value="today"
@@ -119,6 +120,7 @@ export function AdminAttendanceWorkspace({
           오늘
         </TabsTrigger>
         <TabsTrigger
+          className="min-w-[88px]"
           onClick={() => handleModeChange("history")}
           onKeyDown={(event) => handleTriggerKeyDown(event.key)}
           value="history"

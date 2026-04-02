@@ -46,7 +46,7 @@ export function AdminAttendanceHistoryView({
     <div className="flex flex-col gap-4">
       <section
         aria-label="이력 필터"
-        className="grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-3"
+        className="grid gap-3 rounded-[16px] border border-border bg-card p-6 md:grid-cols-3"
       >
         <label className="flex flex-col gap-2 text-sm font-medium text-foreground">
           이름
@@ -92,7 +92,15 @@ export function AdminAttendanceHistoryView({
           </EmptyHeader>
         </Empty>
       ) : (
-        <section className="rounded-xl border border-border bg-card p-4">
+        <section className="overflow-hidden rounded-[16px] border border-border bg-card">
+          <div className="border-b border-border/80 px-6 py-5">
+            <h2 className="text-xl font-medium tracking-[-0.03em] text-foreground">
+              근태 이력
+            </h2>
+            <p className="text-sm leading-6 text-secondary">
+              조건에 맞는 기간과 팀원을 좁혀서 운영 이력을 확인해요.
+            </p>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>

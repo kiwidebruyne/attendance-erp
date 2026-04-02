@@ -218,11 +218,11 @@ describe("AttendancePageClient", () => {
   it("renders the today card above the carry-over exception stack", () => {
     render(<AttendancePageClient initialData={createPageData()} />);
 
-    expect(screen.getByText("오늘 근태")).toBeInTheDocument();
+    expect(screen.getByText("근태 관리")).toBeInTheDocument();
     expect(
       screen.getByText("어제 퇴근 기록이 아직 없어요."),
     ).toBeInTheDocument();
-    expect(screen.getByText("최근 7일 기록")).toBeInTheDocument();
+    expect(screen.getByText("출퇴근 이력")).toBeInTheDocument();
   });
 
   it("keeps failed attempts and missing check-ins as separate surfaces", () => {
@@ -452,7 +452,7 @@ describe("AttendancePageClient", () => {
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
     );
 
-    expect(screen.getByText("오늘 근태")).toBeInTheDocument();
+    expect(screen.getByText("근태 관리")).toBeInTheDocument();
     expect(
       sheet.getByText("근무 기록을 정정할 수 있어요."),
     ).toBeInTheDocument();
