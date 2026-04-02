@@ -589,7 +589,7 @@ Response:
       "effectiveApprovedLeaveContext": [],
       "pendingLeaveContext": [],
       "staffingRisk": "warning",
-      "requiresApprovalConfirmation": false
+      "requiresApprovalConfirmation": true
     }
   },
   "requests": [
