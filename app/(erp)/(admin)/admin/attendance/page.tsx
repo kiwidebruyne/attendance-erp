@@ -32,26 +32,28 @@ export default async function AdminAttendancePage(
     toUrlSearchParams(rawSearchParams),
   );
   const baseUrl = await getRequestOrigin();
-  const { historyResponse, todayResponse } =
+  const { historyResponse, todayExceptionRows, todayResponse } =
     await loadAdminAttendanceScreenData({
       baseUrl,
       state,
     });
 
   return (
-    <div className="flex flex-1 flex-col gap-6">
-      <header className="space-y-1">
-        <h1 className="text-[32px] font-medium tracking-[-0.04em] text-foreground">
+    <div className="flex flex-1 flex-col gap-8">
+      <header>
+        <h1 className="text-[40px] font-semibold tracking-[-0.05em] text-balance text-foreground">
           팀 근태 운영
         </h1>
-        <p className="max-w-3xl text-sm leading-6 text-secondary">
-          오늘 운영 상태를 먼저 보고, 필요한 이력은 같은 화면에서 바로 비교해요.
+        <p className="mt-1 max-w-3xl text-sm leading-6 text-secondary">
+          오늘 바로 확인할 운영 이슈를 먼저 보고, 필요한 이력은 같은 화면에서
+          이어서 비교해요
         </p>
       </header>
 
       <AdminAttendanceWorkspace
         historyResponse={historyResponse}
         state={state}
+        todayExceptionRows={todayExceptionRows}
         todayResponse={todayResponse}
       />
     </div>

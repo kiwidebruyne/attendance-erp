@@ -112,10 +112,11 @@ Validation and policy topics that must stay aligned with narrower contract docum
 
 Required UI:
 
-- a default today-first operations mode that opens in `today`, `exception-first`, and `entire team`
-- today summary cards for checked-in, not checked-in, late, on-leave, failed-attempt, and previous-day-open counts
-- a grouped exception-first operations queue for today rather than a full-team default table
-- an exception-first team list that still includes employees with no successful attendance record for the day once their current operational state becomes relevant
+- a default today-first operations mode that renders the page in this order: exception table, one-row summary cards, then full team ledger
+- a top exception table that aggregates unresolved employee-surface exceptions for the day instead of using a left rail
+- one horizontal row of summary cards labeled `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`
+- a full team ledger with selectable `기본`, `근무상태별`, and `근태상태별` views using the same underlying data
+- an exception-table-first team list that still includes employees with no successful attendance record for the day once their current operational state becomes relevant
 - visible carry-over warnings for employees whose previous workday is still open because checkout is missing
 - visibility into failed attendance attempts, leave-work conflicts, and compact current manual attendance request state where applicable
 - a secondary history review mode inside the same route with page-local controls for search and selected date range
@@ -127,13 +128,13 @@ Implementation concerns that must stay aligned with narrower contract documents:
 - whether department filtering is required in the first implementation pass
 - history review should remain a secondary mode inside `/admin/attendance` rather than replacing the today-first default entry behavior
 - mode, date range, and search state should remain URL-shareable when they affect admin attendance queries
-- action-needed summary cards and today queue rows should derive from the same date-level facts so counts never drift from the queue
-- contextual summary cards such as checked-in and on-leave should use the same date-level facts as the exception queue, but they do not need 1:1 queue-row parity because the default today surface remains exception-first
+- the today exception table, one-row summary cards, and ledger view groupings should all derive from the same date-level facts so counts and group membership never drift
+- these are presentation-only projections; the public API contract remains unchanged
 
 Edge cases to keep visible during implementation:
 
-- a no-record employee becomes visible in the today operations queue after the adjusted expected start passes even if no attendance row has been created yet
-- a no-record employee with an unresolved failed attempt, carry-over problem, or current manual request may become queue-visible before a simple missing check-in warning would apply
+- a no-record employee becomes visible in the top exception table after the adjusted expected start passes even if no attendance row has been created yet
+- a no-record employee with an unresolved failed attempt, carry-over problem, or current manual request may become table-visible before a simple missing check-in warning would apply
 - a prior-workday carry-over correction request may remain embedded on a today row when it still explains the employee's current operational state, and the target date must stay visible
 - an approved manual attendance correction must clear from the today embedded request state once canonical attendance writeback finishes
 
