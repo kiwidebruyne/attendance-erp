@@ -1,4 +1,4 @@
-import type { LeaveOverviewResponse } from "@/lib/contracts/shared";
+import type { LeaveOverviewResponse } from "@/lib/contracts/leave";
 import {
   buildLeaveConflictProjection,
   resolveEffectiveApprovedLeaveRequests,
@@ -32,7 +32,11 @@ function getLeaveRequestTimestamp(request: SeedLeaveRequest) {
 }
 
 function getLeaveRequestDurationHours(request: SeedLeaveRequest) {
-  if (request.leaveType !== "hourly") {
+  if (
+    request.leaveType !== "hourly" ||
+    request.startAt === null ||
+    request.endAt === null
+  ) {
     return null;
   }
 
