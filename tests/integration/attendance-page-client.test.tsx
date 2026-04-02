@@ -28,6 +28,8 @@ const navigation = vi.hoisted(() => ({
 }));
 
 const api = vi.hoisted(() => ({
+  getAttendanceHistory: vi.fn(),
+  getAttendanceToday: vi.fn(),
   createManualAttendanceRequest: vi.fn(),
   updateManualAttendanceRequest: vi.fn(),
 }));
@@ -51,6 +53,8 @@ vi.mock("@/lib/attendance/api-client", async () => {
 
   return {
     ...actual,
+    getAttendanceHistory: api.getAttendanceHistory,
+    getAttendanceToday: api.getAttendanceToday,
     createManualAttendanceRequest: api.createManualAttendanceRequest,
     updateManualAttendanceRequest: api.updateManualAttendanceRequest,
   };
@@ -209,10 +213,101 @@ function createPageData(
   };
 }
 
+function createSameDayCorrectionPageData(
+  overrides: Partial<AttendancePageData> = {},
+): AttendancePageData {
+  const baseData = createPageData();
+
+  return {
+    ...baseData,
+    today: {
+      ...baseData.today,
+      previousDayOpenRecord: null,
+      manualRequest: null,
+      display: createDisplay({
+        activeExceptions: ["not_checked_in"],
+        nextAction: {
+          type: "submit_manual_request",
+          relatedRequestId: null,
+        },
+      }),
+    },
+    history: {
+      ...baseData.history,
+      records: [
+        {
+          date: "2026-04-13",
+          expectedWorkday: createExpectedWorkday(),
+          record: null,
+          manualRequest: null,
+          display: createDisplay({
+            activeExceptions: ["not_checked_in"],
+            nextAction: {
+              type: "submit_manual_request",
+              relatedRequestId: null,
+            },
+          }),
+        },
+        ...baseData.history.records.filter(
+          (record) => record.date !== "2026-04-13",
+        ),
+      ],
+    },
+    ...overrides,
+  };
+}
+
+function createSameDayPendingPageData(
+  requestOverrides: Partial<AttendanceSurfaceManualRequestResource> = {},
+  overrides: Partial<AttendancePageData> = {},
+): AttendancePageData {
+  const baseData = createSameDayCorrectionPageData();
+  const request = createManualRequest(requestOverrides);
+
+  return {
+    ...baseData,
+    today: {
+      ...baseData.today,
+      manualRequest: request,
+      display: createDisplay({
+        activeExceptions: ["manual_request_pending", "not_checked_in"],
+        nextAction: {
+          type: "review_request_status",
+          relatedRequestId: request.id,
+        },
+      }),
+    },
+    history: {
+      ...baseData.history,
+      records: [
+        {
+          date: "2026-04-13",
+          expectedWorkday: createExpectedWorkday(),
+          record: null,
+          manualRequest: createManualRequest(requestOverrides),
+          display: createDisplay({
+            activeExceptions: ["manual_request_pending", "not_checked_in"],
+            nextAction: {
+              type: "review_request_status",
+              relatedRequestId: request.id,
+            },
+          }),
+        },
+        ...baseData.history.records.filter(
+          (record) => record.date !== "2026-04-13",
+        ),
+      ],
+    },
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useRealTimers();
   navigation.pathname = "/attendance";
+  api.getAttendanceToday.mockResolvedValue(createPageData().today);
+  api.getAttendanceHistory.mockResolvedValue(createPageData().history);
   api.createManualAttendanceRequest.mockResolvedValue({});
   api.updateManualAttendanceRequest.mockResolvedValue({});
 });
@@ -793,30 +888,77 @@ describe("AttendancePageClient", () => {
     });
   });
 
-  it("opens pending request status, allows edit, and refreshes after save", async () => {
+  it("submits a same-day correction and replaces stale create surfaces with pending status", async () => {
+    const refetchedData = createSameDayPendingPageData(
+      {
+        reason: "비콘 재시도 실패로 출근 시간을 정정 요청했어요.",
+      },
+      {
+        today: {
+          ...createSameDayPendingPageData().today,
+          previousDayOpenRecord: null,
+        },
+      },
+    );
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
     render(
-      <AttendancePageClient
-        initialData={createPageData({
-          today: {
-            ...createPageData().today,
-            previousDayOpenRecord: null,
-            manualRequest: createManualRequest(),
-            display: createDisplay({
-              activeExceptions: ["manual_request_pending", "not_checked_in"],
-              nextAction: {
-                type: "review_request_status",
-                relatedRequestId: null,
-              },
-            }),
-          },
-        })}
-      />,
+      <AttendancePageClient initialData={createSameDayCorrectionPageData()} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "출근 기록 확인" }));
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.change(sheet.getByLabelText("사유"), {
+      target: { value: "비콘 재시도 실패로 출근 시간을 정정 요청했어요." },
+    });
+    fireEvent.click(sheet.getByRole("button", { name: "출근 기록 확인" }));
+
+    await waitFor(() => {
+      expect(api.createManualAttendanceRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-04-13",
+          action: "clock_in",
+          reason: "비콘 재시도 실패로 출근 시간을 정정 요청했어요.",
+        }),
+      );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    expect(screen.getByText("정정 요청중이에요")).toBeInTheDocument();
+    expect(screen.getByText("정정 요청됨")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "출근 기록 확인" }),
+    ).not.toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it("opens pending request status, allows edit, and refreshes current session after save", async () => {
+    const updatedReason = "출근 시도 실패 내용을 조금 더 자세히 남깁니다.";
+    const refetchedData = createSameDayPendingPageData({
+      reason: updatedReason,
+    });
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
+    render(
+      <AttendancePageClient initialData={createSameDayPendingPageData()} />,
     );
 
     expect(
       screen.queryByRole("button", { name: "출근 기록 확인" }),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "요청 보기" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
@@ -829,7 +971,7 @@ describe("AttendancePageClient", () => {
 
     fireEvent.click(sheet.getByRole("button", { name: "내용 수정" }));
     fireEvent.change(sheet.getByLabelText("사유"), {
-      target: { value: "출근 시도 실패 내용을 조금 더 자세히 남깁니다." },
+      target: { value: updatedReason },
     });
     fireEvent.click(sheet.getByRole("button", { name: "변경 저장" }));
 
@@ -839,12 +981,25 @@ describe("AttendancePageClient", () => {
         expect.objectContaining({
           date: "2026-04-13",
           action: "clock_in",
-          reason: "출근 시도 실패 내용을 조금 더 자세히 남깁니다.",
+          reason: updatedReason,
           requestedClockInAt: "2026-04-13T09:05:00+09:00",
         }),
       );
-      expect(navigation.refresh).toHaveBeenCalled();
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
     });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
+
+    const updatedSheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    expect(updatedSheet.getByText(updatedReason)).toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
   });
 
   it("drops hidden clock fields when changing a pending request action type", async () => {
@@ -874,7 +1029,7 @@ describe("AttendancePageClient", () => {
     expect(
       screen.queryByText("오늘 출근 기록이 아직 없어요"),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "요청 보기" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
@@ -937,7 +1092,59 @@ describe("AttendancePageClient", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("restores the correction CTA after withdrawing a pending request and refetching current session data", async () => {
+    const refetchedData = createSameDayCorrectionPageData();
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
+    render(
+      <AttendancePageClient initialData={createSameDayPendingPageData()} />,
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "요청 보기" })[0]!);
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.click(sheet.getByRole("button", { name: "철회" }));
+
+    await waitFor(() => {
+      expect(api.updateManualAttendanceRequest).toHaveBeenCalledWith(
+        "manual_request_emp_001_2026-04-13_root",
+        {
+          status: "withdrawn",
+        },
+      );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    expect(
+      screen.getByRole("button", { name: "출근 기록 확인" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("정정 요청됨")).not.toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
   it("shows revision_requested rationale and submits a resubmission follow-up", async () => {
+    const refetchedData = createSameDayPendingPageData({
+      id: "manual_request_emp_001_2026-04-13_resubmitted",
+      parentRequestId: "manual_request_emp_001_2026-04-13_revision",
+      rootRequestId: "manual_request_emp_001_2026-04-13_revision",
+      followUpKind: "resubmission",
+      reason: "보완 요청 내용을 반영해서 다시 제출합니다.",
+      effectiveRequestId: "manual_request_emp_001_2026-04-13_resubmitted",
+      activeRequestId: "manual_request_emp_001_2026-04-13_resubmitted",
+    });
+
+    api.getAttendanceToday.mockResolvedValueOnce(refetchedData.today);
+    api.getAttendanceHistory.mockResolvedValueOnce(refetchedData.history);
+
     render(
       <AttendancePageClient
         initialData={createPageData({
@@ -993,6 +1200,46 @@ describe("AttendancePageClient", () => {
           reason: "보완 요청 내용을 반영해서 다시 제출합니다.",
           parentRequestId: "manual_request_emp_001_2026-04-13_revision",
           followUpKind: "resubmission",
+        }),
+      );
+      expect(api.getAttendanceToday).toHaveBeenCalledTimes(1);
+      expect(api.getAttendanceHistory).toHaveBeenCalledWith({
+        from: "2026-04-07",
+        to: "2026-04-13",
+      });
+    });
+
+    expect(screen.getByText("정정 요청중이에요")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "다시 제출" }),
+    ).not.toBeInTheDocument();
+    expect(navigation.refresh).not.toHaveBeenCalled();
+  });
+
+  it("falls back to router refresh when current-session refetch fails after a successful mutation", async () => {
+    api.getAttendanceToday.mockRejectedValueOnce(new Error("refetch failed"));
+
+    render(
+      <AttendancePageClient initialData={createSameDayCorrectionPageData()} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "출근 기록 확인" }));
+
+    const sheet = within(
+      document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,
+    );
+
+    fireEvent.change(sheet.getByLabelText("사유"), {
+      target: { value: "refetch fallback 확인" },
+    });
+    fireEvent.click(sheet.getByRole("button", { name: "출근 기록 확인" }));
+
+    await waitFor(() => {
+      expect(api.createManualAttendanceRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          date: "2026-04-13",
+          action: "clock_in",
+          reason: "refetch fallback 확인",
         }),
       );
       expect(navigation.refresh).toHaveBeenCalled();

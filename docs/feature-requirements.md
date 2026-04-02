@@ -45,6 +45,7 @@ Required UI:
 - a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
 - carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
 - one shared in-page correction or review sheet that owns carry-over correction, pending edit or withdraw, review-reason visibility, and reviewed-request resubmission for `/attendance`
+- after a manual-attendance create, edit, withdraw, or resubmission succeeds on `/attendance`, the current browser session should immediately reflect the latest employee today and history state from the mock API instead of waiting for a full reload or seed reset
 - same-date manual-attendance duplicate prevention must treat `clock_in`, `clock_out`, and `both` as one governing chain per target date rather than separate action buckets
 - manual-attendance correction entry must collect explicit requested attendance times per action: `clock_in` requires only the requested clock-in time, `clock_out` requires only the requested clock-out time, and `both` requires both
 - clock-out-only correction must be available only when the target date already has an open attendance record; otherwise the flow must steer the employee to `both`

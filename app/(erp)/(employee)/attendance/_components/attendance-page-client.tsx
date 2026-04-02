@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 
 import { AttendancePageScreen } from "@/app/(erp)/(employee)/attendance/_components/attendance-page-screen";
 import type { AttendanceManualRequestDraft } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
@@ -14,6 +14,8 @@ import {
 import {
   AttendanceApiError,
   createManualAttendanceRequest,
+  getAttendanceHistory,
+  getAttendanceToday,
   updateManualAttendanceRequest,
 } from "@/lib/attendance/api-client";
 import type {
@@ -97,11 +99,16 @@ export function AttendancePageClient({
 }>) {
   const router = useRouter();
   const [isRouting, startRoutingTransition] = useTransition();
+  const [pageData, setPageData] = useState(initialData);
   const [sheetState, setSheetState] = useState<AttendanceSheetState | null>(
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageData(initialData);
+  }, [initialData]);
 
   const handleOpenSheet = (surface: AttendanceSurfaceModel) => {
     setMutationError(null);
@@ -120,6 +127,34 @@ export function AttendancePageClient({
         view === "month" ? "/attendance?view=month" : "/attendance?view=week",
       );
     });
+  };
+
+  const refreshCurrentSessionData = async () => {
+    try {
+      const historyQuery = {
+        from: pageData.history.from,
+        to: pageData.history.to,
+      };
+      const [today, history] = await Promise.all([
+        getAttendanceToday(),
+        getAttendanceHistory(historyQuery),
+      ]);
+
+      setPageData((current) => ({
+        ...current,
+        date: today.date,
+        historyRange: {
+          from: history.from,
+          to: history.to,
+        },
+        today,
+        history,
+      }));
+    } catch {
+      startRoutingTransition(() => {
+        router.refresh();
+      });
+    }
   };
 
   const handleSubmit = async (draft: AttendanceManualRequestDraft) => {
@@ -151,9 +186,7 @@ export function AttendancePageClient({
       }
 
       handleCloseSheet();
-      startRoutingTransition(() => {
-        router.refresh();
-      });
+      await refreshCurrentSessionData();
     } catch (error) {
       setMutationError(getErrorMessage(error));
     } finally {
@@ -177,9 +210,7 @@ export function AttendancePageClient({
         status: "withdrawn",
       });
       handleCloseSheet();
-      startRoutingTransition(() => {
-        router.refresh();
-      });
+      await refreshCurrentSessionData();
     } catch (error) {
       setMutationError(getErrorMessage(error));
     } finally {
@@ -189,7 +220,7 @@ export function AttendancePageClient({
 
   return (
     <AttendancePageScreen
-      data={initialData}
+      data={pageData}
       isSubmitting={isSubmitting || isRouting}
       mutationError={mutationError}
       sheetState={sheetState}
