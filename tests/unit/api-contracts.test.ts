@@ -276,6 +276,32 @@ describe("shared contract schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("requires nextAction to match whether active work exists", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        governingReviewComment: "Please attach the beacon retry details.",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_manual_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        governingReviewComment: null,
+        hasActiveFollowUp: true,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("employee attendance contracts", () => {

@@ -259,6 +259,24 @@ function validateRequestChainProjection(
         'Invalid input: "effectiveStatus" must match "activeStatus" when active work exists',
     });
   }
+
+  if (hasActiveRequest && value.nextAction !== "admin_review") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["nextAction"],
+      message:
+        'Invalid input: "nextAction" must be "admin_review" when active work exists',
+    });
+  }
+
+  if (!hasActiveRequest && value.nextAction !== "none") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["nextAction"],
+      message:
+        'Invalid input: "nextAction" must be "none" when no active work exists',
+    });
+  }
 }
 
 const manualAttendanceRequestResourceBaseSchema = z
