@@ -402,14 +402,27 @@ function resolvePendingHistoryManualRequest(
   world: AttendanceRepositoryWorld,
   employeeId: string,
   date: string,
-) {
+): AttendanceHistoryResponse["records"][number]["manualRequest"] {
   const manualRequest = resolveAttendanceSurfaceManualRequest(
     world,
     employeeId,
     date,
   );
 
-  return manualRequest?.status === "pending" ? manualRequest : null;
+  if (
+    manualRequest?.status !== "pending" ||
+    manualRequest.activeStatus !== "pending" ||
+    manualRequest.effectiveStatus !== "pending"
+  ) {
+    return null;
+  }
+
+  return {
+    ...manualRequest,
+    status: "pending",
+    activeStatus: "pending",
+    effectiveStatus: "pending",
+  };
 }
 
 export function getEmployeeAttendanceToday(
