@@ -453,6 +453,7 @@ Expected fields:
 - reason
 - request status
 - `reviewComment`, which is `null` unless the latest review event used `reject` or `request_revision`
+- leave queue items also expose nullable `startAt` and `endAt` interval fields; hourly leave populates them and non-hourly leave keeps them `null`
 - relation fields: `rootRequestId`, `parentRequestId`, `followUpKind`, `supersededByRequestId`
 - `Request Chain Projection`
 - submission and review timestamps

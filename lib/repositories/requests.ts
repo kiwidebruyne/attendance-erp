@@ -451,6 +451,8 @@ function toQueueItem(
     effectiveStatus: projection.effectiveStatus,
     hasActiveFollowUp: projection.hasActiveFollowUp,
     nextAction: projection.nextAction,
+    startAt: request.startAt,
+    endAt: request.endAt,
   };
 
   const leaveItem = {
