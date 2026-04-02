@@ -157,6 +157,25 @@ describe("attendance derivation", () => {
     ).toEqual([]);
   });
 
+  it("does not create leave_work_conflict without actual attendance facts", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T12:00:00+09:00",
+        expectedWorkday: createExpectedWorkday({
+          leaveCoverage: {
+            requestId: "req_leave_001",
+            leaveType: "annual",
+            startAt: "2026-03-30T09:00:00+09:00",
+            endAt: "2026-03-30T18:00:00+09:00",
+          },
+        }),
+        record: null,
+        attempts: [],
+        previousDayOpenRecord: null,
+      }).activeExceptions,
+    ).not.toContain("leave_work_conflict");
+  });
+
   it("surfaces not_checked_in after the adjusted start time without finalizing absence", () => {
     expect(
       deriveAttendanceDisplay({
@@ -249,6 +268,31 @@ describe("attendance derivation", () => {
         relatedRequestId: null,
       },
     });
+  });
+
+  it("keeps unresolved carry-over failed attempts visible after the cutoff", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T09:01:00+09:00",
+        expectedWorkday: createExpectedWorkday(),
+        record: null,
+        attempts: [
+          createAttendanceAttempt({
+            id: "attempt_002",
+            date: "2026-03-29",
+            action: "clock_out",
+            attemptedAt: "2026-03-30T08:30:00+09:00",
+            status: "failed",
+            failureReason: "BLE beacon not detected",
+          }),
+        ],
+        previousDayOpenRecord: createPreviousDayOpenRecord(),
+      }).activeExceptions,
+    ).toEqual([
+      "previous_day_checkout_missing",
+      "attempt_failed",
+      "not_checked_in",
+    ]);
   });
 
   it("prefers working over non_workday when same-day facts exist", () => {

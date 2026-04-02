@@ -54,6 +54,20 @@ function getRequestedDate(
   );
 }
 
+function getOperationalAttempts(
+  attempts: AttendanceAttempt[],
+  requestedDate: string,
+  previousDayOpenRecord: PreviousDayOpenRecord | null,
+): AttendanceAttempt[] {
+  return attempts.filter((attempt) => {
+    if (attempt.date === requestedDate) {
+      return true;
+    }
+
+    return previousDayOpenRecord?.date === attempt.date;
+  });
+}
+
 function hasLaterSuccessfulAttempt(
   failedAttempt: AttendanceAttempt,
   attempts: AttendanceAttempt[],
@@ -135,8 +149,10 @@ function deriveActiveExceptions({
 }): AttendanceExceptionType[] {
   const activeExceptions: AttendanceExceptionType[] = [];
   const requestedDate = getRequestedDate(now, expectedWorkday, record);
-  const sameDayAttempts = attempts.filter(
-    (attempt) => attempt.date === requestedDate,
+  const operationalAttempts = getOperationalAttempts(
+    attempts,
+    requestedDate,
+    previousDayOpenRecord,
   );
   const currentDate = now.slice(0, 10);
   const carryOverCutoff = toDate(buildDateTime(currentDate, "09:00:00", now));
@@ -153,10 +169,15 @@ function deriveActiveExceptions({
     activeExceptions.push("previous_day_checkout_missing");
   }
 
-  const latestOperationalFailure = sameDayAttempts.findLast(
+  const latestOperationalFailure = operationalAttempts.findLast(
     (attempt) =>
       attempt.status === "failed" &&
-      !hasLaterSuccessfulAttempt(attempt, sameDayAttempts),
+      !hasLaterSuccessfulAttempt(
+        attempt,
+        operationalAttempts.filter(
+          (candidateAttempt) => candidateAttempt.date === attempt.date,
+        ),
+      ),
   );
 
   if (latestOperationalFailure) {
@@ -165,7 +186,8 @@ function deriveActiveExceptions({
 
   if (
     expectedWorkday.leaveCoverage !== null &&
-    (record?.clockInAt !== null || record?.clockOutAt !== null)
+    record !== null &&
+    (record.clockInAt !== null || record.clockOutAt !== null)
   ) {
     activeExceptions.push("leave_work_conflict");
   }
