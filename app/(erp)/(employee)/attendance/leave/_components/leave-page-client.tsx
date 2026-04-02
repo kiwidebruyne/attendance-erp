@@ -198,6 +198,7 @@ export function LeavePageClient({
   const [composerChainRootId, setComposerChainRootId] = useState<string | null>(
     null,
   );
+  const [composerScrollRequest, setComposerScrollRequest] = useState(0);
   const correctionCandidateKey = viewModel.correctionCandidates
     .map((candidate) => candidate.rootRequestId)
     .join("|");
@@ -306,6 +307,7 @@ export function LeavePageClient({
     setMutationError(null);
     setComposerChainRootId(chain.rootRequestId);
     setComposerDraft(buildDraftFromAction(chain, action));
+    setComposerScrollRequest((current) => current + 1);
   };
 
   const handleSubmitComposer = async () => {
@@ -364,6 +366,7 @@ export function LeavePageClient({
     <LeavePageScreen
       composerChain={composerChain}
       composerDraft={composerDraft}
+      composerScrollRequest={composerScrollRequest}
       correctionCandidateId={correctionCandidateId}
       data={initialData}
       isSubmitting={isSubmitting || isRouting}
@@ -387,6 +390,7 @@ export function LeavePageClient({
         setMutationError(null);
         setComposerChainRootId(null);
         setComposerDraft(createNewComposerDraft(initialData.selectedDate));
+        setComposerScrollRequest((current) => current + 1);
       }}
       onRunChainAction={handleRunChainAction}
       onSelectDate={handleSelectDate}

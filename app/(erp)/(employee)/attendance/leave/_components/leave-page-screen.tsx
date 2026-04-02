@@ -5,6 +5,7 @@ import {
   FileClockIcon,
   ListTodoIcon,
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import {
   buildDateTimeFromDateAndTime,
@@ -58,6 +59,7 @@ import { cn } from "@/lib/utils";
 type LeavePageScreenProps = {
   composerChain: LeaveChainModel | null;
   composerDraft: LeaveComposerDraft | null;
+  composerScrollRequest: number;
   correctionCandidateId: string | null;
   data: LeavePageData;
   isSubmitting: boolean;
@@ -253,9 +255,9 @@ function SummaryTier({
   viewModel: LeavePageViewModel;
 }>) {
   return (
-    <section className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,4fr)]">
+    <section>
       <Card>
-        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center">
+        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
           <div className="min-w-[184px] space-y-2">
             <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
               남은 연차
@@ -270,54 +272,58 @@ function SummaryTier({
               </p>
             </div>
           </div>
+
+          <div className="hidden h-10 w-px bg-border xl:block" />
+
+          <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                승인됨
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.approvedCount}건
+              </p>
+              <p className="text-sm text-secondary">
+                승인된 휴가를 바로 확인할 수 있어요
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                검토중
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.pendingCount}건
+              </p>
+              <p className="text-sm text-secondary">
+                지금 검토 중인 요청이에요
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                반려됨
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.rejectedCount}건
+              </p>
+              <p className="text-sm text-secondary">
+                검토 결과를 확인하고 다시 정리해요
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                다시 제출 필요
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.revisionRequestedCount}건
+              </p>
+              <p className="text-sm text-secondary">
+                보완 후 다시 제출해야 해요
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryMetric
-          description="승인된 휴가를 바로 확인할 수 있어요"
-          label="승인됨"
-          value={viewModel.approvedCount}
-        />
-        <SummaryMetric
-          description="지금 검토 중인 요청이에요"
-          label="검토중"
-          value={viewModel.pendingCount}
-        />
-        <SummaryMetric
-          description="검토 결과를 확인하고 다시 정리해요"
-          label="반려됨"
-          value={viewModel.rejectedCount}
-        />
-        <SummaryMetric
-          description="보완 후 다시 제출해야 해요"
-          label="다시 제출 필요"
-          value={viewModel.revisionRequestedCount}
-        />
-      </div>
     </section>
-  );
-}
-
-function SummaryMetric({
-  description,
-  label,
-  value,
-}: Readonly<{
-  description: string;
-  label: string;
-  value: number;
-}>) {
-  return (
-    <div className="rounded-[16px] border border-border/80 bg-surface-subtle p-4">
-      <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-        {value}건
-      </p>
-      <p className="mt-2 text-sm leading-6 text-secondary">{description}</p>
-    </div>
   );
 }
 
@@ -1220,6 +1226,7 @@ function HistorySection({
 export function LeavePageScreen({
   composerChain,
   composerDraft,
+  composerScrollRequest,
   correctionCandidateId,
   data,
   isSubmitting,
@@ -1235,6 +1242,19 @@ export function LeavePageScreen({
   viewModel,
   visibleMonth,
 }: LeavePageScreenProps) {
+  const composerContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (composerDraft === null || composerScrollRequest === 0) {
+      return;
+    }
+
+    composerContainerRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, [composerDraft, composerScrollRequest]);
+
   return (
     <div className="flex flex-1 flex-col gap-8">
       <header>
@@ -1256,11 +1276,6 @@ export function LeavePageScreen({
         viewModel={viewModel}
       />
 
-      <HistorySection
-        onRunChainAction={onRunChainAction}
-        viewModel={viewModel}
-      />
-
       <section className="grid gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.95fr)_minmax(0,1fr)]">
         <CalendarPanel
           data={data}
@@ -1276,16 +1291,23 @@ export function LeavePageScreen({
           onRunChainAction={onRunChainAction}
           viewModel={viewModel}
         />
-        <ComposerPanel
-          composerChain={composerChain}
-          composerDraft={composerDraft}
-          isSubmitting={isSubmitting}
-          mutationError={mutationError}
-          onClearComposer={onClearComposer}
-          onComposerFieldChange={onComposerFieldChange}
-          onSubmitComposer={onSubmitComposer}
-        />
+        <div ref={composerContainerRef} className="scroll-mt-20">
+          <ComposerPanel
+            composerChain={composerChain}
+            composerDraft={composerDraft}
+            isSubmitting={isSubmitting}
+            mutationError={mutationError}
+            onClearComposer={onClearComposer}
+            onComposerFieldChange={onComposerFieldChange}
+            onSubmitComposer={onSubmitComposer}
+          />
+        </div>
       </section>
+
+      <HistorySection
+        onRunChainAction={onRunChainAction}
+        viewModel={viewModel}
+      />
     </div>
   );
 }

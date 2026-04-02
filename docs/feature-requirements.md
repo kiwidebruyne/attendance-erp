@@ -74,9 +74,9 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a stable top summary tier that always shows leave balance plus calm current-state counts for `approved`, `pending`, `rejected`, and `revision_requested` chains rather than escalating plain pending requests into the top correction surface
+- a stable top summary tier that always shows one combined leave-balance card plus calm current-state counts for `approved`, `pending`, `rejected`, and `revision_requested` chains rather than escalating plain pending requests into the top correction surface
 - a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state
-- a full-width leave history row above the planning workspace so recovery actions remain history-led before calendar planning
+- a full-width leave history row below the planning workspace so planning stays calendar-first while history remains the required recovery surface
 - a lower planning workspace that keeps the leave-only calendar, selected-date context, and inline composer adjacent on desktop and stacked in the same order on narrow widths
 - one inline leave composer in that planning workspace that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
 - a flat list of the current user's leave request chains, ordered by latest activity, with each row representing the current governing chain context rather than every request record as a separate top-level row
@@ -94,6 +94,7 @@ Required UI:
 - if a clicked date belongs to a multi-day leave range, the selected-date context must show the governing full range rather than only the clicked date
 - selected-date context should lead with one governing chain card and keep other date-related items as compact secondary links rather than a stack of equal full cards
 - top-correction and history CTAs should converge on the same inline composer so the write-flow owner stays unambiguous across new request, `resubmit`, `change`, and `cancel`
+- when top-correction, history, or selected-date CTAs open the inline composer, the page may scroll to that composer area so the write flow stays in view
 - pending leave actions should stay history-led with `edit` primary and `withdraw` secondary; approved leave actions should stay history-led with `change` primary and `cancel` secondary
 - suppressed reviewed non-approved rows should keep `resubmit` as the primary action and may add `show again at top` as a secondary recovery action where relevant
 - approved leave with a pending `change` or `cancel` follow-up must show both the current effective approval and the pending follow-up context together so the employee does not misread the follow-up as already effective
