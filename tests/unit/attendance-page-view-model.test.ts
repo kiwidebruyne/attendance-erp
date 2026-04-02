@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildCarryOverDraft,
   buildExceptionSurfaceModels,
   buildHistoryAction,
   buildHistoryCorrectionDraft,
@@ -15,7 +14,6 @@ import type {
   AttendanceDisplay,
   AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
-  PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 
 function createExpectedWorkday(
@@ -116,7 +114,6 @@ function createTodayResponse(
       department: "Operations",
     },
     expectedWorkday: createExpectedWorkday(),
-    previousDayOpenRecord: null,
     todayRecord: null,
     attempts: [],
     manualRequest: null,
@@ -131,29 +128,7 @@ function createTodayResponse(
   };
 }
 
-function createPreviousDayOpenRecord(
-  overrides: Partial<PreviousDayOpenRecord> = {},
-): PreviousDayOpenRecord {
-  return {
-    date: "2026-04-10",
-    clockInAt: "2026-04-10T09:04:00+09:00",
-    clockOutAt: null,
-    expectedClockOutAt: "2026-04-10T18:00:00+09:00",
-    ...overrides,
-  };
-}
-
 describe("attendance page view model", () => {
-  it("prefills carry-over correction as a prior-date clock_out request", () => {
-    expect(buildCarryOverDraft(createPreviousDayOpenRecord())).toEqual({
-      date: "2026-04-10",
-      action: "clock_out",
-      requestedClockInAt: null,
-      requestedClockOutAt: "2026-04-10T18:00:00+09:00",
-      reason: "",
-    });
-  });
-
   it("prefills open-record history rows as a checkout correction", () => {
     expect(
       buildHistoryCorrectionDraft(
@@ -282,6 +257,7 @@ describe("attendance page view model", () => {
       kind: "pending",
       label: "요청 보기",
       tone: "warning",
+      title: "근무 기록 정정 요청을 확인하고 있어요",
       request: {
         id: "manual_request_emp_001_2026-04-09_root",
       },
@@ -311,7 +287,7 @@ describe("attendance page view model", () => {
       {
         id: "manual-request-summary",
         kind: "pending",
-        title: "정정 요청중이에요",
+        title: "출근 시간 정정 요청을 확인하고 있어요",
       },
     ]);
   });

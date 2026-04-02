@@ -232,11 +232,6 @@ const emp001CompletedAttendanceDays = deepFreeze([
     clockOutAt: buildFixedSeoulDateTime("2026-03-23", "18:03:00"),
   },
   {
-    date: "2026-03-24",
-    clockInAt: buildFixedSeoulDateTime("2026-03-24", "08:58:00"),
-    clockOutAt: buildFixedSeoulDateTime("2026-03-24", "18:02:00"),
-  },
-  {
     date: "2026-03-25",
     clockInAt: buildFixedSeoulDateTime("2026-03-25", "09:14:00"),
     clockOutAt: buildFixedSeoulDateTime("2026-03-25", "18:11:00"),
@@ -301,6 +296,15 @@ const attendanceAttempts = deepFreeze(
       date: "2026-04-10",
       action: "clock_in",
       attemptedAt: buildFixedSeoulDateTime("2026-04-10", "08:56:00"),
+      status: "success",
+      failureReason: null,
+    },
+    {
+      id: attendanceAttemptId("emp_001", "2026-04-13", "clock_in", "success"),
+      employeeId: "emp_001",
+      date: "2026-04-13",
+      action: "clock_in",
+      attemptedAt: buildFixedSeoulDateTime("2026-04-13", "09:02:00"),
       status: "success",
       failureReason: null,
     },
@@ -523,6 +527,17 @@ const attendanceRecords = deepFreeze(
       employeeId: "emp_001",
       date: "2026-04-10",
       clockInAt: buildFixedSeoulDateTime("2026-04-10", "08:56:00"),
+      clockInSource: "beacon",
+      clockOutAt: null,
+      clockOutSource: null,
+      workMinutes: null,
+      manualRequestId: null,
+    },
+    {
+      id: attendanceRecordId("emp_001", "2026-04-13"),
+      employeeId: "emp_001",
+      date: "2026-04-13",
+      clockInAt: buildFixedSeoulDateTime("2026-04-13", "09:02:00"),
       clockInSource: "beacon",
       clockOutAt: null,
       clockOutSource: null,
@@ -821,6 +836,42 @@ const manualAttendanceRequests = deepFreeze(
 const leaveRequests = deepFreeze(
   leaveRequestEntitySchema.array().parse([
     {
+      id: leaveRequestId("emp_001", "2026-03-24", "root"),
+      employeeId: "emp_001",
+      requestType: "leave",
+      leaveType: "annual",
+      date: "2026-03-24",
+      startAt: null,
+      endAt: null,
+      reason: "Using a seeded full-day annual leave example.",
+      requestedAt: buildFixedSeoulDateTime("2026-03-20", "15:00:00"),
+      status: "approved",
+      reviewedAt: buildFixedSeoulDateTime("2026-03-21", "10:30:00"),
+      reviewComment: null,
+      rootRequestId: leaveRequestId("emp_001", "2026-03-24", "root"),
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    },
+    {
+      id: leaveRequestId("emp_001", "2026-04-07", "root"),
+      employeeId: "emp_001",
+      requestType: "leave",
+      leaveType: "hourly",
+      date: "2026-04-07",
+      startAt: buildFixedSeoulDateTime("2026-04-07", "13:00:00"),
+      endAt: buildFixedSeoulDateTime("2026-04-07", "16:00:00"),
+      reason: "Using a seeded hourly leave example.",
+      requestedAt: buildFixedSeoulDateTime("2026-04-05", "11:20:00"),
+      status: "approved",
+      reviewedAt: buildFixedSeoulDateTime("2026-04-06", "09:40:00"),
+      reviewComment: null,
+      rootRequestId: leaveRequestId("emp_001", "2026-04-07", "root"),
+      parentRequestId: null,
+      followUpKind: null,
+      supersededByRequestId: null,
+    },
+    {
       id: leaveRequestId("emp_004", "2026-04-16", "root"),
       employeeId: "emp_004",
       requestType: "leave",
@@ -1015,12 +1066,6 @@ export const canonicalSeedWorld = deepFreeze({
 });
 
 export const seedScenarioAnchors = deepFreeze({
-  previousDayMissingCheckout: {
-    employeeId: "emp_001",
-    recordDate: "2026-04-10",
-    surfaceDate: "2026-04-13",
-    attendanceRecordId: attendanceRecordId("emp_001", "2026-04-10"),
-  },
   nextDayCheckout: {
     employeeId: "emp_002",
     recordDate: "2026-04-14",
@@ -1071,6 +1116,16 @@ export const seedScenarioAnchors = deepFreeze({
   pendingManualWithdraw: {
     employeeId: "emp_011",
     requestId: manualRequestId("emp_011", "2026-04-07", "root"),
+  },
+  defaultEmployeeAnnualLeave: {
+    employeeId: "emp_001",
+    date: "2026-03-24",
+    requestId: leaveRequestId("emp_001", "2026-03-24", "root"),
+  },
+  defaultEmployeeHourlyLeave: {
+    employeeId: "emp_001",
+    date: "2026-04-07",
+    requestId: leaveRequestId("emp_001", "2026-04-07", "root"),
   },
   approvedManualWriteback: {
     employeeId: "emp_007",

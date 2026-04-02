@@ -84,10 +84,6 @@ export function getDisplaySummary(display: AttendanceDisplay) {
 }
 
 export function getHistoryDisplayStatusLabel(display: AttendanceDisplay) {
-  if (display.activeExceptions.includes("previous_day_checkout_missing")) {
-    return "전날 미퇴근";
-  }
-
   if (display.activeExceptions.includes("attempt_failed")) {
     return "시도 실패";
   }

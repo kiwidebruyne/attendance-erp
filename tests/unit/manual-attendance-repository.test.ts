@@ -13,10 +13,7 @@ import {
   updateManualAttendanceRequest,
 } from "@/lib/repositories/manual-attendance";
 import { manualAttendanceRequestEntitySchema } from "@/lib/seed/entities";
-import {
-  buildFixedSeoulDateTime,
-  fixedSeoulBaselineDate,
-} from "@/lib/seed/seoul-clock";
+import { buildFixedSeoulDateTime } from "@/lib/seed/seoul-clock";
 import { type CanonicalSeedWorld, canonicalSeedWorld } from "@/lib/seed/world";
 
 function createWorld() {
@@ -181,34 +178,29 @@ describe("manual attendance repository helpers", () => {
     });
   });
 
-  it("returns the prior-day manual request on the attendance surface and hides approved or withdrawn rows", () => {
-    const carryOverWorld = createPendingManualRequestWorld();
+  it("returns date-scoped manual requests on the attendance surface and hides approved or withdrawn rows", () => {
+    const pendingWorld = createPendingManualRequestWorld();
 
-    const carryOverSummary = resolveAttendanceSurfaceManualRequest(
-      carryOverWorld,
+    const pendingSummary = resolveAttendanceSurfaceManualRequest(
+      pendingWorld,
       "emp_001",
-      "2026-04-13",
-      {
-        date: "2026-04-10",
-      },
+      "2026-04-10",
     );
     const approvedSummary = resolveAttendanceSurfaceManualRequest(
       canonicalSeedWorld,
       "emp_007",
       "2026-04-03",
-      null,
     );
     const withdrawnSummary = resolveAttendanceSurfaceManualRequest(
       createWithdrawnManualRequestWorld(),
       "emp_001",
       "2026-04-13",
-      null,
     );
 
     expect(() =>
-      attendanceSurfaceManualRequestResourceSchema.parse(carryOverSummary),
+      attendanceSurfaceManualRequestResourceSchema.parse(pendingSummary),
     ).not.toThrow();
-    expect(carryOverSummary).toMatchObject({
+    expect(pendingSummary).toMatchObject({
       id: "manual_request_emp_001_2026-04-10_root",
       date: "2026-04-10",
       status: "pending",
@@ -269,7 +261,6 @@ describe("manual attendance repository helpers", () => {
       world,
       "emp_001",
       "2026-04-13",
-      null,
     );
 
     expect(summary).toBeNull();
@@ -584,15 +575,15 @@ describe("manual attendance repository helpers", () => {
         createWorld(),
         "emp_001",
         {
-          date: fixedSeoulBaselineDate,
+          date: "2026-04-09",
           action: "clock_out",
           requestedClockOutAt: buildFixedSeoulDateTime(
-            fixedSeoulBaselineDate,
+            "2026-04-09",
             "18:00:00",
           ),
           reason: "Clock-out alone should require an open attendance record.",
         },
-        buildFixedSeoulDateTime(fixedSeoulBaselineDate, "18:15:00"),
+        buildFixedSeoulDateTime("2026-04-09", "18:15:00"),
       ),
     ).toThrowError(ManualAttendanceConflictError);
   });

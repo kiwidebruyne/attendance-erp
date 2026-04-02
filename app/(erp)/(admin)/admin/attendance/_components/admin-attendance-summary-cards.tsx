@@ -1,5 +1,4 @@
 import {
-  CalendarClockIcon,
   CalendarDaysIcon,
   Clock3Icon,
   FileWarningIcon,
@@ -44,12 +43,6 @@ const summaryCards: Array<{
     title: "출결 시도 실패",
     icon: FileWarningIcon,
     accentClassName: "bg-status-warning-soft text-status-warning",
-  },
-  {
-    key: "previousDayOpenCount",
-    title: "전날 미퇴근",
-    icon: CalendarClockIcon,
-    accentClassName: "bg-status-danger-soft text-status-danger",
   },
 ];
 

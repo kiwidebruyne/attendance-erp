@@ -17,7 +17,6 @@ import type {
   ExpectedWorkday,
   FailedAttendanceAttempt,
   LeaveCoverage,
-  PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 import { resolveEffectiveApprovedLeaveRequests } from "@/lib/repositories/leave-conflicts";
 import { buildLeaveInterval } from "@/lib/repositories/leave-intervals";
@@ -63,7 +62,6 @@ type AttendanceSurfaceRow = {
   attempts: AttendanceAttempt[];
   display: ReturnType<typeof deriveAttendanceDisplay>;
   latestFailedAttempt: FailedAttendanceAttempt | null;
-  previousDayOpenRecord: PreviousDayOpenRecord | null;
   manualRequest: AttendanceSurfaceManualRequestResource | null;
 };
 
@@ -256,49 +254,6 @@ function resolveAttendanceRecord(
   );
 }
 
-function resolvePreviousDayOpenRecord(
-  world: AttendanceRepositoryWorld,
-  employeeId: string,
-  date: string,
-  now: string,
-) {
-  const openRecords = world.attendanceRecords.filter(
-    (record) =>
-      record.employeeId === employeeId &&
-      record.date < date &&
-      record.clockInAt !== null &&
-      record.clockOutAt === null,
-  );
-  const latestOpenRecord = openRecords.sort((left, right) =>
-    compareDates(right.date, left.date),
-  )[0];
-
-  if (latestOpenRecord === undefined) {
-    return null;
-  }
-
-  const latestOpenClockInAt = latestOpenRecord.clockInAt;
-
-  if (latestOpenClockInAt === null) {
-    return null;
-  }
-
-  const cutoff = buildDateTime(date, "09:00:00", latestOpenClockInAt);
-
-  if (new Date(now).getTime() < new Date(cutoff).getTime()) {
-    return null;
-  }
-
-  return {
-    date: latestOpenRecord.date,
-    clockInAt: latestOpenClockInAt,
-    clockOutAt: latestOpenRecord.clockOutAt,
-    expectedClockOutAt: latestOpenRecord.date
-      ? buildDateTime(latestOpenRecord.date, "18:00:00", latestOpenClockInAt)
-      : null,
-  };
-}
-
 function hasLaterSuccessfulAttempt(
   failedAttempt: AttendanceAttempt,
   attempts: AttendanceAttempt[],
@@ -318,23 +273,12 @@ function resolveOperationalAttempts(
   world: AttendanceRepositoryWorld,
   employeeId: string,
   date: string,
-  previousDayOpenRecord: PreviousDayOpenRecord | null,
 ) {
-  const rawRelevantAttempts = world.attendanceAttempts.filter((attempt) => {
-    if (attempt.employeeId !== employeeId) {
-      return false;
-    }
-
-    if (attempt.date === date) {
-      return true;
-    }
-
-    return (
-      previousDayOpenRecord !== null &&
-      attempt.date === previousDayOpenRecord.date
-    );
-  });
-  const relevantAttempts = rawRelevantAttempts.map(toAttendanceAttempt);
+  const relevantAttempts = world.attendanceAttempts
+    .filter(
+      (attempt) => attempt.employeeId === employeeId && attempt.date === date,
+    )
+    .map(toAttendanceAttempt);
 
   return relevantAttempts
     .filter((attempt) => {
@@ -379,23 +323,15 @@ function buildAttendanceSurfaceRow(
   const employee = assertEmployeeExists(world, employeeId);
   const expectedWorkday = resolveExpectedWorkday(world, employeeId, date, now);
   const record = resolveAttendanceRecord(world, employeeId, date);
-  const previousDayOpenRecord = resolvePreviousDayOpenRecord(
-    world,
-    employeeId,
-    date,
-    now,
-  );
   const operationalAttempts = resolveOperationalAttempts(
     world,
     employeeId,
     date,
-    previousDayOpenRecord,
   );
   const manualRequest = resolveAttendanceSurfaceManualRequest(
     world,
     employeeId,
     date,
-    previousDayOpenRecord,
   );
 
   return {
@@ -413,11 +349,9 @@ function buildAttendanceSurfaceRow(
       expectedWorkday,
       record,
       attempts: operationalAttempts,
-      previousDayOpenRecord,
       manualRequest,
     }),
     latestFailedAttempt: resolveLatestFailedAttempt(operationalAttempts),
-    previousDayOpenRecord,
     manualRequest,
   };
 }
@@ -425,7 +359,6 @@ function buildAttendanceSurfaceRow(
 function isAdminTodayItemRelevant(row: AttendanceSurfaceRow) {
   return (
     row.record !== null ||
-    row.previousDayOpenRecord !== null ||
     row.latestFailedAttempt !== null ||
     row.manualRequest !== null ||
     row.expectedWorkday.leaveCoverage !== null ||
@@ -436,7 +369,6 @@ function isAdminTodayItemRelevant(row: AttendanceSurfaceRow) {
 function isAdminListRowRelevant(row: AttendanceSurfaceRow) {
   return (
     row.record !== null ||
-    row.previousDayOpenRecord !== null ||
     row.latestFailedAttempt !== null ||
     row.manualRequest !== null ||
     row.expectedWorkday.leaveCoverage !== null ||
@@ -475,7 +407,6 @@ function resolvePendingHistoryManualRequest(
     world,
     employeeId,
     date,
-    null,
   );
 
   return manualRequest?.status === "pending" ? manualRequest : null;
@@ -496,7 +427,6 @@ export function getEmployeeAttendanceToday(
     date: input.date,
     employee: row.employee,
     expectedWorkday: row.expectedWorkday,
-    previousDayOpenRecord: row.previousDayOpenRecord,
     todayRecord: row.record,
     attempts: row.attempts,
     manualRequest: row.manualRequest,
@@ -556,27 +486,23 @@ export function getAdminAttendanceToday(
     .filter(isAdminTodayItemRelevant)
     .sort((left, right) => {
       const priority = (row: AttendanceSurfaceRow) => {
-        if (row.previousDayOpenRecord !== null) {
+        if (row.latestFailedAttempt !== null) {
           return 0;
         }
 
-        if (row.latestFailedAttempt !== null) {
+        if (row.manualRequest !== null) {
           return 1;
         }
 
-        if (row.manualRequest !== null) {
+        if (row.display.activeExceptions.includes("not_checked_in")) {
           return 2;
         }
 
-        if (row.display.activeExceptions.includes("not_checked_in")) {
+        if (row.display.activeExceptions.includes("leave_work_conflict")) {
           return 3;
         }
 
-        if (row.display.activeExceptions.includes("leave_work_conflict")) {
-          return 4;
-        }
-
-        return 5;
+        return 4;
       };
 
       const priorityDelta = priority(left) - priority(right);
@@ -593,7 +519,6 @@ export function getAdminAttendanceToday(
       todayRecord: row.record,
       display: row.display,
       latestFailedAttempt: row.latestFailedAttempt,
-      previousDayOpenRecord: row.previousDayOpenRecord,
       manualRequest: row.manualRequest,
     }));
 

@@ -6,7 +6,6 @@ import type {
   AttendanceAttempt,
   AttendanceSurfaceManualRequestResource,
   ManualAttendanceAction,
-  PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 
 export type AttendanceManualRequestDraft = Readonly<{
@@ -144,17 +143,6 @@ function getLatestFailedAttempt(attempts: AttendanceAttempt[]) {
   return attempts.findLast((attempt) => attempt.status === "failed") ?? null;
 }
 
-function isCarryOverManualRequest(
-  request: AttendanceSurfaceManualRequestResource | null,
-  previousDayOpenRecord: PreviousDayOpenRecord | null,
-) {
-  return (
-    request !== null &&
-    previousDayOpenRecord !== null &&
-    request.date === previousDayOpenRecord.date
-  );
-}
-
 function buildCreateSurfaceModel(input: {
   ctaLabel: string;
   dateEditable?: boolean;
@@ -285,14 +273,6 @@ function buildFailedAttemptDraft(
   today: AttendanceTodayResponse,
   failedAttempt: Extract<AttendanceAttempt, { status: "failed" }>,
 ): AttendanceManualRequestDraft {
-  if (
-    failedAttempt.action === "clock_out" &&
-    today.previousDayOpenRecord !== null &&
-    failedAttempt.date === today.previousDayOpenRecord.date
-  ) {
-    return buildCarryOverDraft(today.previousDayOpenRecord);
-  }
-
   if (failedAttempt.action === "clock_out") {
     return {
       date: failedAttempt.date,
@@ -337,18 +317,6 @@ function buildFailedAttemptSurface(
     ctaLabel: isClockOutFailure ? "퇴근 시간 정정 요청" : "출근 기록 확인",
     tone: "destructive",
   });
-}
-
-export function buildCarryOverDraft(
-  previousDayOpenRecord: PreviousDayOpenRecord,
-): AttendanceManualRequestDraft {
-  return {
-    date: previousDayOpenRecord.date,
-    action: "clock_out",
-    requestedClockInAt: null,
-    requestedClockOutAt: previousDayOpenRecord.expectedClockOutAt,
-    reason: "",
-  };
 }
 
 export function buildHistoryCorrectionDraft(
@@ -400,6 +368,20 @@ export function buildRequestDraft(
   };
 }
 
+export function getPendingRequestTitle(
+  action: AttendanceSurfaceManualRequestResource["action"],
+) {
+  if (action === "clock_in") {
+    return "출근 시간 정정 요청을 확인하고 있어요";
+  }
+
+  if (action === "clock_out") {
+    return "퇴근 시간 정정 요청을 확인하고 있어요";
+  }
+
+  return "근무 기록 정정 요청을 확인하고 있어요";
+}
+
 export function buildResubmissionDraft(
   request: AttendanceSurfaceManualRequestResource,
 ): AttendanceResubmissionDraft {
@@ -414,44 +396,12 @@ export function buildExceptionSurfaceModels(
   today: AttendanceTodayResponse,
 ): AttendanceSurfaceModel[] {
   const surfaces: AttendanceSurfaceModel[] = [];
-  const carryOverRequest = isCarryOverManualRequest(
-    today.manualRequest,
-    today.previousDayOpenRecord,
-  )
-    ? today.manualRequest
-    : null;
   const sameDayPendingRequest =
     today.manualRequest !== null &&
     today.manualRequest.status === "pending" &&
     today.manualRequest.date === today.date
       ? today.manualRequest
       : null;
-
-  if (
-    today.display.activeExceptions.includes("previous_day_checkout_missing") &&
-    today.previousDayOpenRecord !== null
-  ) {
-    if (carryOverRequest !== null) {
-      surfaces.push(
-        buildRequestSurfaceModel(carryOverRequest, {
-          id: "previous-day-checkout-missing",
-          pendingTitle: "어제 퇴근 기록을 확인하고 있어요",
-          pendingDescription: "제출한 정정 요청의 진행 상태를 확인할 수 있어요",
-        }),
-      );
-    } else {
-      surfaces.push(
-        buildCreateSurfaceModel({
-          id: "previous-day-checkout-missing",
-          draft: buildCarryOverDraft(today.previousDayOpenRecord),
-          title: "어제 퇴근 기록이 아직 없어요",
-          description: "이미 퇴근했다면 퇴근 시간을 정정 요청할 수 있어요",
-          ctaLabel: "어제 퇴근 시간 정정 요청",
-          tone: "destructive",
-        }),
-      );
-    }
-  }
 
   if (today.display.activeExceptions.includes("attempt_failed")) {
     const latestFailedAttempt = getLatestFailedAttempt(today.attempts);
@@ -466,14 +416,13 @@ export function buildExceptionSurfaceModels(
 
   if (
     today.manualRequest !== null &&
-    carryOverRequest === null &&
     (today.display.activeExceptions.includes("manual_request_pending") ||
       today.display.activeExceptions.includes("manual_request_rejected"))
   ) {
     surfaces.push(
       buildRequestSurfaceModel(today.manualRequest, {
         id: "manual-request-summary",
-        pendingTitle: "정정 요청중이에요",
+        pendingTitle: getPendingRequestTitle(today.manualRequest.action),
         pendingDescription: "제출한 정정 요청 내용을 다시 확인할 수 있어요",
         pendingTone: "warning",
       }),
@@ -550,7 +499,7 @@ export function buildHistoryAction(
         id: `history-${record.date}`,
         request: record.manualRequest,
         draft: buildRequestDraft(record.manualRequest),
-        title: "정정 요청중이에요",
+        title: getPendingRequestTitle(record.manualRequest.action),
         description: "제출한 정정 요청 내용을 다시 확인할 수 있어요",
         ctaLabel: "요청 보기",
         tone: "warning",

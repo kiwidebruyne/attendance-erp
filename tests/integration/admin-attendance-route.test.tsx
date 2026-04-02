@@ -40,7 +40,6 @@ describe("admin attendance route helpers", () => {
         lateCount: 0,
         onLeaveCount: 0,
         failedAttemptCount: 0,
-        previousDayOpenCount: 0,
       },
       items: [],
     });

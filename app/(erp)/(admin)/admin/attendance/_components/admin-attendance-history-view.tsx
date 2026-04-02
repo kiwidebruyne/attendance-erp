@@ -16,6 +16,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { AdminAttendanceListResponse } from "@/lib/contracts/admin-attendance";
+import { fixedSeoulBaselineDate } from "@/lib/seed/seoul-clock";
 
 import {
   formatMinutesLabel,
@@ -143,7 +144,12 @@ export function AdminAttendanceHistoryView({
                     {formatMinutesLabel(record.record?.workMinutes ?? null)}
                   </TableCell>
                   <TableCell>
-                    {getHistoryDisplayStatusLabel(record.display)}
+                    {record.date < fixedSeoulBaselineDate &&
+                    record.record !== null &&
+                    record.record.clockInAt !== null &&
+                    record.record.clockOutAt === null
+                      ? "퇴근 누락"
+                      : getHistoryDisplayStatusLabel(record.display)}
                   </TableCell>
                 </TableRow>
               ))}

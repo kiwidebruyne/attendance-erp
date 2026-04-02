@@ -68,24 +68,19 @@ describe("employee attendance route handlers", () => {
       employee: {
         id: "emp_001",
       },
-      previousDayOpenRecord: {
-        date: "2026-04-10",
+      todayRecord: {
+        date: "2026-04-13",
+        clockInSource: "beacon",
+        clockOutAt: null,
       },
       manualRequest: null,
     });
   });
 
-  it("keeps carry-over prior-workday manual requests visible on today's card", async () => {
+  it("keeps today-card manual requests scoped to the requested date", async () => {
     const world = createWorld();
     addPendingManualRequest(world, {
-      id: "manual_request_emp_001_2026-04-10_root",
-      date: "2026-04-10",
-      action: "clock_out",
-      requestedClockInAt: null,
-      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
-      submittedAt: "2026-04-13T09:20:00+09:00",
-      reason: "Submitting a carry-over checkout correction.",
-      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      id: "manual_request_emp_001_2026-04-13_root",
     });
     setMockSeedWorldForTests(world);
 
@@ -93,37 +88,8 @@ describe("employee attendance route handlers", () => {
     const body = attendanceTodayResponseSchema.parse(await response.json());
 
     expect(body.manualRequest).toMatchObject({
-      id: "manual_request_emp_001_2026-04-10_root",
-      date: "2026-04-10",
-      status: "pending",
-    });
-  });
-
-  it("prefers the carry-over prior-workday request even when a same-day completed request exists", async () => {
-    const world = createWorld();
-    addPendingManualRequest(world, {
-      id: "manual_request_emp_001_2026-04-10_root",
-      date: "2026-04-10",
-      action: "clock_out",
-      requestedClockInAt: null,
-      requestedClockOutAt: "2026-04-10T18:10:00+09:00",
-      submittedAt: "2026-04-13T09:20:00+09:00",
-      reason: "Submitting a carry-over checkout correction.",
-      rootRequestId: "manual_request_emp_001_2026-04-10_root",
-    });
-    addPendingManualRequest(world, {
-      id: "manual_request_emp_001_2026-04-13_withdrawn",
-      status: "withdrawn",
-      rootRequestId: "manual_request_emp_001_2026-04-13_withdrawn",
-    });
-    setMockSeedWorldForTests(world);
-
-    const response = await getAttendanceMe();
-    const body = attendanceTodayResponseSchema.parse(await response.json());
-
-    expect(body.manualRequest).toMatchObject({
-      id: "manual_request_emp_001_2026-04-10_root",
-      date: "2026-04-10",
+      id: "manual_request_emp_001_2026-04-13_root",
+      date: "2026-04-13",
       status: "pending",
     });
   });

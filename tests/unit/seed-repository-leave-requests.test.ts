@@ -295,7 +295,9 @@ describe("request-chain and leave repository helpers", () => {
     expect(completed.viewFilter).toBe("completed");
     expect(completed.items.map((item) => item.id)).toEqual([
       "leave_request_emp_005_2026-04-18_root",
+      "leave_request_emp_001_2026-04-07_root",
       "manual_request_emp_007_2026-04-03_root",
+      "leave_request_emp_001_2026-03-24_root",
     ]);
 
     expect(all.viewFilter).toBe("all");
@@ -308,7 +310,9 @@ describe("request-chain and leave repository helpers", () => {
       "manual_request_emp_009_2026-04-08_resubmission",
       "manual_request_emp_011_2026-04-07_root",
       "leave_request_emp_005_2026-04-18_root",
+      "leave_request_emp_001_2026-04-07_root",
       "manual_request_emp_007_2026-04-03_root",
+      "leave_request_emp_001_2026-03-24_root",
     ]);
     expect(emp004QueueItem).toMatchObject({
       requestType: "leave",

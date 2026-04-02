@@ -50,11 +50,15 @@ describe("canonical seed world", () => {
   });
 
   it("covers the required seed-world scenario anchors", () => {
-    expect(seedScenarioAnchors.previousDayMissingCheckout).toEqual({
+    expect(seedScenarioAnchors.defaultEmployeeAnnualLeave).toEqual({
       employeeId: "emp_001",
-      recordDate: "2026-04-10",
-      surfaceDate: "2026-04-13",
-      attendanceRecordId: "attendance_record_emp_001_2026-04-10",
+      date: "2026-03-24",
+      requestId: "leave_request_emp_001_2026-03-24_root",
+    });
+    expect(seedScenarioAnchors.defaultEmployeeHourlyLeave).toEqual({
+      employeeId: "emp_001",
+      date: "2026-04-07",
+      requestId: "leave_request_emp_001_2026-04-07_root",
     });
     expect(seedScenarioAnchors.nextDayCheckout).toEqual({
       employeeId: "emp_002",

@@ -405,7 +405,6 @@ export function resolveAttendanceSurfaceManualRequest(
   world: CanonicalSeedWorld,
   employeeId: string,
   date: string,
-  previousDayOpenRecord: { date: string } | null,
 ) {
   const buildSurfaceResourceForDate = (targetDate: string) => {
     const chainRequests = world.manualAttendanceRequests
@@ -433,16 +432,6 @@ export function resolveAttendanceSurfaceManualRequest(
 
     return toAttendanceSurfaceResource(surfacedRequest, projection);
   };
-
-  if (previousDayOpenRecord !== null) {
-    const carryOverResource = buildSurfaceResourceForDate(
-      previousDayOpenRecord.date,
-    );
-
-    if (carryOverResource !== null) {
-      return carryOverResource;
-    }
-  }
 
   return buildSurfaceResourceForDate(date);
 }

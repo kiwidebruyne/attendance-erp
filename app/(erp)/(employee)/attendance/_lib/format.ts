@@ -132,8 +132,6 @@ export function formatNextAction(display: AttendanceDisplay) {
       return "퇴근 처리는 기존 퇴근 동선에서 진행해 주세요";
     case "submit_manual_request":
       return "정정 요청이 필요해요";
-    case "resolve_previous_day_checkout":
-      return "전날 퇴근 시간을 먼저 확인해 주세요";
     case "review_request_status":
       return "제출한 요청 상태를 확인해 주세요";
     case "review_leave_conflict":
@@ -163,8 +161,6 @@ export function formatAttendanceException(
       return "출근 기록 없음";
     case "absent":
       return "결근 처리 전";
-    case "previous_day_checkout_missing":
-      return "어제 퇴근 누락";
     case "leave_work_conflict":
       return "휴가 충돌";
     case "manual_request_pending":

@@ -102,7 +102,7 @@ function createPastDueNoShowWorld() {
 }
 
 describe("attendance repository helpers", () => {
-  it("builds the carry-over attendance today response for the open prior workday", () => {
+  it("builds the baseline today response as an in-progress beacon workday", () => {
     const response = getEmployeeAttendanceToday(canonicalSeedWorld, {
       employeeId: "emp_001",
       date: "2026-04-13",
@@ -115,14 +115,16 @@ describe("attendance repository helpers", () => {
       employee: {
         id: "emp_001",
       },
-      previousDayOpenRecord: {
-        date: "2026-04-10",
+      todayRecord: {
+        date: "2026-04-13",
+        clockInSource: "beacon",
         clockOutAt: null,
       },
       display: expect.objectContaining({
-        activeExceptions: ["previous_day_checkout_missing", "not_checked_in"],
+        phase: "working",
+        activeExceptions: [],
         nextAction: expect.objectContaining({
-          type: "resolve_previous_day_checkout",
+          type: "clock_out",
         }),
       }),
     });
@@ -191,11 +193,13 @@ describe("attendance repository helpers", () => {
         expect.objectContaining({
           date: "2026-04-13",
           manualRequest: null,
+          record: expect.objectContaining({
+            clockInAt: "2026-04-13T09:02:00+09:00",
+            clockOutAt: null,
+          }),
           display: expect.objectContaining({
-            activeExceptions: [
-              "previous_day_checkout_missing",
-              "not_checked_in",
-            ],
+            phase: "working",
+            activeExceptions: [],
           }),
         }),
       ]),
@@ -284,24 +288,24 @@ describe("attendance repository helpers", () => {
 
     expect(
       weekResponse.records.find((record) => record.date === "2026-04-07")
+        ?.expectedWorkday.leaveCoverage,
+    ).toMatchObject({
+      leaveType: "hourly",
+      startAt: "2026-04-07T13:00:00+09:00",
+      endAt: "2026-04-07T16:00:00+09:00",
+    });
+    expect(
+      weekResponse.records.find((record) => record.date === "2026-04-07")
         ?.record,
     ).toMatchObject({
       clockInAt: "2026-04-07T08:57:00+09:00",
       clockOutAt: "2026-04-07T18:04:00+09:00",
     });
     expect(
-      weekResponse.records.find((record) => record.date === "2026-04-08")
-        ?.record,
+      monthResponse.records.find((record) => record.date === "2026-03-24")
+        ?.expectedWorkday.leaveCoverage,
     ).toMatchObject({
-      clockInAt: "2026-04-08T09:18:00+09:00",
-      clockOutAt: "2026-04-08T18:02:00+09:00",
-    });
-    expect(
-      weekResponse.records.find((record) => record.date === "2026-04-09")
-        ?.record,
-    ).toMatchObject({
-      clockInAt: "2026-04-09T08:59:00+09:00",
-      clockOutAt: "2026-04-09T17:21:00+09:00",
+      leaveType: "annual",
     });
     expect(
       monthResponse.records.find((record) => record.date === "2026-03-16")
@@ -316,13 +320,6 @@ describe("attendance repository helpers", () => {
     ).toMatchObject({
       clockInAt: "2026-03-23T08:59:00+09:00",
       clockOutAt: "2026-03-23T18:03:00+09:00",
-    });
-    expect(
-      monthResponse.records.find((record) => record.date === "2026-03-24")
-        ?.record,
-    ).toMatchObject({
-      clockInAt: "2026-03-24T08:58:00+09:00",
-      clockOutAt: "2026-03-24T18:02:00+09:00",
     });
     expect(
       monthResponse.records.find((record) => record.date === "2026-03-30")
@@ -341,12 +338,8 @@ describe("attendance repository helpers", () => {
     ).not.toContain("not_checked_in");
     expect(
       monthResponse.records.find((record) => record.date === "2026-04-13")
-        ?.display.activeExceptions,
-    ).toContain("not_checked_in");
-    expect(
-      monthResponse.records.find((record) => record.date === "2026-04-13")
-        ?.display.activeExceptions,
-    ).not.toContain("absent");
+        ?.display.phase,
+    ).toBe("working");
     expect(
       monthWorkdayRecords.filter((record) => record.record !== null),
     ).toHaveLength(19);
@@ -358,6 +351,13 @@ describe("attendance repository helpers", () => {
     expect(
       monthWorkdayRecords.filter((record) =>
         record.display.activeExceptions.includes("not_checked_in"),
+      ),
+    ).toHaveLength(0);
+    expect(
+      monthWorkdayRecords.filter(
+        (record) =>
+          record.expectedWorkday.leaveCoverage !== null &&
+          record.record === null,
       ),
     ).toHaveLength(1);
   });
@@ -438,18 +438,10 @@ describe("attendance repository helpers", () => {
     ).toMatchObject({
       date: "2026-04-13",
       summary: {
-        previousDayOpenCount: 1,
         failedAttemptCount: 1,
+        checkedInCount: 1,
       },
       items: expect.arrayContaining([
-        expect.objectContaining({
-          employee: expect.objectContaining({
-            id: "emp_001",
-          }),
-          previousDayOpenRecord: expect.objectContaining({
-            date: "2026-04-10",
-          }),
-        }),
         expect.objectContaining({
           employee: expect.objectContaining({
             id: "emp_010",

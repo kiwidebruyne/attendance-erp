@@ -8,7 +8,6 @@ import {
   employeeSummarySchema,
   expectedWorkdaySchema,
   failedAttendanceAttemptSchema,
-  previousDayOpenRecordSchema,
 } from "@/lib/contracts/shared";
 
 const adminAttendanceTodayItemSchema = z.object({
@@ -17,7 +16,6 @@ const adminAttendanceTodayItemSchema = z.object({
   todayRecord: attendanceRecordSchema.nullable(),
   display: attendanceDisplaySchema,
   latestFailedAttempt: failedAttendanceAttemptSchema.nullable(),
-  previousDayOpenRecord: previousDayOpenRecordSchema.nullable(),
   manualRequest: attendanceSurfaceManualRequestResourceSchema.nullable(),
 });
 
@@ -38,7 +36,6 @@ export const adminAttendanceTodayResponseSchema = z.object({
     lateCount: z.number(),
     onLeaveCount: z.number(),
     failedAttemptCount: z.number(),
-    previousDayOpenCount: z.number(),
   }),
   items: z.array(adminAttendanceTodayItemSchema),
 });

@@ -12,7 +12,6 @@ import {
   followUpKindSchema,
   manualAttendanceActionSchema,
   manualAttendanceRequestResourceSchema,
-  previousDayOpenRecordSchema,
   requestStatusSchema,
 } from "@/lib/contracts/shared";
 
@@ -35,7 +34,6 @@ export const attendanceTodayResponseSchema = z.object({
   date: apiDateSchema,
   employee: employeeSummarySchema,
   expectedWorkday: expectedWorkdaySchema,
-  previousDayOpenRecord: previousDayOpenRecordSchema.nullable(),
   todayRecord: attendanceRecordSchema.nullable(),
   attempts: z.array(attendanceAttemptSchema),
   manualRequest: attendanceSurfaceManualRequestResourceSchema.nullable(),

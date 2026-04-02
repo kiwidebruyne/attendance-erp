@@ -54,7 +54,6 @@ describe("shared contract schemas", () => {
       "attempt_failed",
       "not_checked_in",
       "absent",
-      "previous_day_checkout_missing",
       "leave_work_conflict",
       "manual_request_pending",
       "manual_request_rejected",
@@ -63,7 +62,6 @@ describe("shared contract schemas", () => {
       "clock_in",
       "clock_out",
       "submit_manual_request",
-      "resolve_previous_day_checkout",
       "review_request_status",
       "review_leave_conflict",
       "wait",
@@ -147,7 +145,6 @@ describe("shared contract schemas", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: null,
         attempts: [
           {
@@ -189,7 +186,6 @@ describe("shared contract schemas", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: null,
         attempts: [
           {
@@ -430,7 +426,6 @@ describe("employee attendance contracts", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: {
           id: "att_20260330_emp_001",
           date: "2026-03-30",
@@ -493,7 +488,6 @@ describe("employee attendance contracts", () => {
           countsTowardAdminSummary: true,
           leaveCoverage: null,
         },
-        previousDayOpenRecord: null,
         todayRecord: null,
         attempts: [],
         manualRequest: {
@@ -1455,7 +1449,6 @@ describe("admin attendance contracts", () => {
           lateCount: 1,
           onLeaveCount: 1,
           failedAttemptCount: 1,
-          previousDayOpenCount: 1,
         },
         items: [
           {
@@ -1492,7 +1485,6 @@ describe("admin attendance contracts", () => {
               },
             },
             latestFailedAttempt: null,
-            previousDayOpenRecord: null,
             manualRequest: null,
           },
         ],
@@ -1515,7 +1507,6 @@ describe("admin attendance contracts", () => {
           lateCount: 1,
           onLeaveCount: 1,
           failedAttemptCount: 1,
-          previousDayOpenCount: 1,
         },
         items: [
           {
@@ -1551,7 +1542,6 @@ describe("admin attendance contracts", () => {
               status: "success",
               failureReason: null,
             },
-            previousDayOpenRecord: null,
             manualRequest: null,
           },
         ],
@@ -1569,7 +1559,6 @@ describe("admin attendance contracts", () => {
           lateCount: 1,
           onLeaveCount: 1,
           failedAttemptCount: 1,
-          previousDayOpenCount: 1,
         },
         items: [
           {
@@ -1598,7 +1587,6 @@ describe("admin attendance contracts", () => {
               },
             },
             latestFailedAttempt: null,
-            previousDayOpenRecord: null,
             manualRequest: {
               id: "req_manual_001",
               requestType: "manual_attendance",

@@ -20,6 +20,7 @@ import {
   type AttendanceSurfaceModel,
   buildExceptionSurfaceModels,
   buildHistoryAction,
+  getPendingRequestTitle,
 } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -207,6 +208,33 @@ function getLeaveUsageLabel(record: AttendanceHistoryRecord) {
     default:
       return "-";
   }
+}
+
+function getHourlyLeaveDurationLabel(record: AttendanceHistoryRecord) {
+  const leaveCoverage = record.expectedWorkday.leaveCoverage;
+
+  if (leaveCoverage?.leaveType !== "hourly") {
+    return null;
+  }
+
+  const startedAt = new Date(leaveCoverage.startAt).getTime();
+  const endedAt = new Date(leaveCoverage.endAt).getTime();
+
+  if (
+    Number.isNaN(startedAt) ||
+    Number.isNaN(endedAt) ||
+    endedAt <= startedAt
+  ) {
+    return null;
+  }
+
+  const minutes = Math.round((endedAt - startedAt) / 60_000);
+
+  if (minutes % 60 === 0) {
+    return `${minutes / 60}시간 사용`;
+  }
+
+  return `${minutes}분 사용`;
 }
 
 function getHistorySpecialNoteLabel(
@@ -441,7 +469,7 @@ function buildHistoricalIssueSurfaces(
     .flatMap((record) => {
       const historyAction = buildHistoryAction(record);
 
-      if (historyAction === null) {
+      if (historyAction === null || record.manualRequest === null) {
         return [];
       }
 
@@ -449,7 +477,7 @@ function buildHistoricalIssueSurfaces(
         {
           ...historyAction,
           id: `history-request-${record.date}`,
-          title: "정정 요청중이에요",
+          title: getPendingRequestTitle(record.manualRequest.action),
           description: "제출한 정정 요청 내용을 다시 확인할 수 있어요",
           tone: "warning" as const,
         },
@@ -463,12 +491,6 @@ function getSurfaceMetaLabel(
   surface: AttendanceSurfaceModel,
   data: AttendancePageData,
 ) {
-  if (surface.id === "previous-day-checkout-missing") {
-    return data.today.previousDayOpenRecord === null
-      ? null
-      : formatNumericDateLabel(data.today.previousDayOpenRecord.date);
-  }
-
   if (surface.id.startsWith("attempt-failed")) {
     const failedAttempt = data.today.attempts.findLast(
       (attempt) => attempt.status === "failed",
@@ -481,10 +503,13 @@ function getSurfaceMetaLabel(
 
   if (
     surface.id === "manual-request-summary" &&
-    data.today.manualRequest !== null &&
-    data.today.manualRequest.reviewedAt !== null
+    data.today.manualRequest !== null
   ) {
     return formatNumericDateLabel(data.today.manualRequest.date);
+  }
+
+  if (surface.railTargetKind === "request" && surface.railTargetDate !== null) {
+    return formatNumericDateLabel(surface.railTargetDate);
   }
 
   if (surface.id === "leave-work-conflict") {
@@ -872,6 +897,7 @@ function HistorySection({
             const historyAction = buildHistoryAction(record);
             const specialNote = getHistorySpecialNoteLabel(record, data.date);
             const leaveUsage = getLeaveUsageLabel(record);
+            const hourlyLeaveDuration = getHourlyLeaveDurationLabel(record);
             const statuses = getHistoryStatusChips(record, data.date);
             const hasPendingRequestRow = hasPendingRequestStatus(
               record,
@@ -900,7 +926,18 @@ function HistorySection({
                   {formatNumericDateLabel(record.date)}
                 </TableCell>
                 <TableCell className="text-foreground">{specialNote}</TableCell>
-                <TableCell className="text-foreground">{leaveUsage}</TableCell>
+                <TableCell className="text-foreground">
+                  {hourlyLeaveDuration === null ? (
+                    leaveUsage
+                  ) : (
+                    <div className="space-y-0.5">
+                      <p>{leaveUsage}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {hourlyLeaveDuration}
+                      </p>
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="whitespace-nowrap text-foreground tabular-nums">
                   {formatAttendanceTime(record.record?.clockInAt ?? null)}
                 </TableCell>

@@ -26,7 +26,6 @@ type TodayItem = AdminAttendanceTodayResponse["items"][number];
 
 function isTodayQueueItem(item: TodayItem) {
   return (
-    item.previousDayOpenRecord !== null ||
     item.latestFailedAttempt !== null ||
     item.manualRequest !== null ||
     item.display.activeExceptions.length > 0 ||
@@ -35,11 +34,6 @@ function isTodayQueueItem(item: TodayItem) {
 }
 
 const groupMetadata = [
-  {
-    key: "previousDayOpen",
-    title: "전날 기록 확인",
-    description: "퇴근 누락이 오늘 운영 상태까지 이어진 근태예요.",
-  },
   {
     key: "failedAttempts",
     title: "실패한 시도",
@@ -60,14 +54,6 @@ const groupMetadata = [
 function RowBadges({ item }: { item: TodayItem }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {item.previousDayOpenRecord !== null ? (
-        <Badge
-          className="bg-status-danger-soft text-status-danger"
-          variant="ghost"
-        >
-          전날 미퇴근
-        </Badge>
-      ) : null}
       {item.latestFailedAttempt !== null ? (
         <Badge
           className="bg-status-warning-soft text-status-warning"
@@ -125,13 +111,11 @@ function TodayQueueRow({ item }: { item: TodayItem }) {
               </p>
             </div>
             <p className="text-sm text-foreground">
-              {item.previousDayOpenRecord !== null
-                ? "어제 퇴근 기록이 아직 없어요."
-                : item.latestFailedAttempt !== null
-                  ? "출결 시도가 확인되지 않았어요."
-                  : item.manualRequest !== null
-                    ? getManualRequestStatusLabel(item.manualRequest)
-                    : getDisplaySummary(item.display)}
+              {item.latestFailedAttempt !== null
+                ? "출결 시도가 확인되지 않았어요."
+                : item.manualRequest !== null
+                  ? getManualRequestStatusLabel(item.manualRequest)
+                  : getDisplaySummary(item.display)}
             </p>
           </div>
           <RowBadges item={item} />
@@ -157,29 +141,14 @@ function TodayQueueRow({ item }: { item: TodayItem }) {
           <div className="flex flex-col gap-1">
             <dt>다음 확인</dt>
             <dd className="text-foreground">
-              {item.previousDayOpenRecord !== null
-                ? "전날 퇴근 사실 확인"
-                : item.latestFailedAttempt !== null
-                  ? "실패 사유 확인"
-                  : item.manualRequest !== null
-                    ? "정정 요청 상태 확인"
-                    : "오늘 기록 확인"}
+              {item.latestFailedAttempt !== null
+                ? "실패 사유 확인"
+                : item.manualRequest !== null
+                  ? "정정 요청 상태 확인"
+                  : "오늘 기록 확인"}
             </dd>
           </div>
         </dl>
-
-        {item.previousDayOpenRecord !== null ? (
-          <div className="rounded-[12px] bg-white px-3 py-2 text-sm text-muted-foreground">
-            <p className="font-medium text-foreground">
-              대상일 {formatDateLabel(item.previousDayOpenRecord.date)}
-            </p>
-            <p>
-              전날 출근 {formatTimeLabel(item.previousDayOpenRecord.clockInAt)}{" "}
-              / 예상 퇴근{" "}
-              {formatTimeLabel(item.previousDayOpenRecord.expectedClockOutAt)}
-            </p>
-          </div>
-        ) : null}
 
         {item.latestFailedAttempt !== null ? (
           <div className="rounded-[12px] bg-white px-3 py-2 text-sm text-muted-foreground">

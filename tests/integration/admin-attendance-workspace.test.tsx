@@ -26,9 +26,11 @@ function createState(search = ""): AdminAttendanceUrlState {
   return normalizeAdminAttendanceUrlState(new URLSearchParams(search));
 }
 
-function getRowByEmployeeName(name: string) {
-  const cell = screen.getByText(name);
-  const row = cell.closest("tr");
+function getRowByEmployeeNameAndDate(name: string, date: string) {
+  const cell = screen
+    .getAllByText(name)
+    .find((candidate) => candidate.closest("tr")?.textContent?.includes(date));
+  const row = cell?.closest("tr");
 
   expect(row).not.toBeNull();
 
@@ -54,7 +56,6 @@ describe("AdminAttendanceWorkspace", () => {
       .items.find(
         (item) =>
           item.todayRecord !== null &&
-          item.previousDayOpenRecord === null &&
           item.latestFailedAttempt === null &&
           item.manualRequest === null &&
           item.display.activeExceptions.length === 0 &&
@@ -72,12 +73,10 @@ describe("AdminAttendanceWorkspace", () => {
 
     expect(screen.getByText("출근 완료")).toBeInTheDocument();
     expect(screen.getByText("출근 전")).toBeInTheDocument();
-    expect(screen.getByText("지각")).toBeInTheDocument();
+    expect(screen.getAllByText("지각").length).toBeGreaterThan(0);
     expect(screen.getByText("휴가")).toBeInTheDocument();
     expect(screen.getByText("출결 시도 실패")).toBeInTheDocument();
-    expect(screen.getAllByText("전날 미퇴근").length).toBeGreaterThan(0);
 
-    expect(screen.getByText("전날 기록 확인")).toBeInTheDocument();
     expect(screen.getByText("실패한 시도")).toBeInTheDocument();
     expect(screen.getByText("오늘 확인 필요")).toBeInTheDocument();
     const noRecordRow = screen.getByText("Junho Lee").closest("li");
@@ -88,20 +87,6 @@ describe("AdminAttendanceWorkspace", () => {
     if (neutralOnTimeEmployee !== undefined) {
       expect(screen.queryByText(neutralOnTimeEmployee)).not.toBeInTheDocument();
     }
-  });
-
-  it("shows the prior-workday target date for the carry-over row", () => {
-    render(
-      <AdminAttendanceWorkspace
-        state={createState()}
-        todayResponse={repository.getAdminAttendanceToday({
-          date: canonicalSeedWorld.baselineDate,
-        })}
-      />,
-    );
-
-    expect(screen.getByText("Minji Park")).toBeInTheDocument();
-    expect(screen.getByText("대상일 2026-04-10")).toBeInTheDocument();
   });
 
   it("shows the governing review comment for the pending manual-request projection", () => {
@@ -221,16 +206,20 @@ describe("AdminAttendanceWorkspace", () => {
   it("renders explicit seeded history exception labels without today-copy phrasing", () => {
     render(
       <AdminAttendanceWorkspace
-        state={createState("?mode=history&from=2026-04-13&to=2026-04-13")}
+        state={createState("?mode=history&from=2026-04-10&to=2026-04-13")}
         historyResponse={repository.getAdminAttendanceList({
-          from: "2026-04-13",
+          from: "2026-04-10",
           to: "2026-04-13",
         })}
       />,
     );
 
-    expect(getRowByEmployeeName("Minji Park")).toHaveTextContent("전날 미퇴근");
-    expect(getRowByEmployeeName("Hyunwoo Baek")).toHaveTextContent("시도 실패");
+    expect(
+      getRowByEmployeeNameAndDate("Minji Park", "2026-04-10"),
+    ).toHaveTextContent("퇴근 누락");
+    expect(
+      getRowByEmployeeNameAndDate("Hyunwoo Baek", "2026-04-13"),
+    ).toHaveTextContent("시도 실패");
     expect(
       screen.queryByText("오늘 지각으로 기록됐어요."),
     ).not.toBeInTheDocument();
@@ -248,7 +237,6 @@ describe("AdminAttendanceWorkspace", () => {
             lateCount: 0,
             onLeaveCount: 0,
             failedAttemptCount: 0,
-            previousDayOpenCount: 0,
           },
           items: [],
         }}
