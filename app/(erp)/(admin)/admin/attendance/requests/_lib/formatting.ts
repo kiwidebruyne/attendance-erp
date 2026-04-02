@@ -376,14 +376,20 @@ function getRequestRowChips(item: AdminRequestItem): AdminRequestChip[] {
     });
   }
 
-  if (item.leaveConflict?.companyEventContext.length > 0 && chips.length < 2) {
+  if (
+    (item.leaveConflict?.companyEventContext?.length ?? 0) > 0 &&
+    chips.length < 2
+  ) {
     chips.push({
       label: "회사 일정 영향",
       tone: "info",
     });
   }
 
-  if (item.leaveConflict?.pendingLeaveContext.length > 0 && chips.length < 2) {
+  if (
+    (item.leaveConflict?.pendingLeaveContext?.length ?? 0) > 0 &&
+    chips.length < 2
+  ) {
     chips.push({
       label: "같은 날짜 대기 요청",
       tone: "outline",

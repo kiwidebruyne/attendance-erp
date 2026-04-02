@@ -179,7 +179,11 @@ function ActionSurface({
   | "warningConfirmation"
 >) {
   const hasReviewComment = reviewComment.trim().length > 0;
-  const needsWarningConfirmation = warningConfirmation !== null;
+  const activeWarningConfirmation =
+    warningConfirmation !== null && warningConfirmation !== undefined
+      ? warningConfirmation
+      : null;
+  const needsWarningConfirmation = activeWarningConfirmation !== null;
 
   return (
     <Card className="gap-0 border-border/80 bg-card">
@@ -221,9 +225,9 @@ function ActionSurface({
             <AlertDescription className="flex flex-col gap-3">
               <div className="flex flex-col gap-2">
                 <p className="font-medium text-foreground">
-                  {warningConfirmation.summary}
+                  {activeWarningConfirmation.summary}
                 </p>
-                {warningConfirmation.lines.map((line) => (
+                {activeWarningConfirmation.lines.map((line) => (
                   <p key={line}>{line}</p>
                 ))}
               </div>

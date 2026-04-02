@@ -1741,6 +1741,8 @@ describe("admin request-review contracts", () => {
             reason: "Medical appointment moved later.",
             status: "pending",
             requestedAt: "2026-03-30T11:25:00+09:00",
+            startAt: "2026-04-03T13:00:00+09:00",
+            endAt: "2026-04-03T15:00:00+09:00",
             reviewedAt: null,
             reviewComment: null,
             governingReviewComment: null,
