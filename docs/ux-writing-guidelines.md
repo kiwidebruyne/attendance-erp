@@ -1,86 +1,275 @@
-# UX Writing Guidelines
+# UX 라이팅 가이드
 
-## Purpose
+## 목적
 
-This document is the primary source of truth for in-product copy in the BestSleep attendance ERP.
-It adapts the relevant parts of Toss UX Writing guidance into a local contract for this repository.
+이 문서는 BestSleep 출결 ERP 안에서 쓰는 문구의 1차 source of truth예요.
+토스 UX 라이팅 원문을 그대로 옮긴 문서가 아니라, 토스의 원칙과 흐름을 이 제품에 맞게 다시 정리한 로컬 계약이에요.
 
-Use this document when writing page headers, status text, warnings, CTA labels, dialogs, helper text, and empty or error states.
-Do not treat the external Toss page as the live contract for this repository after this document is updated.
+페이지 제목, 상태 문구, 경고 문구, CTA, 다이얼로그, 도움말, empty state, error state를 쓸 때 이 문서를 먼저 봐요.
+레이아웃과 surface 배치는 `docs/ui-guidelines.md`가 맡고, 말투와 문구 규칙은 이 문서가 맡아요.
 
-## Source and Scope
+이 문서가 토스 말투를 강하게 참고하는 이유도 분명해요.
+ERP는 잘못 만들면 관리자가 팀원을 감시하는 도구처럼 느껴질 수 있고, 그 순간 제품이 주는 불편과 긴장이 커져요.
+BestSleep ERP는 관리자와 팀원 모두에게 "나를 도와주는 도구", "같은 사실을 맞추는 도구"처럼 느껴져야 해요.
+그래서 이 문서는 딱딱한 통제형 말투보다, 협업과 정렬의 느낌을 주는 토스식 말투를 더 적합한 기준으로 봐요.
 
-- Source reference reviewed on 2026-04-01: [Toss UX Writing](https://developers-apps-in-toss.toss.im/design/ux-writing.html)
-- This document is an adapted contract, not a verbatim mirror of the external reference.
-- `docs/ui-guidelines.md` owns layout and surface behavior. This document owns wording rules and copy patterns.
+- 원문 참고: [Toss UX Writing](https://developers-apps-in-toss.toss.im/design/ux-writing.html)
+- 검토 기준일: 2026-04-02
+- 이 문서는 원문 미러가 아니라 BestSleep 로컬 계약이에요.
 
-## Core Rules
+## 문서 운영 원칙
 
-- Write product copy in Korean `haeyoche`.
-- Prefer active voice over passive voice unless passive wording makes the user impact clearer or calmer.
-- Prefer positive phrasing over negative phrasing when both are honest and equally clear.
-- Avoid overly formal honorific phrasing such as `-시겠어요?`, `-시나요?`, or person-elevating business phrasing.
-- Prefer verb-led CTA labels over noun-only button labels.
-- CTA labels should describe the user's action, not ask a vague question.
-- Keep the current state, the reason, and the next action visible together when a warning or review state matters operationally.
-- If the product is certain about a fact, lead with the fact instead of a speculative question.
-- Use question-form copy only when the product genuinely needs the user to judge an unknown situation.
-- Avoid blame-oriented wording. State the issue precisely, then show the recovery path.
+- 이 레포의 source-of-truth 문서는 기본적으로 영어로 관리해요.
+- 다만 최종 제품의 노출 언어는 한국어예요.
+- `docs/ux-writing-guidelines.md`는 한국어 UX 문구를 직접 정의하는 문서라서 예외적으로 한국어로 관리해요.
+- 코드 토큰, 라우트 이름, API 필드, enum 값, 상태 값은 구현과 맞춰야 하므로 필요할 때 `revision_requested`, `pending`, `/attendance`처럼 인라인 코드로 그대로 적어요.
 
-## CTA Rules
+## 1. 해요체
 
-- Default to action-led CTA labels such as `어제 퇴근 시간 정정 요청`, `사유 확인`, or `다시 제출`.
-- Do not use generic CTA labels such as `요청`, `처리`, or `확인` when a more specific verb phrase fits.
-- Do not use top-level CTA buttons that are only speculative questions such as `혹시 퇴근하셨나요?`.
-- When the product knows the factual problem, use a fact-led headline and place any user-judgment question inside the follow-up flow if still needed.
-- Secondary dialog dismissal should use wording equivalent to `닫기` rather than `취소` when the intent is only to leave the dialog.
+제품 안의 문구는 해요체로 써요.
+상황이 급하더라도 명령문처럼 딱딱하게 끊지 말고, 과도하게 높이지도 않아요.
+직원과 관리자가 서로를 감시하는 느낌보다 같은 사실을 맞추는 느낌을 받게 해야 해요.
 
-## Attendance-Specific Patterns
+| 상황                    | 피해야 할 문구   | 권장 문구                                                          |
+| ----------------------- | ---------------- | ------------------------------------------------------------------ |
+| 전날 퇴근 누락 헤드라인 | `퇴근 누락`      | `어제 퇴근 기록이 아직 없어요.`                                    |
+| 출근 누락 안내          | `출근 기록 없음` | `오늘 출근 기록이 아직 없어요.`                                    |
+| 요청 반려 안내          | `반려됨`         | `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.` |
+| 관리자 검토 큐          | `문제 직원 3명`  | `오늘 확인이 필요한 근태 3건이 있어요.`                            |
 
-### Fact-Led Warning Headlines
+## 2. 능동적 말하기
 
-- Prefer `어제 퇴근 기록이 아직 없어요.` over speculative question-led headlines.
-- Prefer `오늘 출근 기록이 아직 없어요.` over generic missing-record language.
-- Prefer `퇴근 시도가 확인되지 않았어요.` over vague error-only summaries.
+가능한 한 능동형으로 말해요.
+제품이 무엇을 확인했고, 사용자가 지금 무엇을 할 수 있는지 바로 드러나야 해요.
+수동형은 책임을 흐리거나 다음 행동을 숨기기 쉬워요.
 
-### Carry-Over Correction Copy
+### 됐어요 → 했어요
 
-- The top carry-over surface should lead with the factual state first.
-- Use a supportive follow-up explanation such as `이미 퇴근했다면 퇴근 시간을 정정 요청할 수 있어요.`
-- The primary headline can be `어제 퇴근 기록이 아직 없어요.` when the product knows the carry-over problem exists.
-- The default primary CTA should describe the recovery action directly, for example `어제 퇴근 시간 정정 요청`.
-- If the user already has a pending request for the same carry-over problem, replace the duplicate-request CTA with status language such as `상태 확인`.
-- If the user already has a `rejected` or `revision_requested` request for the same carry-over problem, replace the duplicate-request CTA with review or resubmission language such as `사유 확인` or `다시 제출`.
-- Keep speculative questions such as `이미 퇴근하셨나요?` inside the follow-up flow only. Do not use them as the top headline or the primary CTA on the carry-over surface.
+결과만 던지기보다, 누가 어떤 행동을 했는지 보이게 써요.
 
-### Request-State Copy
+| 피해야 할 문구            | 권장 문구               |
+| ------------------------- | ----------------------- |
+| `출근 처리가 완료됐어요.` | `출근을 확인했어요.`    |
+| `휴가 신청이 접수됐어요.` | `휴가 신청을 받았어요.` |
+| `반려가 처리됐어요.`      | `검토 결과를 남겼어요.` |
 
-- Use copy that keeps the review reason and the next action together.
-- Prefer `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.` over a bare `반려됨`.
-- Keep request status language aligned between employee and admin surfaces so both sides describe the same current state.
-- For a pending carry-over correction, prefer copy such as `어제 퇴근 시간 정정 요청을 검토하고 있어요. 진행 상태를 확인할 수 있어요.`
-- For a rejected or `revision_requested` carry-over correction, prefer copy such as `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.`
-- For reviewed non-approved leave top-surface suppression, prefer CTA copy such as `상단에서 숨기기` and restore copy such as `다시 상단에 표시`.
-- Do not label leave top-surface suppression as `삭제`, `해결`, `알림 끄기`, or a temporary close such as `닫기`.
-- When a reviewed non-approved leave request has been hidden from top auto-surfacing, keep history or request-context copy explicit that the record, review reason, and resubmission path still remain available.
+### `~었` 줄이기
 
-## Question-Form Exceptions
+불필요하게 과거형을 겹치지 않아요.
+상태가 지금도 유효하면 지금 시점의 문장처럼 읽히게 써요.
 
-Question-form copy is allowed only when the product cannot determine the answer itself and needs a user judgment.
+| 피해야 할 문구              | 권장 문구                 |
+| --------------------------- | ------------------------- |
+| `정정 요청을 제출했었어요.` | `정정 요청을 제출했어요.` |
+| `사유를 입력해 두셨어요.`   | `사유를 입력했어요.`      |
 
-Good uses in this product:
+### 동사로 바꿔 쓰기
 
-- a confirmation question inside a prefilled carry-over correction flow
-- a user-input prompt where the product genuinely does not know whether the user already completed an action, such as an in-flow confirmation like `이미 퇴근하셨나요?`
+명사만 나열하지 말고, 동사로 풀어서 써요.
+특히 CTA와 상태 설명은 사용자가 바로 행동으로 옮길 수 있게 끝을 동사로 여는 편이 좋아요.
 
-Question-form copy should not be the default for:
+| 피해야 할 문구                          | 권장 문구                                       |
+| --------------------------------------- | ----------------------------------------------- |
+| `근태 이상 확인 필요`                   | `근태 이상을 확인해 주세요.`                    |
+| `반려 사유 확인`만 본문에 반복          | `반려된 이유를 확인하고 다시 제출할 수 있어요.` |
+| `퇴근 누락 정정 요청`을 설명문으로 사용 | `빠진 퇴근 시간을 정정 요청할 수 있어요.`       |
 
-- known missing-record states
-- top-level warning headlines
-- primary CTA labels
+## 3. 긍정적 말하기
 
-## Relationship to Other Docs
+부정형을 무조건 금지하는 것은 아니에요.
+다만 사용자가 할 수 있는 행동이나 남아 있는 가능성이 있다면, 그 길을 같이 보여줘요.
+사실을 흐리지 않는 선에서 긍정형으로 말해요.
 
-- Update `docs/ui-guidelines.md` when copy rules affect surface structure or CTA placement.
-- Update `docs/feature-requirements.md` when copy rules affect user-visible workflow expectations.
-- Keep raw discussion provenance in `docs/product-spec-context.md` when a new writing rule is first debated before it is promoted here.
+### 없어요 → 있어요
+
+| 상황                              | 피해야 할 문구                | 권장 문구                                            |
+| --------------------------------- | ----------------------------- | ---------------------------------------------------- |
+| 같은 날짜에 이미 요청이 있는 경우 | `다시 요청할 수 없어요.`      | `이미 제출한 요청의 상태를 확인할 수 있어요.`        |
+| 휴가 신청이 막힌 날짜             | `이 날짜는 신청할 수 없어요.` | `다른 날짜로 휴가를 신청할 수 있어요.`               |
+| 근태 정정이 검토 중인 경우        | `새 요청을 보낼 수 없어요.`   | `지금은 제출한 요청의 진행 상태를 확인할 수 있어요.` |
+
+### 에러 메시지
+
+에러 문구는 막혔다는 사실만 말하지 말고, 다음 행동을 같이 말해요.
+
+| 상황           | 피해야 할 문구           | 권장 문구                                                                       |
+| -------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| 비콘 검증 실패 | `비콘을 찾을 수 없어요.` | `비콘이 확인되면 출근할 수 있어요. 지금은 정정 요청으로 기록을 남길 수 있어요.` |
+| 퇴근 시도 실패 | `퇴근 실패`              | `퇴근 시도가 확인되지 않았어요. 필요하면 퇴근 시간을 정정 요청할 수 있어요.`    |
+
+::: tip 다이얼로그 왼쪽 버튼은 `닫기`
+다이얼로그 왼쪽 버튼은 `닫기`로 맞춰요.
+`취소`는 사용자가 하던 작업이 취소됐다고 오해할 수 있어요.
+:::
+
+### 서비스를 일부만 쓸 수 있을 때
+
+제품 전체를 못 쓰는 것처럼 읽히지 않게 써요.
+특정 행동만 막혀 있다면, 지금 가능한 행동을 먼저 보여줘요.
+
+| 상황                       | 피해야 할 문구          | 권장 문구                                        |
+| -------------------------- | ----------------------- | ------------------------------------------------ |
+| 검토 중이라 수정 제출 불가 | `수정할 수 없어요.`     | `지금은 검토 중이에요. 상태를 확인할 수 있어요.` |
+| 관리자 검토가 필요한 상태  | `자동 처리되지 않아요.` | `관리자 검토 후 반영돼요.`                       |
+
+## 4. 캐주얼한 경어
+
+`~시겠어요?`, `시나요?`, `~께`, `계시다`, `여쭈다` 같은 과한 경어는 쓰지 않아요.
+사무적이고 딱딱한 말투보다, 친절하지만 가볍게 읽히는 말투가 더 잘 맞아요.
+
+### 동사에서 `~시` 빼기
+
+| 피해야 할 문구              | 권장 문구                                           |
+| --------------------------- | --------------------------------------------------- |
+| `사유를 입력해 주시겠어요?` | `사유를 입력해 주세요.`                             |
+| `다시 제출하시겠어요?`      | `다시 제출할 수 있어요.` 또는 `다시 제출해 주세요.` |
+
+### `계시다` → `있다`
+
+| 피해야 할 문구               | 권장 문구                  |
+| ---------------------------- | -------------------------- |
+| `검토 중이신 요청이 있어요.` | `검토 중인 요청이 있어요.` |
+| `대기 중이신 팀원이 있어요.` | `대기 중인 팀원이 있어요.` |
+
+### `여쭈다` → `확인하다`, `묻다`
+
+| 피해야 할 문구               | 권장 문구                      |
+| ---------------------------- | ------------------------------ |
+| `퇴근 시간을 여쭙고 있어요.` | `퇴근 시간을 확인하고 있어요.` |
+| `사유를 여쭤볼게요.`         | `사유를 물어볼게요.`           |
+
+### `께` → `에게`
+
+| 피해야 할 문구                | 권장 문구                       |
+| ----------------------------- | ------------------------------- |
+| `관리자께 요청을 전달했어요.` | `관리자에게 요청을 전달했어요.` |
+| `팀장님께 확인해 주세요.`     | `팀장에게 확인해 주세요.`       |
+
+### `~시`를 빼면 어색할 때
+
+기계적으로 경어만 빼지 말고, 알고 싶은 정보를 주어로 다시 세워서 써요.
+
+| 피해야 할 문구          | 권장 문구                 |
+| ----------------------- | ------------------------- |
+| `언제 퇴근하셨나요?`    | `퇴근 시간은 언제인가요?` |
+| `어떤 사유로 쉬시나요?` | `쉬는 사유는 무엇인가요?` |
+
+## 5. `{명사} + {명사}` 쓰지 않기
+
+명사를 겹쳐 쓰면 딱딱하고 뜻이 늦게 들어와요.
+한자어 명사는 가능하면 동사나 쉬운 문장으로 풀어 써요.
+
+### 한자어 풀어쓰기
+
+| 피해야 할 문구        | 권장 문구                    |
+| --------------------- | ---------------------------- |
+| `근태 이상 발생`      | `근태 이상이 생겼어요.`      |
+| `요청 반려 처리`      | `요청을 반려했어요.`         |
+| `출근 기록 확인 필요` | `출근 기록을 확인해 주세요.` |
+
+### 풀어쓰기 어려울 때
+
+완전히 바꾸기 어렵다면, 최소한 문장처럼 이어지게 풀어요.
+
+| 피해야 할 문구        | 권장 문구                              |
+| --------------------- | -------------------------------------- |
+| `근태 정정 요청 상태` | `근태 정정 요청이 어디까지 진행됐는지` |
+| `휴가 승인 대기 상태` | `휴가 신청을 지금 검토하고 있는 상태`  |
+
+## 6. 예외 규칙
+
+기본 규칙을 그대로 쓰면 오히려 어색하거나 덜 정확한 경우가 있어요.
+아래 경우만 예외를 허용해요.
+
+### 질문형은 제품이 답을 모를 때만 써요
+
+질문형은 제품이 이미 답을 아는 상황에서 쓰지 않아요.
+특히 top headline과 primary CTA에서는 질문형을 금지해요.
+
+| 상황                     | 피해야 할 문구       | 권장 문구                       |
+| ------------------------ | -------------------- | ------------------------------- |
+| 전날 퇴근 누락 헤드라인  | `혹시 퇴근하셨나요?` | `어제 퇴근 기록이 아직 없어요.` |
+| carry-over CTA           | `퇴근하셨나요?`      | `어제 퇴근 시간 정정 요청`      |
+| follow-up flow 내부 확인 | `-`                  | `이미 퇴근했나요?`              |
+
+질문형을 써도 되는 경우:
+
+- 제품이 사용자의 판단 없이는 사실을 확정할 수 없을 때
+- prefilled follow-up flow 안에서 마지막 확인이 필요할 때
+- 입력을 시작하기 전에 사용자의 선택을 받아야 할 때
+
+### 사실형 헤드라인 + 행동형 CTA를 같이 써요
+
+제품이 문제를 이미 알고 있다면, 헤드라인은 사실을 말하고 CTA는 행동을 말해요.
+
+| 상황           | 헤드라인                         | 보조 문구                                            | CTA                        |
+| -------------- | -------------------------------- | ---------------------------------------------------- | -------------------------- |
+| 전날 퇴근 누락 | `어제 퇴근 기록이 아직 없어요.`  | `이미 퇴근했다면 퇴근 시간을 정정 요청할 수 있어요.` | `어제 퇴근 시간 정정 요청` |
+| 오늘 출근 누락 | `오늘 출근 기록이 아직 없어요.`  | `출근이 늦어졌거나 기록이 빠졌다면 확인해 주세요.`   | `출근 기록 확인`           |
+| 퇴근 시도 실패 | `퇴근 시도가 확인되지 않았어요.` | `필요하면 퇴근 시간을 정정 요청할 수 있어요.`        | `퇴근 시간 정정 요청`      |
+
+### carry-over 요청 상태는 상태에 맞게 CTA를 바꿔요
+
+같은 문제로 이미 요청이 있으면, 새 요청을 권하지 않아요.
+
+| 상태                 | 헤드라인 예시                       | 본문 예시                                           | CTA 예시    |
+| -------------------- | ----------------------------------- | --------------------------------------------------- | ----------- |
+| `pending`            | `어제 퇴근 기록을 확인하고 있어요.` | `제출한 정정 요청의 진행 상태를 확인할 수 있어요.`  | `상태 확인` |
+| `rejected`           | `조정이 필요해요.`                  | `사유를 확인하고 수정해서 다시 제출할 수 있어요.`   | `사유 확인` |
+| `revision_requested` | `보완이 필요해요.`                  | `남긴 사유를 확인하고 수정해서 다시 제출해 주세요.` | `다시 제출` |
+
+### 검토 결과는 이유와 다음 행동을 같이 보여줘요
+
+상태 이름만 던지지 말고, 왜 그런지와 다음 행동을 같이 보여줘요.
+
+| 피해야 할 문구 | 권장 문구                                                          |
+| -------------- | ------------------------------------------------------------------ |
+| `반려됨`       | `조정이 필요해요. 사유를 확인하고 수정해서 다시 제출할 수 있어요.` |
+| `보완 요청`    | `보완이 필요해요. 남긴 사유를 확인하고 다시 제출해 주세요.`        |
+| `승인 대기`    | `검토 중이에요. 진행 상태를 확인할 수 있어요.`                     |
+
+### 검토 완료된 비승인 휴가 요청은 숨길 수 있어도 사라지지 않아요
+
+reviewed non-approved leave request를 top correction tier에서만 숨길 때는,
+요청 자체가 사라지거나 해결된 것처럼 말하지 않아요.
+
+| 상황                    | 피해야 할 문구 | 권장 문구                                                 |
+| ----------------------- | -------------- | --------------------------------------------------------- |
+| 상단 노출만 숨길 때     | `삭제`         | `상단에서 숨기기`                                         |
+| 다시 상단으로 복원할 때 | `다시 알림`    | `다시 상단에 표시`                                        |
+| 숨김 상태 설명          | `해결됐어요.`  | `숨겨도 요청 이력과 검토 의견은 그대로 확인할 수 있어요.` |
+| 일시 닫기처럼 보일 때   | `닫기`         | `상단에서 숨기기`                                         |
+| 알림 제어처럼 보일 때   | `알림 끄기`    | `상단에서 숨기기`                                         |
+
+### 관리자 reviewed-history는 직원 액션 CTA처럼 쓰지 않아요
+
+관리자 화면의 `completed`와 `all`에서 reviewed non-approved request는
+직원이 다시 제출해야 하는 작업을 관리자에게 직접 안내하는 영역이 아니에요.
+이 영역은 검토 결과와 이유를 보여주는 history/context로 써요.
+
+| 상황                                   | 피해야 할 문구                           | 권장 문구                                                         |
+| -------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| 관리자 detail에서 `revision_requested` | `사유를 확인하고 다시 제출해 주세요.`    | `보완 요청 사유를 남겼어요. 이 요청은 검토 완료 이력으로 남아요.` |
+| 관리자 detail에서 `rejected`           | `직원이 수정해서 다시 제출할 수 있어요.` | `반려 사유를 확인할 수 있어요. 이 요청은 검토 완료 이력이에요.`   |
+| 관리자 row 상태 설명                   | `직원 응답 대기`                         | `검토 완료`                                                       |
+
+### 부드럽지만 흐리지 않게 써요
+
+이 제품은 협업 도구처럼 말해야 하지만, 문제의 심각성을 감추면 안 돼요.
+비난하지 않되, 사실과 다음 행동은 분명하게 남겨요.
+
+| 피해야 할 문구                        | 권장 문구                                                          |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| `문제 직원 3명`                       | `오늘 확인이 필요한 근태 3건이 있어요.`                            |
+| `지각자를 관리하세요.`                | `지금 확인이 필요한 근태를 먼저 살펴봐요.`                         |
+| `누락됐지만 나중에 처리할 수 있어요.` | `기록이 빠졌어요. 지금 정정 요청을 남기면 더 빨리 맞출 수 있어요.` |
+
+이 원칙의 목적은 분위기를 무조건 부드럽게 만드는 데 있지 않아요.
+관리자와 팀원 모두가 이 시스템을 "나를 통제하는 도구"가 아니라 "실수를 빨리 맞추고 일을 덜 꼬이게 해 주는 도구"로 느끼게 만드는 데 있어요.
+
+## 다른 문서와의 관계
+
+- 레이아웃, surface 우선순위, interaction 규칙은 `docs/ui-guidelines.md`를 따라요.
+- 사용자에게 보여야 하는 동작과 흐름은 `docs/feature-requirements.md`를 따라요.
+- 말투 규칙이 처음 논의된 배경이나 아직 승격 전인 논의는 `docs/product-spec-context.md`에 남겨요.
+- 이 문서의 규칙을 바꾸면 관련된 UI/feature 문서도 같은 변경에서 같이 맞춰요.

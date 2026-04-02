@@ -48,7 +48,9 @@ This repository is a single-project Next.js 16 App Router application for the Be
 - List files in `docs/` before starting each task, and keep `docs/` up-to-date.
 - All repository-wide rules must be defined in the appropriate AGENTS.md.
 - Update the relevant source-of-truth documents in the same change whenever routes, API payloads, data vocabulary, or UI rules change.
-- Write code, comments, and documentation in English.
+- Write code and code comments in English.
+- Maintain source-of-truth documents in English by default, except `docs/ux-writing-guidelines.md`, which is intentionally maintained in Korean because it defines Korean UX copy.
+- Treat Korean as the shipped in-product language for the current assignment scope. Do not infer English UI copy from the repository's default documentation language.
 - Store repository text files with LF line endings. Reserve CRLF only for Windows-only scripts such as `.bat` and `.cmd`.
 - When introducing a workaround, leave sufficient comments that explain why it exists, its scope, and the conditions for removing it.
 - Prefer enum types over strings whenever possible.
