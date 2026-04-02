@@ -142,17 +142,22 @@ Required UI:
 
 - a request table covering manual attendance requests and leave requests
 - filter tabs for needs review, completed, and all
+- default landing tab is `needs_review`; initial load uses the tab only and does not imply additional default text or date filters
 - a queue-first review workspace where the request table is the primary entry surface and the selected request drives supporting selected-date context plus detail
+- `needs_review` rows are ordered newest pending request first
 - approve, reject, and request-revision actions anchored in actionable request detail rather than queue rows
 - explicit review-comment input when rejecting a request or requesting revision
 - visible request-chain context that shows the active request, the effective status, and any earlier review comment that still explains the current state
+- `governingReviewComment` remains visible as a row/detail signal when unresolved rationale still governs
+- minimum row context before opening detail includes employee block, request type/subtype, primary target date, current/effective state cue, one-line reason, and at most two compact chips
 - queue rows that explain why the request matters before detail is opened, while final review actions remain detail-only
 - reviewed non-approved requests should be described as completed review history on the admin side rather than as admin-writable pending work on the same request record
 - reviewed non-approved requests should appear in `completed` and `all` only, never in `needs_review`
 - within `completed` and `all`, reviewed non-approved requests should remain visible as history/context rather than as a separate admin queue state
 - `completed` should keep the same workspace grammar as `needs_review`, but with lower emphasis and history-first reading
 - `all` should section actionable review work ahead of completed review history rather than mixing both into one undifferentiated list
-- within `completed`, approved or withdrawn results should remain visually distinct from reviewed non-approved history and should appear ahead of that history section
+- within `completed`, approved or withdrawn results should remain visually distinct from reviewed non-approved history, should appear ahead of that history section, approved rows should appear before withdrawn rows inside the first completed-history section, approved rows should sort by latest review activity descending, withdrawn rows should sort by their original submission timestamp because they have no review timestamp, and reviewed non-approved history should sort by latest review activity descending
+- the completed section inside `all` should preserve the same approved/withdrawn-before-reviewed-non-approved section order and the same per-section sort keys
 - admin-side next action for reviewed non-approved history should be treated as no further admin action on the same record, even when employee pages still expose a page-local resubmission path
 - admin completed-history detail should remain read-only, use quiet outcome footing, and should not show employee-resubmit CTA copy or employee-only suppression metadata
 - post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval
@@ -164,7 +169,7 @@ Required UI:
 
 Decision points for later issue planning:
 
-- whether bulk approval is needed in the first pass
+- bulk approve/reject stays out of scope for v1
 - whether any future product phase should allow exceptional administrative revocation of approved requests beyond current scope; see issue `#53`
 
 ## Cross-Screen UX Expectations

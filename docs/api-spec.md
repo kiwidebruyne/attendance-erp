@@ -930,17 +930,18 @@ Returns the request-review queue for admins.
 
 Query parameters:
 
-- `view`: optional `needs_review`, `completed`, or `all`
+- `view`: optional `needs_review`, `completed`, or `all`; defaults to `needs_review` when omitted
 
 Response notes:
 
 - each item uses `Request Status` plus relation fields and the shared `Request Chain Projection`
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
 - `governingReviewComment` stays populated while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up
-- `needs_review` groups chains whose active request has `status = pending`
-- `completed` groups chains whose effective status is `approved`, `withdrawn`, `revision_requested`, or `rejected` and which have no active follow-up
-- `all` includes both actionable review work and completed review history
+- `needs_review` groups chains whose active request has `status = pending` and should be ordered newest pending request first
+- `completed` groups chains whose effective status is `approved`, `withdrawn`, `revision_requested`, or `rejected` and which have no active follow-up; reviewed non-approved items with no active follow-up remain completed history only. Keep approved/withdrawn results ahead of reviewed non-approved history, place approved rows before withdrawn rows inside that first section, order approved items by latest review activity descending, order withdrawn items by their original submission timestamp (`submittedAt` for manual-attendance items, `requestedAt` for leave items), and order reviewed non-approved items by latest review activity descending
+- `all` includes both actionable review work and completed review history; keep the same approved/withdrawn-before-reviewed-non-approved section order inside the completed portion, using the same per-section sort keys as `completed`
 - admin clients may visually separate reviewed non-approved items from approved or withdrawn results inside `completed` and `all`
+- `governingReviewComment` should remain visible in row and detail projections while unresolved rationale still governs
 - request-chain semantics, reviewed-request immutability, and follow-up workflow rules are defined in `docs/request-lifecycle-model.md`
 
 Response:
