@@ -74,8 +74,8 @@ Edge cases to keep visible during implementation:
 
 Required UI:
 
-- a stable top summary tier that always shows one combined leave-balance card plus calm current-state counts for `approved`, `pending`, `rejected`, and `revision_requested` chains rather than escalating plain pending requests into the top correction surface
-- a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state
+- a stable top summary tier that always shows one combined leave-balance card plus calm current-state counts for `revision_requested`, `approved`, `pending`, and `rejected` chains rather than escalating plain pending requests into the top correction surface
+- a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state, rendered as a table-style recovery surface rather than an expanded detail card
 - a full-width leave history row below the planning workspace so planning stays calendar-first while history remains the required recovery surface
 - a lower planning workspace that keeps the leave-only calendar, selected-date context, and inline composer adjacent on desktop and stacked in the same order on narrow widths
 - one inline leave composer in that planning workspace that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
@@ -84,10 +84,10 @@ Required UI:
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
 - reviewed non-approved leave requests should read as completed admin review with a clear employee-side resubmission path; `revision_requested` should emphasize correction guidance, while `rejected` should emphasize refusal of the current version without removing the linked resubmission path
 - a prefilled follow-up path for leave `resubmission`, approved-state `change`, and approved-state `cancel` flows
-- when multiple reviewed non-approved leave requests qualify for top correction surfacing, a compact candidate list plus one expanded detail that defaults to the most recently reviewed eligible request
-- top correction detail that keeps the prior request summary, reviewed outcome, review reason, next action, primary `resubmit`, and the hide/show-top affordance together
+- when multiple reviewed non-approved leave requests qualify for top correction surfacing, show them together in one table so the user can compare request, status, review note, and action without switching cards
+- top correction rows should keep the prior request summary, reviewed outcome, review reason, and primary `resubmit` action visible together
 - reviewed non-approved leave requests may be hidden from top correction auto-surfacing one reviewed request at a time without removing history, rationale, or linked resubmission context
-- history must remain the required recovery surface for a previously suppressed reviewed leave request, while the top correction detail or selected-date context may add optional restore or resubmission entry points without replacing history
+- history must remain the required recovery surface for a previously suppressed reviewed leave request, while the top correction table or selected-date context may add optional restore or resubmission entry points without replacing history
 - employees may restore a previously suppressed reviewed leave request from history or selected-date context surfaces when they want it back in the top correction tier
 - suppressing one reviewed leave request must not hide a different request that only shares the same date, leave type, or root chain history
 - selecting a date with existing leave context must show the governing chain context before offering a blank new-request flow

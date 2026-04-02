@@ -20,7 +20,6 @@ import {
 } from "@/app/(erp)/(employee)/attendance/leave/_lib/format";
 import type { LeavePageData } from "@/app/(erp)/(employee)/attendance/leave/_lib/page-data";
 import {
-  formatChainMenuLabel,
   type LeaveChainAction,
   type LeaveChainModel,
   type LeaveComposerDraft,
@@ -59,14 +58,16 @@ import { cn } from "@/lib/utils";
 type LeavePageScreenProps = {
   composerChain: LeaveChainModel | null;
   composerDraft: LeaveComposerDraft | null;
-  composerScrollRequest: number;
-  correctionCandidateId: string | null;
+  composerScrollIntent: Readonly<{
+    date: string;
+    token: number;
+  }> | null;
   data: LeavePageData;
   isSubmitting: boolean;
   mutationError: string | null;
   onClearComposer: () => void;
+  onComposerScrollComplete: () => void;
   onComposerFieldChange: (patch: Partial<LeaveComposerDraft>) => void;
-  onCorrectionCandidateChange: (rootRequestId: string) => void;
   onMonthChange: (delta: number) => void;
   onOpenNewComposer: () => void;
   onRunChainAction: (action: LeaveChainAction) => void;
@@ -278,6 +279,17 @@ function SummaryTier({
           <div className="grid flex-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div className="space-y-1.5">
               <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
+                다시 제출 필요
+              </p>
+              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
+                {viewModel.revisionRequestedCount}건
+              </p>
+              <p className="text-sm text-secondary">
+                보완 후 다시 제출해야 해요
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
                 승인됨
               </p>
               <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
@@ -309,17 +321,6 @@ function SummaryTier({
                 검토 결과를 확인하고 다시 정리해요
               </p>
             </div>
-            <div className="space-y-1.5">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                다시 제출 필요
-              </p>
-              <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
-                {viewModel.revisionRequestedCount}건
-              </p>
-              <p className="text-sm text-secondary">
-                보완 후 다시 제출해야 해요
-              </p>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -328,15 +329,11 @@ function SummaryTier({
 }
 
 function TopCorrectionTier({
-  candidateId,
   data,
-  onChange,
   onRunChainAction,
   viewModel,
 }: Readonly<{
-  candidateId: string | null;
   data: LeavePageData;
-  onChange: (rootRequestId: string) => void;
   onRunChainAction: (action: LeaveChainAction) => void;
   viewModel: LeavePageViewModel;
 }>) {
@@ -344,21 +341,9 @@ function TopCorrectionTier({
     return null;
   }
 
-  const activeCandidate =
-    viewModel.correctionCandidates.find(
-      (candidate) => candidate.rootRequestId === candidateId,
-    ) ?? viewModel.correctionCandidates[0];
-
-  if (activeCandidate === undefined) {
-    return null;
-  }
-
-  const companyEventLabel = getCompanyEventLabel(activeCandidate, data);
-  const conflictMessages = getConflictMessages(activeCandidate, data);
-
   return (
     <Card>
-      <CardHeader className="gap-4 border-b border-border/80 pb-5">
+      <CardHeader className="gap-2 border-b border-border/80 pb-5">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -367,110 +352,101 @@ function TopCorrectionTier({
                 className="size-4 text-status-danger"
               />
               <CardTitle className="text-xl tracking-[-0.03em]">
-                다시 맞춰볼 휴가 요청이 있어요
+                다시 제출이 필요한 요청
               </CardTitle>
             </div>
             <CardDescription className="text-sm leading-6">
-              검토가 끝난 비승인 요청만 모아 보여드려요
+              검토가 끝난 비승인 요청을 모아 보고 바로 다시 제출해요
             </CardDescription>
           </div>
           <Badge variant="destructive">{viewModel.attentionCount}건</Badge>
         </div>
-
-        {viewModel.correctionCandidates.length < 2 ? null : (
-          <div className="flex flex-wrap gap-2">
-            {viewModel.correctionCandidates.map((candidate) => (
-              <Button
-                key={candidate.rootRequestId}
-                onClick={() => onChange(candidate.rootRequestId)}
-                size="sm"
-                variant={
-                  candidate.rootRequestId === activeCandidate.rootRequestId
-                    ? "secondary"
-                    : "outline"
-                }
-              >
-                {formatChainMenuLabel(candidate)}
-              </Button>
-            ))}
-          </div>
-        )}
       </CardHeader>
-      <CardContent className="grid gap-6 pt-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant={getStatusBadgeVariant(activeCandidate)}>
-              {activeCandidate.statusLabel}
-            </Badge>
-            <span className="text-sm text-secondary">
-              {formatLeaveDateTimeLabel(
-                activeCandidate.latestRequest.reviewedAt,
-              )}
-            </span>
-          </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>휴가 일정</TableHead>
+            <TableHead>유형</TableHead>
+            <TableHead>현재 상태</TableHead>
+            <TableHead>검토 메모</TableHead>
+            <TableHead className="text-right">작업</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {viewModel.correctionCandidates.map((candidate) => {
+            const companyEventLabel = getCompanyEventLabel(candidate, data);
+            const conflictMessages = getConflictMessages(candidate, data);
 
-          <div className="space-y-2">
-            <p className="text-lg font-medium tracking-[-0.03em] text-foreground">
-              {activeCandidate.correctionHeadline ??
-                "사유를 다시 확인해 주세요"}
-            </p>
-            <p className="text-sm leading-6 text-secondary">
-              {activeCandidate.currentSummary}
-            </p>
-          </div>
-
-          {activeCandidate.reviewComment === null ? null : (
-            <Alert className="border-status-danger-soft bg-status-danger-soft/40">
-              <CircleAlertIcon
-                aria-hidden="true"
-                className="size-4 text-status-danger"
-              />
-              <AlertTitle className="text-status-danger">검토 사유</AlertTitle>
-              <AlertDescription>
-                {activeCandidate.reviewComment}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {companyEventLabel === null &&
-          conflictMessages.length === 0 ? null : (
-            <div className="rounded-[14px] border border-border/80 bg-muted/55 p-4">
-              <p className="text-sm font-medium text-foreground">
-                다시 제출 전에 함께 볼 내용
-              </p>
-              <div className="mt-3 flex flex-col gap-2 text-sm text-secondary">
-                {companyEventLabel === null ? null : (
-                  <span>운영 일정: {companyEventLabel}</span>
-                )}
-                {conflictMessages.map((message) => (
-                  <span key={message}>{message}</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="flex flex-col justify-between gap-4 rounded-[16px] border border-border/80 bg-surface-subtle p-5">
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-foreground">다음 행동</p>
-            <p className="text-sm leading-6 text-secondary">
-              사유를 반영한 새 요청으로 다시 제출하면 같은 체인 안에서 이어서
-              검토할 수 있어요
-            </p>
-          </div>
-          <Button
-            className="w-full"
-            onClick={() => {
-              if (activeCandidate.primaryAction !== null) {
-                onRunChainAction(activeCandidate.primaryAction);
-              }
-            }}
-            variant="secondary"
-          >
-            {activeCandidate.primaryAction?.label ?? "다시 제출"}
-          </Button>
-        </div>
-      </CardContent>
+            return (
+              <TableRow key={candidate.rootRequestId}>
+                <TableCell className="align-top">
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">
+                      {candidate.currentSummary}
+                    </p>
+                    <p className="text-sm text-secondary">
+                      단계 {candidate.requests.length}개 체인
+                    </p>
+                  </div>
+                </TableCell>
+                <TableCell className="align-top text-sm text-secondary">
+                  {formatLeaveTypeLabel(candidate.latestRequest.leaveType)}
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="space-y-2">
+                    <Badge variant={getStatusBadgeVariant(candidate)}>
+                      {candidate.statusLabel}
+                    </Badge>
+                    <p className="text-sm text-secondary">
+                      {formatLeaveDateTimeLabel(candidate.latestActivityAt)}
+                    </p>
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="max-w-[320px] space-y-2 text-sm leading-6 text-secondary">
+                    <p className="line-clamp-2 text-status-danger">
+                      {candidate.reviewComment ?? "남긴 검토 메모가 없어요"}
+                    </p>
+                    {companyEventLabel === null ? null : (
+                      <p className="line-clamp-2">
+                        운영 일정: {companyEventLabel}
+                      </p>
+                    )}
+                    {conflictMessages.map((message) => (
+                      <p key={message} className="line-clamp-2">
+                        {message}
+                      </p>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="flex justify-end">
+                    {candidate.primaryAction === null ? (
+                      <span className="text-sm text-muted-foreground">-</span>
+                    ) : (
+                      <Button
+                        onClick={() =>
+                          onRunChainAction(candidate.primaryAction)
+                        }
+                        size="sm"
+                        variant={getActionButtonVariant(
+                          candidate.primaryAction,
+                        )}
+                      >
+                        {candidate.primaryAction.label}
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+      <div className="border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">
+        지금 다시 제출이 필요한 요청 {viewModel.attentionCount}건을 보여주고
+        있어요
+      </div>
     </Card>
   );
 }
@@ -1226,14 +1202,13 @@ function HistorySection({
 export function LeavePageScreen({
   composerChain,
   composerDraft,
-  composerScrollRequest,
-  correctionCandidateId,
+  composerScrollIntent,
   data,
   isSubmitting,
   mutationError,
   onClearComposer,
+  onComposerScrollComplete,
   onComposerFieldChange,
-  onCorrectionCandidateChange,
   onMonthChange,
   onOpenNewComposer,
   onRunChainAction,
@@ -1245,15 +1220,31 @@ export function LeavePageScreen({
   const composerContainerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (composerDraft === null || composerScrollRequest === 0) {
+    if (
+      composerDraft === null ||
+      composerScrollIntent === null ||
+      data.selectedDate !== composerScrollIntent.date
+    ) {
       return;
     }
 
-    composerContainerRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
+    const frame = window.requestAnimationFrame(() => {
+      composerContainerRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      onComposerScrollComplete();
     });
-  }, [composerDraft, composerScrollRequest]);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    composerDraft,
+    composerScrollIntent,
+    data.selectedDate,
+    onComposerScrollComplete,
+  ]);
 
   return (
     <div className="flex flex-1 flex-col gap-8">
@@ -1269,9 +1260,7 @@ export function LeavePageScreen({
       <SummaryTier data={data} viewModel={viewModel} />
 
       <TopCorrectionTier
-        candidateId={correctionCandidateId}
         data={data}
-        onChange={onCorrectionCandidateChange}
         onRunChainAction={onRunChainAction}
         viewModel={viewModel}
       />

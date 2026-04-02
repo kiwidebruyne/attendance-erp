@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 
 import { LeavePageScreen } from "@/app/(erp)/(employee)/attendance/leave/_components/leave-page-screen";
 import { buildDateTimeFromDateAndTime } from "@/app/(erp)/(employee)/attendance/leave/_lib/format";
@@ -51,12 +51,6 @@ function addMonths(month: string, delta: number) {
   return cursor.toISOString().slice(0, 10);
 }
 
-function getDefaultCorrectionCandidateId(
-  viewModel: ReturnType<typeof buildLeavePageViewModel>,
-) {
-  return viewModel.correctionCandidates[0]?.rootRequestId ?? null;
-}
-
 function upsertLeaveRequestOverview(
   overview: LeavePageData["overview"],
   request: LeavePageData["overview"]["requests"][number],
@@ -77,6 +71,11 @@ function getTargetRequest(chain: LeaveChainModel, action: LeaveChainAction) {
     chain.latestRequest
   );
 }
+
+type ComposerScrollIntent = Readonly<{
+  date: string;
+  token: number;
+}>;
 
 function buildDraftFromAction(
   chain: LeaveChainModel,
@@ -189,19 +188,14 @@ export function LeavePageClient({
   const [visibleMonth, setVisibleMonth] = useState(
     startOfMonth(initialData.selectedDate),
   );
-  const [correctionCandidateId, setCorrectionCandidateId] = useState<
-    string | null
-  >(getDefaultCorrectionCandidateId(viewModel));
   const [composerDraft, setComposerDraft] = useState<LeaveComposerDraft | null>(
     null,
   );
   const [composerChainRootId, setComposerChainRootId] = useState<string | null>(
     null,
   );
-  const [composerScrollRequest, setComposerScrollRequest] = useState(0);
-  const correctionCandidateKey = viewModel.correctionCandidates
-    .map((candidate) => candidate.rootRequestId)
-    .join("|");
+  const [composerScrollIntent, setComposerScrollIntent] =
+    useState<ComposerScrollIntent | null>(null);
   const visibleChainKey = viewModel.visibleChains
     .map((chain) => chain.rootRequestId)
     .join("|");
@@ -222,21 +216,6 @@ export function LeavePageClient({
   }, [initialData.overview]);
 
   useEffect(() => {
-    const correctionCandidateIds =
-      correctionCandidateKey.length === 0
-        ? []
-        : correctionCandidateKey.split("|");
-
-    setCorrectionCandidateId((current) => {
-      if (current !== null && correctionCandidateIds.includes(current)) {
-        return current;
-      }
-
-      return correctionCandidateIds[0] ?? null;
-    });
-  }, [correctionCandidateKey]);
-
-  useEffect(() => {
     const visibleChainIds =
       visibleChainKey.length === 0 ? [] : visibleChainKey.split("|");
 
@@ -248,6 +227,17 @@ export function LeavePageClient({
     }
   }, [composerChainRootId, visibleChainKey]);
 
+  const queueComposerScroll = useCallback((date: string) => {
+    setComposerScrollIntent((current) => ({
+      date,
+      token: (current?.token ?? 0) + 1,
+    }));
+  }, []);
+
+  const handleComposerScrollComplete = useCallback(() => {
+    setComposerScrollIntent(null);
+  }, []);
+
   const handleSelectDate = (date: string) => {
     if (date === initialData.selectedDate) {
       return;
@@ -255,7 +245,7 @@ export function LeavePageClient({
 
     setMutationError(null);
     startRoutingTransition(() => {
-      router.push(`/attendance/leave?date=${date}`);
+      router.push(`/attendance/leave?date=${date}`, { scroll: false });
     });
   };
 
@@ -267,13 +257,6 @@ export function LeavePageClient({
     }
 
     const targetRequest = getTargetRequest(chain, action);
-    setVisibleMonth(startOfMonth(targetRequest.date));
-
-    if (targetRequest.date !== initialData.selectedDate) {
-      startRoutingTransition(() => {
-        router.push(`/attendance/leave?date=${targetRequest.date}`);
-      });
-    }
 
     if (action.kind === "withdraw") {
       if (!window.confirm("검토 전에 이 요청을 철회할까요?")) {
@@ -290,6 +273,7 @@ export function LeavePageClient({
         setOptimisticOverview((current) =>
           upsertLeaveRequestOverview(current, request),
         );
+        setComposerScrollIntent(null);
         setComposerDraft(null);
         setComposerChainRootId(null);
         startRoutingTransition(() => {
@@ -305,9 +289,18 @@ export function LeavePageClient({
     }
 
     setMutationError(null);
+    setVisibleMonth(startOfMonth(targetRequest.date));
     setComposerChainRootId(chain.rootRequestId);
     setComposerDraft(buildDraftFromAction(chain, action));
-    setComposerScrollRequest((current) => current + 1);
+    queueComposerScroll(targetRequest.date);
+
+    if (targetRequest.date !== initialData.selectedDate) {
+      startRoutingTransition(() => {
+        router.push(`/attendance/leave?date=${targetRequest.date}`, {
+          scroll: false,
+        });
+      });
+    }
   };
 
   const handleSubmitComposer = async () => {
@@ -350,6 +343,7 @@ export function LeavePageClient({
         );
       }
 
+      setComposerScrollIntent(null);
       setComposerDraft(null);
       setComposerChainRootId(null);
       startRoutingTransition(() => {
@@ -366,23 +360,23 @@ export function LeavePageClient({
     <LeavePageScreen
       composerChain={composerChain}
       composerDraft={composerDraft}
-      composerScrollRequest={composerScrollRequest}
-      correctionCandidateId={correctionCandidateId}
+      composerScrollIntent={composerScrollIntent}
       data={initialData}
       isSubmitting={isSubmitting || isRouting}
       mutationError={mutationError}
       onClearComposer={() => {
+        setComposerScrollIntent(null);
         setComposerDraft(null);
         setComposerChainRootId(null);
         setMutationError(null);
       }}
+      onComposerScrollComplete={handleComposerScrollComplete}
       onComposerFieldChange={(patch) => {
         setMutationError(null);
         setComposerDraft((current) =>
           current === null ? current : { ...current, ...patch },
         );
       }}
-      onCorrectionCandidateChange={setCorrectionCandidateId}
       onMonthChange={(delta) => {
         setVisibleMonth((current) => addMonths(current, delta));
       }}
@@ -390,7 +384,7 @@ export function LeavePageClient({
         setMutationError(null);
         setComposerChainRootId(null);
         setComposerDraft(createNewComposerDraft(initialData.selectedDate));
-        setComposerScrollRequest((current) => current + 1);
+        queueComposerScroll(initialData.selectedDate);
       }}
       onRunChainAction={handleRunChainAction}
       onSelectDate={handleSelectDate}
