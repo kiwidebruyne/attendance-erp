@@ -229,6 +229,7 @@ function applyApprovedManualAttendanceWriteback(
 function toAdminRequestDecisionResponse(
   world: CanonicalSeedWorld,
   request: SeedRequest,
+  status: AdminRequestDecisionResponse["status"],
 ): AdminRequestDecisionResponse {
   const projection = buildRequestChainProjection(world, request.id);
 
@@ -239,7 +240,7 @@ function toAdminRequestDecisionResponse(
   return {
     id: request.id,
     requestType: request.requestType,
-    status: request.status,
+    status,
     reviewedAt: request.reviewedAt,
     reviewComment: request.reviewComment,
     governingReviewComment: projection.governingReviewComment,
@@ -577,7 +578,7 @@ export function reviewAdminRequest(
   },
 ): AdminRequestDecisionResponse {
   const request = ensureRequestIsWritable(world, requestId);
-  const nextStatus =
+  const nextStatus: AdminRequestDecisionResponse["status"] =
     decision.decision === "approve"
       ? "approved"
       : decision.decision === "reject"
@@ -604,7 +605,7 @@ export function reviewAdminRequest(
     applyApprovedManualAttendanceWriteback(world, request);
   }
 
-  return toAdminRequestDecisionResponse(world, request);
+  return toAdminRequestDecisionResponse(world, request, nextStatus);
 }
 
 function getRequestTimestampForSort(timestamp: string | number) {
