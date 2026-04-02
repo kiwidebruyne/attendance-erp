@@ -342,6 +342,52 @@ describe("admin request route handlers", () => {
     ).toThrowError(LeaveRequestConflictError);
   });
 
+  it("preserves the prior approved leave as effective when a follow-up change is rejected", async () => {
+    const response = await patchAdminRequestRoute(
+      "leave_request_emp_004_2026-04-16_change",
+      {
+        decision: "reject",
+        reviewComment: "The approved leave should stay unchanged.",
+      },
+    );
+    const body = adminRequestDecisionResponseSchema.parse(
+      await response.json(),
+    );
+    const world = getMockSeedWorld();
+    const overview = createSeedRepository({ world }).getEmployeeLeaveOverview({
+      employeeId: "emp_004",
+      date: "2026-04-16",
+    });
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      id: "leave_request_emp_004_2026-04-16_change",
+      status: "rejected",
+      reviewComment: "The approved leave should stay unchanged.",
+      governingReviewComment: "The approved leave should stay unchanged.",
+      activeRequestId: null,
+      activeStatus: null,
+      effectiveRequestId: "leave_request_emp_004_2026-04-16_root",
+      effectiveStatus: "approved",
+      nextAction: "none",
+    });
+    expect(overview.balance).toMatchObject({
+      totalDays: 15,
+      usedDays: 1,
+      remainingDays: 14,
+    });
+    expect(overview.selectedDateContext).toMatchObject({
+      date: "2026-04-16",
+      leaveConflict: {
+        effectiveApprovedLeaveContext: [
+          expect.objectContaining({
+            requestId: "leave_request_emp_004_2026-04-16_root",
+          }),
+        ],
+      },
+    });
+  });
+
   it("returns 404 for missing admin review targets", async () => {
     const response = await patchAdminRequestRoute("req_missing", {
       decision: "approve",

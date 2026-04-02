@@ -83,6 +83,28 @@ export function resolveEffectiveApprovedLeaveRequests(
     }
 
     if (
+      latestRequest !== null &&
+      latestRequest.parentRequestId !== null &&
+      (latestRequest.status === "rejected" ||
+        latestRequest.status === "revision_requested") &&
+      (latestRequest.followUpKind === "change" ||
+        latestRequest.followUpKind === "cancel")
+    ) {
+      const parentRequest =
+        sortedRequests.find(
+          (request) => request.id === latestRequest.parentRequestId,
+        ) ?? null;
+
+      if (
+        parentRequest?.status === "approved" &&
+        parentRequest.followUpKind !== "cancel"
+      ) {
+        effectiveApprovedRequests.push(parentRequest);
+        continue;
+      }
+    }
+
+    if (
       latestRequest?.status === "approved" &&
       latestRequest.followUpKind !== "cancel"
     ) {

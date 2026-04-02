@@ -315,24 +315,40 @@ export function buildRequestChainProjection(
     };
   }
 
-  const effectiveRequest = chainRequests.at(-1) ?? request;
+  const latestRequest = chainRequests.at(-1) ?? request;
+  const latestParentRequest =
+    latestRequest.parentRequestId === null
+      ? null
+      : (getRequestById(world, latestRequest.parentRequestId) ?? null);
+  const fallsBackToParentRequest =
+    latestRequest.status === "withdrawn" && latestParentRequest !== null;
+  const keepsApprovedParentEffective =
+    latestParentRequest?.status === "approved" &&
+    latestRequest.requestType === "leave" &&
+    (latestRequest.followUpKind === "change" ||
+      latestRequest.followUpKind === "cancel") &&
+    (latestRequest.status === "rejected" ||
+      latestRequest.status === "revision_requested");
   const fallbackEffectiveRequest =
-    effectiveRequest.status === "withdrawn" &&
-    effectiveRequest.parentRequestId !== null
-      ? (getRequestById(world, effectiveRequest.parentRequestId) ??
-        effectiveRequest)
-      : effectiveRequest;
+    fallsBackToParentRequest || keepsApprovedParentEffective
+      ? latestParentRequest
+      : latestRequest;
+  const governingReviewComment =
+    keepsApprovedParentEffective &&
+    (latestRequest.status === "rejected" ||
+      latestRequest.status === "revision_requested")
+      ? latestRequest.reviewComment
+      : fallbackEffectiveRequest.status === "rejected" ||
+          fallbackEffectiveRequest.status === "revision_requested"
+        ? fallbackEffectiveRequest.reviewComment
+        : null;
 
   return {
     activeRequestId: null,
     activeStatus: null,
     effectiveRequestId: fallbackEffectiveRequest.id,
     effectiveStatus: fallbackEffectiveRequest.status,
-    governingReviewComment:
-      fallbackEffectiveRequest.status === "rejected" ||
-      fallbackEffectiveRequest.status === "revision_requested"
-        ? fallbackEffectiveRequest.reviewComment
-        : null,
+    governingReviewComment,
     hasActiveFollowUp: false,
     nextAction: "none",
   };
