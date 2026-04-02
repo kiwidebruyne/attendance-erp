@@ -5,6 +5,7 @@ import {
   FileTextIcon,
   LayoutDashboardIcon,
 } from "lucide-react";
+import type { Route } from "next";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
@@ -25,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type ErpNavItem = {
-  href: string;
+  href: Route;
   icon: ComponentType<{ className?: string }>;
   label: string;
 };

@@ -1,7 +1,9 @@
+import type { Route } from "next";
+
 type PageRouteStubProps = {
   description: string;
   eyebrow: string;
-  route: string;
+  route: Route;
   title: string;
 };
 

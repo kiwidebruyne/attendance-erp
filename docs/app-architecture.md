@@ -44,6 +44,7 @@ It focuses on routing, layout, rendering boundaries, state placement, and the lo
 ## Recommended Route Organization
 
 - Use a shared ERP shell layout to host both employee and admin route groups without affecting the URL.
+- Keep known app routes as literal strings at `Link`, `redirect`, and shared nav data call sites so `typedRoutes` can validate them; if a route must be assembled dynamically, cast only the final validated value to `Route` instead of introducing wrapper helpers.
 - A recommended layout shape is:
 
 ```txt
