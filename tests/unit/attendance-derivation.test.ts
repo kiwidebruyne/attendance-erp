@@ -368,6 +368,32 @@ describe("attendance derivation", () => {
     ).toEqual(["attempt_failed"]);
   });
 
+  it("ignores stale closed-day attempts when deriving a non-workday display", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-30T12:00:00+09:00",
+        expectedWorkday: createExpectedWorkday({
+          isWorkday: false,
+          expectedClockInAt: null,
+          expectedClockOutAt: null,
+          adjustedClockInAt: null,
+          adjustedClockOutAt: null,
+          countsTowardAdminSummary: false,
+        }),
+        record: null,
+        attempts: [
+          createAttendanceAttempt({
+            status: "failed",
+            date: "2026-03-29",
+            attemptedAt: "2026-03-29T08:30:00+09:00",
+            failureReason: "BLE beacon not detected",
+          }),
+        ],
+        previousDayOpenRecord: null,
+      }).activeExceptions,
+    ).toEqual([]);
+  });
+
   it("keeps unresolved carry-over failed attempts visible after the cutoff", () => {
     expect(
       deriveAttendanceDisplay({

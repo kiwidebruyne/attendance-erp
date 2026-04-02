@@ -220,6 +220,20 @@ describe("shared contract schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("requires an active request when a follow-up is marked active", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_002",
+        effectiveStatus: "pending",
+        governingReviewComment: "Please attach the beacon retry details.",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
 });
 
 describe("employee attendance contracts", () => {

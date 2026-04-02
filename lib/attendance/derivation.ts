@@ -76,7 +76,9 @@ function getRequestedDate(
   previousDayOpenRecord: PreviousDayOpenRecord | null,
 ): string {
   const latestCurrentWorkdayAttempt = attempts.findLast(
-    (attempt) => attempt.date !== previousDayOpenRecord?.date,
+    (attempt) =>
+      attempt.date !== previousDayOpenRecord?.date &&
+      getDateInReferenceOffset(now, attempt.attemptedAt) === attempt.date,
   );
   const currentWorkdayDate =
     latestCurrentWorkdayAttempt?.date ??

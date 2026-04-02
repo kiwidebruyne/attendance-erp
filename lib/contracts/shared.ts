@@ -204,6 +204,7 @@ function validateRequestChainProjection(
 ) {
   const hasActiveRequestId = value.activeRequestId !== null;
   const hasActiveStatus = value.activeStatus !== null;
+  const hasActiveRequest = hasActiveRequestId && hasActiveStatus;
 
   if (hasActiveRequestId && !hasActiveStatus) {
     ctx.addIssue({
@@ -220,6 +221,15 @@ function validateRequestChainProjection(
       path: ["activeRequestId"],
       message:
         'Invalid input: "activeRequestId" is required when "activeStatus" is present',
+    });
+  }
+
+  if (value.hasActiveFollowUp && !hasActiveRequest) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["hasActiveFollowUp"],
+      message:
+        'Invalid input: "hasActiveFollowUp" requires both "activeRequestId" and "activeStatus"',
     });
   }
 }
