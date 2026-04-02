@@ -20,6 +20,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 | `DESIGN.md`                          | design-agent visual system                            | design tokens, component style, or visual guardrails change                                                             |
 | `docs/raw-assignment.md`             | raw assignment input and original reference material  | the provided assignment text or local visual reference asset changes                                                    |
 | `docs/product-spec-context.md`       | living raw product-spec discussion log                | cross-screen spec discussions, locked defaults, or open product questions change                                        |
+| `docs/seed-world-contract.md`        | deterministic mock seed world contract                | baseline date, calendar window, or seeded scenario composition change                                                   |
 | `docs/attendance-operating-model.md` | attendance runtime flow and timeline semantics        | attendance fact lifecycle, derived exception timing, or cross-screen attendance synchronization rules change            |
 | `docs/request-lifecycle-model.md`    | request workflow semantics and follow-up chains       | reviewed-request change rules, follow-up chains, or cross-screen request synchronization rules change                   |
 | `docs/leave-conflict-policy.md`      | leave operational conflict policy                     | company-event conflict, staffing-cap policy, or leave approval warning rules change                                     |
@@ -38,6 +39,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 - `DESIGN.md` owns the visual system and design-agent-facing tokens.
 - `docs/raw-assignment.md` owns the raw source text and local reference artifact list, but not interpreted product contracts.
 - `docs/product-spec-context.md` owns the living raw discussion log, cross-screen decision context, and open interview questions that have not yet been promoted into narrower contract documents.
+- `docs/seed-world-contract.md` owns the deterministic mock seed baseline, calendar window, employee composition, seeded scenario coverage, and read-only company-event inputs.
 - `docs/attendance-operating-model.md` owns the attendance fact lifecycle, derived attendance interpretation, and shared attendance timeline semantics.
 - `docs/request-lifecycle-model.md` owns reviewed-request lifecycle semantics, follow-up-chain rules, and shared employee/admin request-state synchronization.
 - `docs/leave-conflict-policy.md` owns company-event conflicts, staffing-cap policy, and leave-specific warning-versus-block defaults across employee and admin review surfaces.
@@ -51,6 +53,7 @@ These files are meant to guide implementation, issue breakdown, and later mainte
 - If a screen or workflow changes, update `docs/feature-requirements.md`.
 - If the source assignment or attached reference asset changes, update `docs/raw-assignment.md` and `docs/assets/` as needed.
 - If ongoing product-spec discussions establish new cross-screen principles, preserve raw context in `docs/product-spec-context.md` before promoting final decisions into narrower source-of-truth documents.
+- If the deterministic mock seed world, baseline date, or seeded scenario composition changes, update `docs/seed-world-contract.md` and any affected contract documents in the same change set.
 - If the attendance fact lifecycle, exception timing, or cross-screen attendance synchronization rules change, update `docs/attendance-operating-model.md` and any affected contract documents in the same change set.
 - If reviewed-request changes, follow-up-chain semantics, or request-state synchronization rules change, update `docs/request-lifecycle-model.md` and any affected contract documents in the same change set.
 - If company-event conflict policy, staffing-cap rules, or leave approval warning behavior changes, update `docs/leave-conflict-policy.md` and any affected feature or UI docs in the same change set.

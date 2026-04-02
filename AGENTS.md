@@ -116,6 +116,7 @@ Always consider using the shadcn mcp and shadcn skills first. Follow the mcp and
 - `docs/AGENTS.md`: documentation catalog, ownership matrix, and update triggers.
 - `docs/raw-assignment.md`: raw assignment input and local ERP reference image for documentation use.
 - `docs/product-spec-context.md`: living raw product-spec discussion log and cross-screen decision context.
+- `docs/seed-world-contract.md`: deterministic mock seed baseline, calendar window, and required scenario composition.
 - `docs/attendance-operating-model.md`: attendance runtime model, time-sequenced fact lifecycle, and shared exception semantics.
 - `docs/request-lifecycle-model.md`: request workflow model, follow-up-chain semantics, and shared employee/admin request synchronization rules.
 - `docs/leave-conflict-policy.md`: leave operational conflict policy, staffing-cap defaults, and company-event warning behavior.
