@@ -57,6 +57,7 @@ describe("admin attendance route helpers", () => {
     });
     expect(fetchAdminAttendanceList).not.toHaveBeenCalled();
     expect(result.todayResponse?.date).toBe("2026-04-13");
+    expect(result.todayExceptionRows).toEqual([]);
     expect(result.historyResponse).toBeUndefined();
   });
 
@@ -94,6 +95,7 @@ describe("admin attendance route helpers", () => {
     );
     expect(fetchAdminAttendanceToday).not.toHaveBeenCalled();
     expect(result.historyResponse?.filters.name).toBe("alex");
+    expect(result.todayExceptionRows).toBeUndefined();
     expect(result.todayResponse).toBeUndefined();
   });
 
@@ -156,7 +158,7 @@ describe("admin attendance loading and error states", () => {
     fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
 
     expect(
-      screen.getByText("관리자 근태 화면을 불러오지 못했어요."),
+      screen.getByText("팀 근태 화면을 불러오지 못했어요"),
     ).toBeInTheDocument();
     expect(reset).toHaveBeenCalledTimes(1);
   });

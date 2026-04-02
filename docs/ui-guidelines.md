@@ -63,22 +63,23 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 ## Exception Surface Rules
 
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
-- Treat `/admin/attendance` as a today-first operations surface. Historical review should stay secondary to the same-day exception workflow.
+- Treat `/admin/attendance` as a today-first operations surface. The today view should read top-to-bottom as exception table, one-row summary cards, then full team ledger. Historical review should stay secondary to the same-day exception workflow.
 - On `/attendance`, keep exception surfaces in their own left-side rail rather than merging them into the same card grid as the ledger.
 - Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
 - On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window so table-level problems stay discoverable before the ledger.
-- Action-needed admin summary cards should match the queue rows derived from the same fact set rather than drifting into approximate counts.
-- Contextual admin summary cards such as checked-in and on-leave should reuse the same fact set, but they must not be turned into queue-driving pseudo-exceptions just to force 1:1 row parity on the default today surface.
-- No-record employees should enter the admin queue only when their current operational state needs attention, not as all-day placeholder rows.
+- Do not use a left exception rail on `/admin/attendance`; aggregate unresolved employee-surface exceptions in the top exception table instead.
+- Use one horizontal summary row on `/admin/attendance` with `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`; these cards are context, not queue entries.
+- The `/admin/attendance` ledger should expose `기본`, `근무상태별`, and `근태상태별` view toggles, and each grouping must come from the same underlying facts.
+- No-record employees should enter the top exception table only when their current operational state needs attention, not as all-day placeholder rows.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
 - Use `docs/leave-conflict-policy.md` for the severity and meaning of leave-request conflict states; this file owns only how those states are surfaced.
 
 ## Exception Priority
 
 - Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
-- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The default today queue should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or late cases so unresolved operational risk is easier to notice than nominal counts.
+- Admin attendance views should prioritize exceptions over aggregate comfort metrics. The top exception table should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or late cases so unresolved operational risk is easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
 ## Notification Surface Taxonomy
