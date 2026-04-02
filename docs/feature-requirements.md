@@ -76,7 +76,7 @@ Required UI:
 - a stable top summary tier that always shows leave balance plus calm current-state context rather than escalating plain pending requests into the top correction surface
 - a conditional top correction tier for reviewed non-approved leave requests that still need employee attention without treating them as a shared queue state
 - a leave-only planning calendar with selected-date context directly below it
-- one inline leave composer below the calendar that supports annual leave, half-day AM, half-day PM, and hourly leave and owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
+- one inline leave composer below the calendar that supports annual leave, half-day AM, half-day PM, and hourly leave; hourly leave uses explicit `startAt`/`endAt` interval input and shows derived `hours` output rather than accepting `hours` as input, and the composer owns new leave request, `resubmission`, approved-state `change`, and approved-state `cancel` flows
 - a flat list of the current user's leave request chains, ordered by latest activity, with each row representing the current governing chain context rather than every request record as a separate top-level row
 - each leave-chain history row should summarize the governed date or date range, leave type, employee reason summary, current governing status, and latest review timing while earlier chain steps remain secondary chain detail rather than separate top-level rows
 - visible prior review comments and follow-up context when a leave request is `revision_requested` or `rejected`
@@ -99,10 +99,10 @@ Required UI:
 
 Validation and policy topics that must stay aligned with narrower contract documents:
 
-- whether past-date leave requests are allowed
-- how same-day duplicate requests are prevented
-- how hourly leave should be represented in the UI and payload
-- how approved leave should surface later attendance conflicts without silently overwriting the original leave decision
+- in the first pass, leave requests may target only today or a future workday
+- duplicate prevention is overlap-based, not type-label-based: the same employee cannot create a second unsuperseded root leave chain whose effective leave interval overlaps another unsuperseded root chain
+- hourly leave uses explicit `startAt` and `endAt` payload fields, and `hours` is derived display/output data rather than authoritative input
+- approved leave surfacing later attendance conflicts without silently overwriting the original leave decision stays owned by `docs/attendance-operating-model.md`
 - company-event conflict policy and staffing-cap warning behavior should follow `docs/leave-conflict-policy.md`
 
 ## Admin Flow Requirements

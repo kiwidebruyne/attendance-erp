@@ -560,6 +560,7 @@ Response notes:
 - approved leave may later surface in attendance endpoints as `leaveCoverage`
 - a later attendance fact on an approved leave-covered day should surface as a leave-work conflict in attendance APIs rather than silently rewriting the leave request
 - follow-up `resubmission`, `change`, and `cancel` requests remain linked to the earlier request rather than silently replacing it
+- hourly leave request items expose `startAt` and `endAt` as the authoritative interval fields, with `hours` derived for display/output only
 - each leave request item in this `GET /api/leave/me` employee aggregate also includes `isTopSurfaceSuppressed`, an employee-specific derived flag for `/attendance/leave` top correction auto-surfacing only
 - `isTopSurfaceSuppressed` is not a guaranteed field on every leave-request response shape; it is part of this employee aggregate response because this endpoint backs the leave page's history plus top-correction projection
 - when `isTopSurfaceSuppressed = true`, the reviewed request remains available in history and date-relevant selected-date context surfaces but is excluded from top correction auto-surfacing until restored
@@ -581,6 +582,8 @@ Response:
       "requestType": "leave",
       "leaveType": "hourly",
       "date": "2026-04-03",
+      "startAt": "2026-04-03T13:00:00+09:00",
+      "endAt": "2026-04-03T15:00:00+09:00",
       "hours": 2,
       "reason": "Personal appointment moved later.",
       "status": "pending",
@@ -612,7 +615,8 @@ Request body:
 
 - `leaveType`: required
 - `date`: required
-- `hours`: required only when `leaveType` is `hourly`
+- `startAt`: required only when `leaveType` is `hourly`
+- `endAt`: required only when `leaveType` is `hourly`
 - `reason`: required employee note
 - `parentRequestId`: optional; required for follow-up submissions
 - `followUpKind`: optional `resubmission`, `change`, or `cancel`
@@ -620,9 +624,12 @@ Request body:
 Current-scope rules:
 
 - Omit `parentRequestId` and `followUpKind` for a new root leave request.
+- `date` may target only today or a future workday in the first pass.
 - `followUpKind = resubmission` is valid only when the parent request currently has `status = rejected` or `revision_requested`.
 - `followUpKind = resubmission` creates a new pending follow-up and does not reopen the parent reviewed request in place.
 - `followUpKind = change` or `cancel` is valid only when the parent request itself currently has `status = approved` and `supersededByRequestId = null`.
+- Hourly leave uses explicit `startAt` and `endAt` interval fields. `hours` is derived output data and is not accepted as write input.
+- Duplicate prevention is overlap-based, not type-label-based: the same employee cannot create a second unsuperseded root leave chain whose effective leave interval overlaps another unsuperseded root chain.
 - A chain may have at most one active employee-submitted follow-up at a time.
 
 Request body:
@@ -631,7 +638,8 @@ Request body:
 {
   "leaveType": "hourly",
   "date": "2026-04-03",
-  "hours": 2,
+  "startAt": "2026-04-03T13:00:00+09:00",
+  "endAt": "2026-04-03T15:00:00+09:00",
   "reason": "Medical appointment moved later.",
   "parentRequestId": "req_leave_001",
   "followUpKind": "change"
@@ -646,6 +654,8 @@ Response:
   "requestType": "leave",
   "leaveType": "hourly",
   "date": "2026-04-03",
+  "startAt": "2026-04-03T13:00:00+09:00",
+  "endAt": "2026-04-03T15:00:00+09:00",
   "hours": 2,
   "reason": "Medical appointment moved later.",
   "status": "pending",
@@ -668,8 +678,8 @@ Response:
 
 Typical error cases:
 
-- `400 validation_error` for invalid dates or missing required fields
-- `409 conflict` when a conflicting leave request already exists
+- `400 validation_error` for invalid dates, missing required fields, or invalid hourly intervals
+- `409 conflict` when an overlapping leave request already exists for the same employee
 - `409 conflict` when the same chain already has another active employee follow-up; include the existing active follow-up request id in the error payload
 - `409 conflict` when `followUpKind` does not match the parent request's current lifecycle state
 
@@ -681,7 +691,8 @@ Request body:
 
 - `leaveType`: optional when editing the pending request
 - `date`: optional when editing the pending request
-- `hours`: optional when editing the pending request
+- `startAt`: optional when editing the pending hourly request
+- `endAt`: optional when editing the pending hourly request
 - `reason`: optional when editing the pending request
 - `status`: optional; the only writable status value is `withdrawn`
 
@@ -690,13 +701,17 @@ Current-scope rules:
 - The request must currently have `status = pending`.
 - If `status = withdrawn`, omit the other editable fields.
 - If `status` is omitted, provide at least one employee-editable field.
+- If `date` is provided, the resulting request must still target today or a future workday in the first pass.
+- Hourly leave edits must still produce a valid `startAt`/`endAt` interval, and `hours` remains derived output rather than writable input.
+- The resulting request must still avoid overlap with another unsuperseded root leave chain for the same employee.
 - This endpoint never creates a follow-up request; approved-state leave change or cancel still requires `POST /api/leave/request` with `followUpKind`.
 
 Example request body:
 
 ```json
 {
-  "hours": 3,
+  "startAt": "2026-04-03T12:00:00+09:00",
+  "endAt": "2026-04-03T15:00:00+09:00",
   "reason": "The appointment window expanded."
 }
 ```
@@ -717,6 +732,8 @@ Response:
   "requestType": "leave",
   "leaveType": "hourly",
   "date": "2026-04-03",
+  "startAt": "2026-04-03T12:00:00+09:00",
+  "endAt": "2026-04-03T15:00:00+09:00",
   "hours": 3,
   "reason": "The appointment window expanded.",
   "status": "pending",
@@ -739,8 +756,9 @@ Response:
 
 Typical error cases:
 
-- `400 validation_error` when the payload mixes `status = withdrawn` with editable fields or otherwise violates the pending-edit contract
+- `400 validation_error` when the payload mixes `status = withdrawn` with editable fields, provides an invalid hourly interval, or otherwise violates the pending-edit contract
 - `404 not_found` when the request id does not exist
+- `409 conflict` when the edited request would overlap another unsuperseded root leave chain for the same employee
 - `409 conflict` when the request is no longer `pending`
 
 ### `PUT /api/leave/request/[id]/top-surface-suppression`

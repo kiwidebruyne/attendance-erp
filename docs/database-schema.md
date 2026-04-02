@@ -191,7 +191,8 @@ Represents a submitted leave application.
 | `requestType`           | enum           | always `leave`                                                                    |
 | `leaveType`             | enum           | `Leave Type`                                                                      |
 | `date`                  | string         | target leave date                                                                 |
-| `hours`                 | number or null | required only when `leaveType` is `hourly`                                        |
+| `startAt`               | string or null | required only when `leaveType` is `hourly`                                        |
+| `endAt`                 | string or null | required only when `leaveType` is `hourly`                                        |
 | `reason`                | string         | employee-provided note                                                            |
 | `status`                | enum           | `Request Status`                                                                  |
 | `requestedAt`           | string         | submission time                                                                   |
@@ -201,6 +202,14 @@ Represents a submitted leave application.
 | `parentRequestId`       | string or null | immediate earlier request for a follow-up; `null` on the root request             |
 | `followUpKind`          | enum or null   | `Follow-Up Kind` for follow-up requests; `null` on the root request               |
 | `supersededByRequestId` | string or null | later approved follow-up that supersedes this request                             |
+
+Hourly leave durations are derived from `startAt` and `endAt` and may be exposed in API and UI output as `hours`, but `hours` is not authoritative input on the canonical request entity.
+
+Important rules:
+
+- In the first pass, leave requests may target only today or a future workday.
+- Duplicate prevention is overlap-based, not type-label-based: the same employee cannot create a second unsuperseded root leave chain whose effective leave interval overlaps another unsuperseded root chain.
+- When `leaveType = hourly`, `startAt` and `endAt` are the authoritative interval fields and `hours` is derived output only.
 
 ### Employee Leave Top Surface Suppression
 

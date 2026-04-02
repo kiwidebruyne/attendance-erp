@@ -7,6 +7,7 @@ It defines how company events, staffing capacity, and approval-side warning beha
 
 This document does not own request lifecycle semantics, attendance fact lifecycle, full HTTP payload definitions, or company-event management workflows.
 Those concerns remain in `docs/request-lifecycle-model.md`, `docs/attendance-operating-model.md`, `docs/api-spec.md`, `docs/database-schema.md`, and `docs/product-spec-context.md`.
+It also does not define requestable-date eligibility, duplicate-prevention rules, or the hourly leave write payload contract; those rules are locked in the feature, API, and schema docs.
 
 ## First-Pass Policy Defaults
 
