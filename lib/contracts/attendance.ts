@@ -191,6 +191,17 @@ export const manualAttendanceRequestPatchBodySchema = z
       });
     }
 
+    if (value.action !== undefined) {
+      validateManualAttendanceClockFields(
+        {
+          action: value.action,
+          requestedClockInAt: value.requestedClockInAt,
+          requestedClockOutAt: value.requestedClockOutAt,
+        },
+        ctx,
+      );
+    }
+
     if (value.status === undefined && !hasEditableFields) {
       ctx.addIssue({
         code: "custom",

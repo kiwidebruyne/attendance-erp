@@ -279,6 +279,34 @@ describe("shared contract schemas", () => {
     ).toThrow();
   });
 
+  it("rejects approved effective projections that still point at the active request", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "approved",
+        governingReviewComment: null,
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
+  it("requires approved effective projections with active work to mark an active follow-up", () => {
+    expect(() =>
+      requestChainProjectionSchema.parse({
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_001",
+        effectiveStatus: "approved",
+        governingReviewComment: null,
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
+      }),
+    ).toThrow();
+  });
+
   it("requires nextAction to match whether active work exists", () => {
     expect(() =>
       requestChainProjectionSchema.parse({
@@ -612,6 +640,26 @@ describe("employee attendance contracts", () => {
       attendanceContracts.manualAttendanceRequestPatchBodySchema?.parse({
         status: "withdrawn",
         reason: "This should not be sent together.",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects manual attendance patch bodies with action-specific clock mismatches", () => {
+    expect(
+      attendanceContracts.manualAttendanceRequestPatchBodySchema,
+    ).toBeDefined();
+
+    expect(() =>
+      attendanceContracts.manualAttendanceRequestPatchBodySchema?.parse({
+        action: "clock_out",
+        requestedClockInAt: "2026-03-30T18:00:00+09:00",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      attendanceContracts.manualAttendanceRequestPatchBodySchema?.parse({
+        action: "clock_in",
+        requestedClockOutAt: "2026-03-30T18:00:00+09:00",
       }),
     ).toThrow();
   });

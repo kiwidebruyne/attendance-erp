@@ -278,6 +278,26 @@ export function validateRequestChainProjection(
     });
   }
 
+  if (hasActiveRequest && value.effectiveStatus === "approved") {
+    if (!value.hasActiveFollowUp) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["hasActiveFollowUp"],
+        message:
+          'Invalid input: "hasActiveFollowUp" must be true when approved work remains effective during an active request',
+      });
+    }
+
+    if (value.effectiveRequestId === value.activeRequestId) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["effectiveRequestId"],
+        message:
+          'Invalid input: "effectiveRequestId" must differ from "activeRequestId" when approved work remains effective during an active request',
+      });
+    }
+  }
+
   if (!hasActiveRequest && value.effectiveStatus === "pending") {
     ctx.addIssue({
       code: "custom",
