@@ -1,8 +1,12 @@
-import { createSeedRepository } from "@/lib/repositories";
-import { canonicalSeedWorld } from "@/lib/seed/world";
+import {
+  createMockSeedRepository,
+  getMockSeedWorld,
+} from "@/lib/server/mock-state";
 
-export const adminAttendanceBaselineDate = canonicalSeedWorld.baselineDate;
+export function getAdminAttendanceBaselineDate() {
+  return getMockSeedWorld().baselineDate;
+}
 
-export const adminAttendanceRepository = createSeedRepository({
-  world: canonicalSeedWorld,
-});
+export function createAdminAttendanceRepository() {
+  return createMockSeedRepository();
+}

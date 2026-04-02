@@ -20,6 +20,7 @@ import type {
   PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 import { resolveEffectiveApprovedLeaveRequests } from "@/lib/repositories/leave-conflicts";
+import { resolveAttendanceSurfaceManualRequest } from "@/lib/repositories/manual-attendance";
 import type { CanonicalSeedWorld } from "@/lib/seed/world";
 
 export type AttendanceRepositoryWorld = CanonicalSeedWorld;
@@ -105,22 +106,6 @@ function compareDateTimes(left: string, right: string) {
 
 function compareDates(left: string, right: string) {
   return left.localeCompare(right);
-}
-
-function toManualAttendanceFollowUpKind(
-  followUpKind: AttendanceRepositoryWorld["manualAttendanceRequests"][number]["followUpKind"],
-) {
-  return followUpKind === "resubmission" ? followUpKind : null;
-}
-
-function toAttendanceSurfaceManualRequestStatus(
-  status: AttendanceRepositoryWorld["manualAttendanceRequests"][number]["status"],
-) {
-  if (status === "revision_requested" || status === "rejected") {
-    return status;
-  }
-
-  return null;
 }
 
 function toAttendanceAttempt(
@@ -418,123 +403,6 @@ function resolveLatestFailedAttempt(
   );
 }
 
-function resolveManualAttendanceSummary(
-  world: AttendanceRepositoryWorld,
-  employeeId: string,
-  date: string,
-  previousDayOpenRecord: PreviousDayOpenRecord | null,
-): AttendanceSurfaceManualRequestResource | null {
-  const sameDayRequests = world.manualAttendanceRequests.filter(
-    (request) => request.employeeId === employeeId && request.date === date,
-  );
-
-  const chainRequests =
-    sameDayRequests.length > 0
-      ? sameDayRequests
-      : previousDayOpenRecord === null
-        ? []
-        : world.manualAttendanceRequests.filter(
-            (request) =>
-              request.employeeId === employeeId &&
-              request.date === previousDayOpenRecord.date,
-          );
-
-  if (chainRequests.length === 0) {
-    return null;
-  }
-
-  const activeRequest = chainRequests
-    .filter((request) => request.status === "pending")
-    .sort((left, right) =>
-      compareDateTimes(right.submittedAt, left.submittedAt),
-    )[0];
-
-  const reviewedRequest = chainRequests
-    .filter(
-      (request) =>
-        request.status === "rejected" ||
-        request.status === "revision_requested",
-    )
-    .sort((left, right) =>
-      compareDateTimes(
-        right.reviewedAt ?? right.submittedAt,
-        left.reviewedAt ?? left.submittedAt,
-      ),
-    )[0];
-
-  const rootRequest = chainRequests.sort((left, right) =>
-    compareDateTimes(left.submittedAt, right.submittedAt),
-  )[0];
-
-  if (activeRequest !== undefined) {
-    const governingReviewComment =
-      reviewedRequest?.reviewComment ?? activeRequest.reviewComment ?? null;
-    const hasActiveFollowUp = activeRequest.parentRequestId !== null;
-
-    return {
-      id: activeRequest.id,
-      requestType: activeRequest.requestType,
-      action: activeRequest.action,
-      date: activeRequest.date,
-      submittedAt: activeRequest.submittedAt,
-      requestedClockInAt: activeRequest.requestedClockInAt,
-      requestedClockOutAt: activeRequest.requestedClockOutAt,
-      reason: activeRequest.reason,
-      status: "pending",
-      reviewedAt: activeRequest.reviewedAt,
-      reviewComment: activeRequest.reviewComment,
-      governingReviewComment,
-      rootRequestId: activeRequest.rootRequestId,
-      parentRequestId: activeRequest.parentRequestId,
-      followUpKind: toManualAttendanceFollowUpKind(activeRequest.followUpKind),
-      supersededByRequestId: activeRequest.supersededByRequestId,
-      activeRequestId: activeRequest.id,
-      activeStatus: "pending",
-      effectiveRequestId: activeRequest.id,
-      effectiveStatus: "pending",
-      hasActiveFollowUp,
-      nextAction: "admin_review",
-    };
-  }
-
-  if (rootRequest === undefined || reviewedRequest === undefined) {
-    return null;
-  }
-
-  const reviewedStatus = toAttendanceSurfaceManualRequestStatus(
-    reviewedRequest.status,
-  );
-
-  if (reviewedStatus === null) {
-    return null;
-  }
-
-  return {
-    id: reviewedRequest.id,
-    requestType: reviewedRequest.requestType,
-    action: reviewedRequest.action,
-    date: reviewedRequest.date,
-    submittedAt: reviewedRequest.submittedAt,
-    requestedClockInAt: reviewedRequest.requestedClockInAt,
-    requestedClockOutAt: reviewedRequest.requestedClockOutAt,
-    reason: reviewedRequest.reason,
-    status: reviewedStatus,
-    reviewedAt: reviewedRequest.reviewedAt,
-    reviewComment: reviewedRequest.reviewComment,
-    governingReviewComment: reviewedRequest.reviewComment,
-    rootRequestId: reviewedRequest.rootRequestId,
-    parentRequestId: reviewedRequest.parentRequestId,
-    followUpKind: toManualAttendanceFollowUpKind(reviewedRequest.followUpKind),
-    supersededByRequestId: reviewedRequest.supersededByRequestId,
-    activeRequestId: null,
-    activeStatus: null,
-    effectiveRequestId: reviewedRequest.id,
-    effectiveStatus: reviewedStatus,
-    hasActiveFollowUp: false,
-    nextAction: "none",
-  };
-}
-
 function buildAttendanceSurfaceRow(
   world: AttendanceRepositoryWorld,
   employeeId: string,
@@ -556,7 +424,7 @@ function buildAttendanceSurfaceRow(
     date,
     previousDayOpenRecord,
   );
-  const manualRequest = resolveManualAttendanceSummary(
+  const manualRequest = resolveAttendanceSurfaceManualRequest(
     world,
     employeeId,
     date,
