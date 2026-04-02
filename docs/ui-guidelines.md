@@ -133,13 +133,16 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Place the conditional top correction tier directly below the stable summary tier and above the history row so reviewed non-approved leave context reads as page-local action guidance before history and planning context.
 - Render the top correction tier as a table-style recovery surface so multiple reviewed non-approved leave requests can be compared at once without card switching.
 - Each top-correction row should keep prior request summary, current reviewed outcome, latest review reason, and the primary `resubmit` action visible together.
-- Keep `/attendance/leave` history chain-first rather than record-first. Use one flat row per governing request chain, order rows by latest activity descending, and keep earlier chain steps as secondary timeline or detail instead of separate top-level rows by default.
+- Keep `/attendance/leave` history chain-aware, but render the bottom leave history as a table anchored to the governing request with columns centered on `유형`, `날짜`, `세부사항`, `상태`, `사유`, and `작업`.
+- Do not add a separate `최근 활동` column to the leave history table.
+- Leave history state cells should show only a badge without extra descriptive text, and long reason text should wrap naturally instead of clamping.
 - `pending` leave rows should lead with `edit` and offer `withdraw` as the secondary action. `approved` leave rows should lead with `change` and offer `cancel`. `rejected` or `revision_requested` rows should lead with `resubmit`, while suppressed reviewed rows may add `show again at top` as a secondary recovery action.
 - `withdrawn` rows and fully superseded historical approvals should stay read-only in the history list and should not advertise fresh action CTAs.
 - Keep `/attendance/leave` history as a full-width row below the lower planning workspace so calendar planning reads first while history remains available as the recovery surface for chain actions.
 - Use the calendar on `/attendance/leave` as leave-only planning and context, not as a shared attendance correction launcher.
+- The calendar panel header should show only the month label and prev/next month controls; remove the calendar title, explanatory description, and `새 요청 시작` button.
 - Keep one lower planning row that places the calendar, selected-date context, and inline composer side by side on desktop. On narrow widths, stack the same three surfaces in that order.
-- Keep the selected-date context immediately after the calendar in the lower planning order. If the selected date already belongs to an existing leave request chain, show that governing context before showing a blank new-request flow.
+- Keep the selected-date context immediately after the calendar in the lower planning order. If the selected date already belongs to an existing leave request chain, show that governing context before showing a blank new-request flow. The selected-date panel remains the entry point for starting a new request.
 - Selected-date context on `/attendance/leave` should be governing-context-first: show one primary governing chain card, and keep additional date-related items as compact secondary links rather than a stack of equal cards.
 - If the clicked date falls inside a multi-day leave request, show the governing full leave range in the primary context card rather than reducing it to the clicked day alone.
 - Keep one inline composer as the third planning surface and the only primary owner of new request, `resubmit`, `change`, and `cancel` flows on `/attendance/leave`.

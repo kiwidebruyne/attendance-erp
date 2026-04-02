@@ -14,6 +14,7 @@ import {
   formatLeaveDateTimeLabel,
   formatLeaveDayCount,
   formatLeaveRequestSummary,
+  formatLeaveTimeLabel,
   formatLeaveTypeLabel,
   getLeaveConflictMessages,
   hasMeaningfulLeaveConflict,
@@ -248,6 +249,39 @@ function getCompanyEventLabel(
   return leaveConflict.companyEventContext[0]?.title ?? null;
 }
 
+function formatHistoryRequestDetail(chain: LeaveChainModel) {
+  const request = chain.activeRequest ?? chain.effectiveRequest;
+
+  if (request.leaveType === "hourly") {
+    return `${formatLeaveTimeLabel(request.startAt)} ~ ${formatLeaveTimeLabel(request.endAt)}`;
+  }
+
+  if (chain.activeRequest?.followUpKind === "change") {
+    return `변경 요청 · ${formatLeaveDateLabel(chain.activeRequest.date)}`;
+  }
+
+  if (chain.activeRequest?.followUpKind === "cancel") {
+    return "취소 요청 진행 중";
+  }
+
+  if (chain.activeRequest?.followUpKind === "resubmission") {
+    return "다시 제출한 요청";
+  }
+
+  switch (request.leaveType) {
+    case "annual":
+      return chain.requests.length > 1
+        ? `하루 일정 · 단계 ${chain.requests.length}개`
+        : "하루 일정";
+    case "half_am":
+      return "오전 일정";
+    case "half_pm":
+      return "오후 일정";
+    case "hourly":
+      return `${formatLeaveTimeLabel(request.startAt)} ~ ${formatLeaveTimeLabel(request.endAt)}`;
+  }
+}
+
 function SummaryTier({
   data,
   viewModel,
@@ -454,33 +488,25 @@ function TopCorrectionTier({
 function CalendarPanel({
   data,
   onMonthChange,
-  onOpenNewComposer,
   onSelectDate,
   viewModel,
   visibleMonth,
 }: Readonly<{
   data: LeavePageData;
   onMonthChange: (delta: number) => void;
-  onOpenNewComposer: () => void;
   onSelectDate: (date: string) => void;
   viewModel: LeavePageViewModel;
   visibleMonth: string;
 }>) {
   const relatedChainsByDate = getRelatedChainsByDate(viewModel);
-  const selectionState = getSelectionState(data);
 
   return (
     <Card>
-      <CardHeader className="gap-4 border-b border-border/80 pb-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardTitle className="text-xl tracking-[-0.03em]">
-              휴가 계획 캘린더
-            </CardTitle>
-            <CardDescription className="text-sm leading-6">
-              날짜를 고르면 해당 일정과 새 요청 흐름을 바로 볼 수 있어요
-            </CardDescription>
-          </div>
+      <CardHeader className="border-b border-border/80 pb-5">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-lg font-medium text-foreground">
+            {formatMonthTitle(visibleMonth)}
+          </p>
           <div className="flex items-center gap-2">
             <Button
               aria-label="이전 달"
@@ -499,19 +525,6 @@ function CalendarPanel({
               <ChevronRightIcon aria-hidden="true" className="size-4" />
             </Button>
           </div>
-        </div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-lg font-medium text-foreground">
-            {formatMonthTitle(visibleMonth)}
-          </p>
-          <Button
-            disabled={!selectionState.canCreate}
-            onClick={onOpenNewComposer}
-            size="sm"
-            variant="secondary"
-          >
-            새 요청 시작
-          </Button>
         </div>
       </CardHeader>
       <CardContent className="pt-5">
@@ -1111,9 +1124,10 @@ function HistorySection({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>휴가 일정</TableHead>
+                <TableHead>유형</TableHead>
+                <TableHead>날짜</TableHead>
+                <TableHead>세부사항</TableHead>
                 <TableHead>상태</TableHead>
-                <TableHead>최근 활동</TableHead>
                 <TableHead>사유</TableHead>
                 <TableHead className="text-right">작업</TableHead>
               </TableRow>
@@ -1121,38 +1135,29 @@ function HistorySection({
             <TableBody>
               {viewModel.visibleChains.map((chain) => (
                 <TableRow key={chain.rootRequestId}>
-                  <TableCell className="align-top">
-                    <div className="space-y-1">
-                      <p className="font-medium text-foreground">
-                        {chain.currentSummary}
-                      </p>
-                      <p className="text-sm text-secondary">
-                        {formatLeaveTypeLabel(chain.latestRequest.leaveType)} ·
-                        단계 {chain.requests.length}개
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell className="align-top">
-                    <div className="space-y-2">
-                      <Badge variant={getStatusBadgeVariant(chain)}>
-                        {chain.statusLabel}
-                      </Badge>
-                      <p className="max-w-[180px] text-sm leading-6 text-secondary">
-                        {chain.statusDescription}
-                      </p>
-                    </div>
+                  <TableCell className="align-top text-sm font-medium text-foreground">
+                    {formatLeaveTypeLabel(chain.latestRequest.leaveType)}
                   </TableCell>
                   <TableCell className="align-top text-sm text-secondary">
-                    <div className="space-y-1">
-                      <p>{chain.latestActivityLabel}</p>
-                      <p>{formatLeaveDateTimeLabel(chain.latestActivityAt)}</p>
-                    </div>
+                    {formatLeaveDateLabel(chain.effectiveRequest.date)}
                   </TableCell>
                   <TableCell className="align-top">
-                    <div className="max-w-[280px] space-y-2 text-sm leading-6 text-secondary">
-                      <p className="line-clamp-2">{chain.reasonSummary}</p>
+                    <p className="max-w-[220px] break-words text-sm leading-6 text-secondary whitespace-normal">
+                      {formatHistoryRequestDetail(chain)}
+                    </p>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Badge variant={getStatusBadgeVariant(chain)}>
+                      {chain.statusLabel}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <div className="max-w-[320px] space-y-2 text-sm leading-6 text-secondary">
+                      <p className="break-words whitespace-normal">
+                        {chain.reasonSummary}
+                      </p>
                       {chain.reviewComment === null ? null : (
-                        <p className="line-clamp-2 text-status-danger">
+                        <p className="break-words text-status-danger whitespace-normal">
                           검토 사유: {chain.reviewComment}
                         </p>
                       )}
@@ -1191,7 +1196,8 @@ function HistorySection({
             </TableBody>
           </Table>
           <div className="border-t border-border/80 px-6 py-4 text-[11px] text-muted-foreground">
-            최근 활동 기준으로 {viewModel.totalChains}개 체인을 보여주고 있어요
+            현재 보이는 휴가 체인 {viewModel.totalChains}개를 정리해 보여주고
+            있어요
           </div>
         </>
       )}
@@ -1269,7 +1275,6 @@ export function LeavePageScreen({
         <CalendarPanel
           data={data}
           onMonthChange={onMonthChange}
-          onOpenNewComposer={onOpenNewComposer}
           onSelectDate={onSelectDate}
           viewModel={viewModel}
           visibleMonth={visibleMonth}
