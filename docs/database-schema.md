@@ -157,17 +157,17 @@ Represents one append-only clock-in or clock-out attempt.
 Represents the canonical attendance fact for one employee on one calendar date.
 Unlike the previous single-status model, this entity stores facts only. Derived display state lives elsewhere.
 
-| Field             | Type           | Notes                                                             |
-| ----------------- | -------------- | ----------------------------------------------------------------- |
-| `id`              | string         | stable record identifier                                          |
-| `employeeId`      | string         | relation to `Employee.id`                                         |
-| `date`            | string         | target workday                                                    |
-| `clockInAt`       | string or null | null until a successful or approved clock-in fact exists          |
-| `clockInSource`   | string or null | `beacon` or `manual`                                              |
-| `clockOutAt`      | string or null | null while the workday is still open or checkout is missing       |
-| `clockOutSource`  | string or null | `beacon` or `manual`                                              |
-| `workMinutes`     | number or null | derived from completed in/out facts when available                |
-| `manualRequestId` | string or null | link to the approved manual request that last changed this record |
+| Field             | Type           | Notes                                                                |
+| ----------------- | -------------- | -------------------------------------------------------------------- |
+| `id`              | string         | stable record identifier                                             |
+| `employeeId`      | string         | relation to `Employee.id`                                            |
+| `date`            | string         | target workday                                                       |
+| `clockInAt`       | string or null | null until a successful or approved clock-in fact exists             |
+| `clockInSource`   | string or null | `beacon` or `manual`                                                 |
+| `clockOutAt`      | string or null | null while the workday is still open or checkout is missing          |
+| `clockOutSource`  | string or null | `beacon` or `manual`                                                 |
+| `workMinutes`     | number or null | derived from completed in/out facts when available                   |
+| `manualRequestId` | string or null | link to the approved manual request that last wrote back this record |
 
 ### Leave Balance
 
@@ -243,7 +243,9 @@ Represents a manual correction request when successful attendance facts are miss
 | `requestType`           | enum           | always `manual_attendance`                                                        |
 | `action`                | enum           | `Manual Attendance Action`                                                        |
 | `date`                  | string         | target workday                                                                    |
-| `requestedAt`           | string         | requested correction time                                                         |
+| `submittedAt`           | string         | employee submission timestamp                                                     |
+| `requestedClockInAt`    | string or null | required when `action` is `clock_in` or `both`                                    |
+| `requestedClockOutAt`   | string or null | required when `action` is `clock_out` or `both`                                   |
 | `reason`                | string         | employee-provided note                                                            |
 | `status`                | enum           | `Request Status`                                                                  |
 | `reviewedAt`            | string or null | timestamp of the latest review event                                              |
@@ -252,6 +254,13 @@ Represents a manual correction request when successful attendance facts are miss
 | `parentRequestId`       | string or null | immediate earlier request for a follow-up; `null` on the root request             |
 | `followUpKind`          | enum or null   | only `resubmission` is in current scope for manual attendance follow-ups          |
 | `supersededByRequestId` | string or null | later request that supersedes this request when current-product rules allow it    |
+
+Important rules:
+
+- One governing manual-attendance chain exists per employee per target date.
+- Root duplicate policy is date-scoped, not action-scoped. A second root request conflicts even when the action differs, as long as the employee already has a governing manual-attendance chain for that date.
+- `clock_out` requests are valid only when the target day already has an open attendance record; otherwise the employee must submit `both`.
+- `submittedAt` is separate from the requested clock timestamps and should not be overloaded with the target attendance time.
 
 Approved manual-attendance requests currently do not support post-approval follow-up `change` or `cancel`.
 
@@ -281,7 +290,9 @@ This is derived from `Manual Attendance Request` rather than persisted as a seco
 | `id`                     | string         | stable request identifier                                                                                                                               |
 | `action`                 | enum           | `Manual Attendance Action`                                                                                                                              |
 | `date`                   | string         | target workday                                                                                                                                          |
-| `requestedAt`            | string         | employee submission timestamp                                                                                                                           |
+| `submittedAt`            | string         | employee submission timestamp                                                                                                                           |
+| `requestedClockInAt`     | string or null | required when `action` is `clock_in` or `both`                                                                                                          |
+| `requestedClockOutAt`    | string or null | required when `action` is `clock_out` or `both`                                                                                                         |
 | `status`                 | enum           | `Request Status`; attendance endpoints surface only `pending`, `revision_requested`, or `rejected`                                                      |
 | `reviewComment`          | string or null | non-empty string when the latest review event used `reject` or `request_revision`                                                                       |
 | `governingReviewComment` | string or null | latest unresolved `reject` or `request_revision` rationale that must remain visible while a linked follow-up has not yet resolved that reviewed outcome |
@@ -294,6 +305,8 @@ This is derived from `Manual Attendance Request` rather than persisted as a seco
 | `effectiveStatus`        | enum           | chain-level effective status                                                                                                                            |
 | `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                                             |
 | `nextAction`             | enum           | `Request Next Action`                                                                                                                                   |
+
+This projection is returned only through `GET /api/attendance/me` and `GET /api/admin/attendance/today`. It is not a full request detail payload and is not persisted as a second source of truth.
 
 ### Request Chain Projection
 
@@ -397,6 +410,8 @@ Expected fields:
 - `Request Chain Projection`
 - submission and review timestamps
 
+Manual attendance queue items use `submittedAt` for the submission timestamp; leave queue items continue to use `requestedAt`.
+
 ## Relationships
 
 - One `Employee` has many `Expected Workday` rows.
@@ -413,7 +428,7 @@ Expected fields:
 - One `Manual Attendance Request` may have zero or one `Request Review Event` in the current product.
 - `rootRequestId`, `parentRequestId`, and `followUpKind` link requests into a chain without a separate `chainId`.
 - `supersededByRequestId` links an older request to the later approved follow-up that replaced it.
-- A `Manual Attendance Request` may be linked back to one `Attendance Record` after approval.
+- A `Manual Attendance Request` may be linked back to one `Attendance Record` after approval writeback.
 - Attendance display state is derived from expected workdays, attempts, records, leave coverage, and request state.
 - The admin request queue is derived from both request entities plus chain projection rules.
 
