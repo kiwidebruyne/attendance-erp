@@ -5,6 +5,7 @@ import {
   adminAttendanceListResponseSchema,
   adminAttendanceTodayResponseSchema,
 } from "@/lib/contracts/admin-attendance";
+import * as attendanceContracts from "@/lib/contracts/attendance";
 import {
   attendanceHistoryQuerySchema,
   attendanceHistoryResponseSchema,
@@ -12,6 +13,7 @@ import {
   manualAttendanceRequestBodySchema,
   manualAttendanceRequestResponseSchema,
 } from "@/lib/contracts/attendance";
+import * as leaveContracts from "@/lib/contracts/leave";
 import {
   leaveOverviewResponseSchema,
   leaveRequestBodySchema,
@@ -408,7 +410,9 @@ describe("employee attendance contracts", () => {
           requestType: "manual_attendance",
           action: "clock_in",
           date: "2026-03-30",
-          requestedAt: "2026-03-30T09:00:00+09:00",
+          submittedAt: "2026-03-30T09:10:00+09:00",
+          requestedClockInAt: "2026-03-30T09:00:00+09:00",
+          requestedClockOutAt: null,
           reason: "Beacon was not detected at the office entrance.",
           status: "approved",
           reviewedAt: "2026-03-30T11:00:00+09:00",
@@ -489,12 +493,57 @@ describe("employee attendance contracts", () => {
     });
   });
 
+  it("accepts the documented manual attendance create payload", () => {
+    expect(
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+      }),
+    ).toMatchObject({
+      action: "clock_in",
+      requestedClockInAt: "2026-03-30T09:00:00+09:00",
+    });
+  });
+
   it("rejects invalid manual attendance actions", () => {
     expect(() =>
       manualAttendanceRequestBodySchema.parse({
         date: "2026-03-30",
         action: "check_in",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects stale requestedAt write assumptions for manual attendance", () => {
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
         requestedAt: "2026-03-30T09:00:00+09:00",
+        reason: "Beacon was not detected at the office entrance.",
+      }),
+    ).toThrow();
+  });
+
+  it("requires action-specific clock fields for manual attendance requests", () => {
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        reason: "Beacon was not detected at the office entrance.",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      manualAttendanceRequestBodySchema.parse({
+        date: "2026-03-30",
+        action: "clock_in",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        requestedClockOutAt: "2026-03-30T18:00:00+09:00",
         reason: "Beacon was not detected at the office entrance.",
       }),
     ).toThrow();
@@ -505,7 +554,7 @@ describe("employee attendance contracts", () => {
       manualAttendanceRequestBodySchema.parse({
         date: "2026-03-30",
         action: "clock_in",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
         reason: "Beacon was not detected at the office entrance.",
         followUpKind: "resubmission",
       }),
@@ -517,7 +566,7 @@ describe("employee attendance contracts", () => {
       manualAttendanceRequestBodySchema.parse({
         date: "2026-03-30",
         action: "clock_in",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
         reason: "Beacon was not detected at the office entrance.",
         parentRequestId: "req_manual_000",
       }),
@@ -529,7 +578,7 @@ describe("employee attendance contracts", () => {
       manualAttendanceRequestBodySchema.parse({
         date: "2026-03-30",
         action: "clock_in",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
         reason: "Beacon was not detected at the office entrance.",
         parentRequestId: "req_manual_000",
         followUpKind: "resubmission",
@@ -540,6 +589,33 @@ describe("employee attendance contracts", () => {
     });
   });
 
+  it("exposes a patch schema for manual attendance updates", () => {
+    expect(
+      attendanceContracts.manualAttendanceRequestPatchBodySchema,
+    ).toBeDefined();
+
+    expect(
+      attendanceContracts.manualAttendanceRequestPatchBodySchema?.parse({
+        reason: "Beacon failed again; correcting the note before review.",
+      }),
+    ).toMatchObject({
+      reason: "Beacon failed again; correcting the note before review.",
+    });
+  });
+
+  it("rejects manual attendance withdrawals that also edit fields", () => {
+    expect(
+      attendanceContracts.manualAttendanceRequestPatchBodySchema,
+    ).toBeDefined();
+
+    expect(() =>
+      attendanceContracts.manualAttendanceRequestPatchBodySchema?.parse({
+        status: "withdrawn",
+        reason: "This should not be sent together.",
+      }),
+    ).toThrow();
+  });
+
   it("parses the documented manual attendance request response", () => {
     expect(
       manualAttendanceRequestResponseSchema.parse({
@@ -547,7 +623,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        submittedAt: "2026-03-30T09:10:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Beacon was not detected at the office entrance.",
         status: "pending",
         reviewedAt: null,
@@ -579,7 +657,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        submittedAt: "2026-03-30T09:10:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Beacon was not detected at the office entrance.",
         status: "pending",
         reviewedAt: "2026-03-30T11:00:00+09:00",
@@ -604,7 +684,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        submittedAt: "2026-03-30T09:10:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Beacon was not detected at the office entrance.",
         status: "rejected",
         reviewedAt: null,
@@ -631,7 +713,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T12:00:00+09:00",
+        submittedAt: "2026-03-30T12:10:00+09:00",
+        requestedClockInAt: "2026-03-30T12:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Updated request after approval.",
         status: "pending",
         reviewedAt: null,
@@ -658,7 +742,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T12:00:00+09:00",
+        submittedAt: "2026-03-30T12:10:00+09:00",
+        requestedClockInAt: "2026-03-30T12:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Follow-up without kind.",
         status: "pending",
         reviewedAt: null,
@@ -683,7 +769,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T12:00:00+09:00",
+        submittedAt: "2026-03-30T12:10:00+09:00",
+        requestedClockInAt: "2026-03-30T12:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Follow-up kind without parent.",
         status: "pending",
         reviewedAt: null,
@@ -710,7 +798,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T09:00:00+09:00",
+        submittedAt: "2026-03-30T09:10:00+09:00",
+        requestedClockInAt: "2026-03-30T09:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Root request with the wrong root chain id.",
         status: "pending",
         reviewedAt: null,
@@ -735,7 +825,9 @@ describe("employee attendance contracts", () => {
         requestType: "manual_attendance",
         action: "clock_in",
         date: "2026-03-30",
-        requestedAt: "2026-03-30T12:00:00+09:00",
+        submittedAt: "2026-03-30T12:10:00+09:00",
+        requestedClockInAt: "2026-03-30T12:00:00+09:00",
+        requestedClockOutAt: null,
         reason: "Follow-up with its own id as the root id.",
         status: "pending",
         reviewedAt: null,
@@ -757,6 +849,19 @@ describe("employee attendance contracts", () => {
 });
 
 describe("leave contracts", () => {
+  it("exposes a leave overview query schema", () => {
+    expect(leaveContracts.leaveOverviewQuerySchema).toBeDefined();
+
+    expect(leaveContracts.leaveOverviewQuerySchema?.parse({})).toEqual({});
+    expect(
+      leaveContracts.leaveOverviewQuerySchema?.parse({
+        date: "2026-04-08",
+      }),
+    ).toEqual({
+      date: "2026-04-08",
+    });
+  });
+
   it("parses the documented leave overview response", () => {
     expect(
       leaveOverviewResponseSchema.parse({
@@ -765,18 +870,42 @@ describe("leave contracts", () => {
           usedDays: 4.5,
           remainingDays: 10.5,
         },
+        selectedDateContext: {
+          date: "2026-04-08",
+          leaveConflict: {
+            companyEventContext: [],
+            effectiveApprovedLeaveContext: [],
+            pendingLeaveContext: [],
+            staffingRisk: "warning",
+            requiresApprovalConfirmation: true,
+          },
+        },
         requests: [
           {
-            id: "req_leave_001",
+            id: "req_leave_002",
             requestType: "leave",
-            leaveType: "annual",
-            date: "2026-04-02",
-            hours: null,
-            reason: "Personal appointment",
+            leaveType: "hourly",
+            date: "2026-04-03",
+            startAt: "2026-04-03T13:00:00+09:00",
+            endAt: "2026-04-03T15:00:00+09:00",
+            hours: 2,
+            reason: "Personal appointment moved later.",
             status: "pending",
-            requestedAt: "2026-03-30T11:10:00+09:00",
+            requestedAt: "2026-03-30T11:25:00+09:00",
             reviewedAt: null,
-            rejectionReason: null,
+            reviewComment: null,
+            governingReviewComment: null,
+            rootRequestId: "req_leave_001",
+            parentRequestId: "req_leave_001",
+            followUpKind: "change",
+            supersededByRequestId: null,
+            activeRequestId: "req_leave_002",
+            activeStatus: "pending",
+            effectiveRequestId: "req_leave_001",
+            effectiveStatus: "approved",
+            hasActiveFollowUp: true,
+            nextAction: "admin_review",
+            isTopSurfaceSuppressed: false,
           },
         ],
       }),
@@ -784,11 +913,14 @@ describe("leave contracts", () => {
       balance: {
         remainingDays: 10.5,
       },
-      requests: [{ requestType: "leave" }],
+      selectedDateContext: {
+        date: "2026-04-08",
+      },
+      requests: [{ requestType: "leave", isTopSurfaceSuppressed: false }],
     });
   });
 
-  it("requires hours for hourly leave requests", () => {
+  it("requires startAt and endAt for hourly leave requests", () => {
     expect(() =>
       leaveRequestBodySchema.parse({
         leaveType: "hourly",
@@ -798,13 +930,77 @@ describe("leave contracts", () => {
     ).toThrow();
   });
 
-  it("rejects numeric hours for non-hourly leave requests", () => {
+  it("rejects stale hours write input for leave requests", () => {
+    expect(() =>
+      leaveRequestBodySchema.parse({
+        leaveType: "hourly",
+        date: "2026-04-03",
+        startAt: "2026-04-03T13:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
+        hours: 2,
+        reason: "Medical appointment",
+      }),
+    ).toThrow();
+  });
+
+  it("accepts the documented hourly leave request body", () => {
+    expect(
+      leaveRequestBodySchema.parse({
+        leaveType: "hourly",
+        date: "2026-04-03",
+        startAt: "2026-04-03T13:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
+        reason: "Medical appointment moved later.",
+        parentRequestId: "req_leave_001",
+        followUpKind: "change",
+      }),
+    ).toMatchObject({
+      leaveType: "hourly",
+      followUpKind: "change",
+    });
+  });
+
+  it("requires leave follow-up fields to be paired", () => {
     expect(() =>
       leaveRequestBodySchema.parse({
         leaveType: "annual",
         date: "2026-04-03",
-        hours: 3,
         reason: "Medical appointment",
+        followUpKind: "resubmission",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      leaveRequestBodySchema.parse({
+        leaveType: "annual",
+        date: "2026-04-03",
+        reason: "Medical appointment",
+        parentRequestId: "req_leave_001",
+      }),
+    ).toThrow();
+  });
+
+  it("exposes a leave patch schema", () => {
+    expect(leaveContracts.leaveRequestPatchBodySchema).toBeDefined();
+
+    expect(
+      leaveContracts.leaveRequestPatchBodySchema?.parse({
+        startAt: "2026-04-03T12:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
+        reason: "The appointment window expanded.",
+      }),
+    ).toMatchObject({
+      reason: "The appointment window expanded.",
+    });
+  });
+
+  it("rejects leave withdrawals that also edit fields", () => {
+    expect(leaveContracts.leaveRequestPatchBodySchema).toBeDefined();
+
+    expect(() =>
+      leaveContracts.leaveRequestPatchBodySchema?.parse({
+        status: "withdrawn",
+        reason: "This should not be sent together.",
       }),
     ).toThrow();
   });
@@ -816,12 +1012,25 @@ describe("leave contracts", () => {
         requestType: "leave",
         leaveType: "hourly",
         date: "2026-04-03",
+        startAt: "2026-04-03T13:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
         hours: 2,
-        reason: "Medical appointment",
+        reason: "Medical appointment moved later.",
         status: "pending",
         requestedAt: "2026-03-30T11:25:00+09:00",
         reviewedAt: null,
-        rejectionReason: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_leave_001",
+        parentRequestId: "req_leave_001",
+        followUpKind: "change",
+        supersededByRequestId: null,
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_001",
+        effectiveStatus: "approved",
+        hasActiveFollowUp: true,
+        nextAction: "admin_review",
       }),
     ).toMatchObject({
       leaveType: "hourly",
@@ -836,63 +1045,115 @@ describe("leave contracts", () => {
         requestType: "leave",
         leaveType: "hourly",
         date: "2026-04-03",
+        startAt: "2026-04-03T13:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
         hours: null,
         reason: "Medical appointment",
         status: "pending",
         requestedAt: "2026-03-30T11:25:00+09:00",
         reviewedAt: null,
-        rejectionReason: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_leave_002",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
       }),
     ).toThrow();
   });
 
-  it("rejects non-hourly leave responses with numeric hours", () => {
+  it("rejects non-hourly leave responses with hourly intervals", () => {
     expect(() =>
       leaveRequestResponseSchema.parse({
         id: "req_leave_002",
         requestType: "leave",
         leaveType: "annual",
         date: "2026-04-03",
-        hours: 2,
+        startAt: "2026-04-03T13:00:00+09:00",
+        endAt: "2026-04-03T15:00:00+09:00",
+        hours: null,
         reason: "Medical appointment",
         status: "pending",
         requestedAt: "2026-03-30T11:25:00+09:00",
         reviewedAt: null,
-        rejectionReason: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_leave_002",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_leave_002",
+        activeStatus: "pending",
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
       }),
     ).toThrow();
   });
 
-  it("rejects rejected leave responses without a rejection reason", () => {
+  it("rejects rejected leave responses without a review comment", () => {
     expect(() =>
       leaveRequestResponseSchema.parse({
         id: "req_leave_002",
         requestType: "leave",
         leaveType: "annual",
         date: "2026-04-03",
+        startAt: null,
+        endAt: null,
         hours: null,
         reason: "Medical appointment",
         status: "rejected",
         requestedAt: "2026-03-30T11:25:00+09:00",
         reviewedAt: "2026-03-30T13:15:00+09:00",
-        rejectionReason: null,
+        reviewComment: null,
+        governingReviewComment: "Please clarify the leave window.",
+        rootRequestId: "req_leave_002",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "rejected",
+        hasActiveFollowUp: false,
+        nextAction: "none",
       }),
     ).toThrow();
   });
 
-  it("rejects approved leave responses with a rejection reason", () => {
+  it("rejects approved leave responses with a review comment", () => {
     expect(() =>
       leaveRequestResponseSchema.parse({
         id: "req_leave_002",
         requestType: "leave",
         leaveType: "annual",
         date: "2026-04-03",
+        startAt: null,
+        endAt: null,
         hours: null,
         reason: "Medical appointment",
         status: "approved",
         requestedAt: "2026-03-30T11:25:00+09:00",
         reviewedAt: "2026-03-30T13:15:00+09:00",
-        rejectionReason: "Should not be present",
+        reviewComment: "Should not be present",
+        governingReviewComment: null,
+        rootRequestId: "req_leave_002",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_leave_002",
+        effectiveStatus: "approved",
+        hasActiveFollowUp: false,
+        nextAction: "none",
       }),
     ).toThrow();
   });
@@ -1058,7 +1319,9 @@ describe("admin attendance contracts", () => {
               requestType: "manual_attendance",
               action: "clock_in",
               date: "2026-03-30",
-              requestedAt: "2026-03-30T09:00:00+09:00",
+              submittedAt: "2026-03-30T09:10:00+09:00",
+              requestedClockInAt: "2026-03-30T09:00:00+09:00",
+              requestedClockOutAt: null,
               reason: "Beacon was not detected at the office entrance.",
               status: "withdrawn",
               reviewedAt: null,
@@ -1149,10 +1412,10 @@ describe("admin attendance contracts", () => {
 });
 
 describe("admin request-review contracts", () => {
-  it("rejects unknown request filters", () => {
+  it("rejects legacy request filters", () => {
     expect(() =>
       adminRequestsQuerySchema.parse({
-        status: "archived",
+        status: "pending",
       }),
     ).toThrow();
   });
@@ -1160,7 +1423,7 @@ describe("admin request-review contracts", () => {
   it("parses the documented request queue response", () => {
     expect(
       adminRequestsResponseSchema.parse({
-        statusFilter: "pending",
+        viewFilter: "needs_review",
         items: [
           {
             id: "req_manual_001",
@@ -1174,9 +1437,20 @@ describe("admin request-review contracts", () => {
             targetDate: "2026-03-30",
             reason: "Beacon was not detected at the office entrance.",
             status: "pending",
-            requestedAt: "2026-03-30T09:10:00+09:00",
+            submittedAt: "2026-03-30T09:10:00+09:00",
             reviewedAt: null,
-            rejectionReason: null,
+            reviewComment: null,
+            governingReviewComment: null,
+            rootRequestId: "req_manual_001",
+            parentRequestId: null,
+            followUpKind: null,
+            supersededByRequestId: null,
+            activeRequestId: "req_manual_001",
+            activeStatus: "pending",
+            effectiveRequestId: "req_manual_001",
+            effectiveStatus: "pending",
+            hasActiveFollowUp: false,
+            nextAction: "admin_review",
           },
         ],
       }),
@@ -1188,7 +1462,7 @@ describe("admin request-review contracts", () => {
   it("rejects leave queue items with manual attendance subtypes", () => {
     expect(() =>
       adminRequestsResponseSchema.parse({
-        statusFilter: "pending",
+        viewFilter: "needs_review",
         items: [
           {
             id: "req_leave_001",
@@ -1204,17 +1478,74 @@ describe("admin request-review contracts", () => {
             status: "pending",
             requestedAt: "2026-03-30T09:10:00+09:00",
             reviewedAt: null,
-            rejectionReason: null,
+            reviewComment: null,
+            governingReviewComment: null,
+            rootRequestId: "req_leave_001",
+            parentRequestId: null,
+            followUpKind: null,
+            supersededByRequestId: null,
+            activeRequestId: "req_leave_001",
+            activeStatus: "pending",
+            effectiveRequestId: "req_leave_001",
+            effectiveStatus: "pending",
+            hasActiveFollowUp: false,
+            nextAction: "admin_review",
           },
         ],
       }),
     ).toThrow();
   });
 
-  it("rejects rejected queue items without a rejection reason", () => {
+  it("parses leave queue items with leave conflict context", () => {
+    expect(
+      adminRequestsResponseSchema.parse({
+        viewFilter: "all",
+        items: [
+          {
+            id: "req_leave_002",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            requestType: "leave",
+            subtype: "hourly",
+            targetDate: "2026-04-03",
+            reason: "Medical appointment moved later.",
+            status: "pending",
+            requestedAt: "2026-03-30T11:25:00+09:00",
+            reviewedAt: null,
+            reviewComment: null,
+            governingReviewComment: null,
+            rootRequestId: "req_leave_001",
+            parentRequestId: "req_leave_001",
+            followUpKind: "change",
+            supersededByRequestId: null,
+            activeRequestId: "req_leave_002",
+            activeStatus: "pending",
+            effectiveRequestId: "req_leave_001",
+            effectiveStatus: "approved",
+            hasActiveFollowUp: true,
+            nextAction: "admin_review",
+            leaveConflict: {
+              companyEventContext: [],
+              effectiveApprovedLeaveContext: [],
+              pendingLeaveContext: [],
+              staffingRisk: "warning",
+              requiresApprovalConfirmation: true,
+            },
+          },
+        ],
+      }),
+    ).toMatchObject({
+      items: [{ requestType: "leave" }],
+    });
+  });
+
+  it("rejects reviewed non-approved queue items without a review comment", () => {
     expect(() =>
       adminRequestsResponseSchema.parse({
-        statusFilter: "rejected",
+        viewFilter: "completed",
         items: [
           {
             id: "req_manual_001",
@@ -1228,19 +1559,31 @@ describe("admin request-review contracts", () => {
             targetDate: "2026-03-30",
             reason: "Beacon was not detected at the office entrance.",
             status: "rejected",
-            requestedAt: "2026-03-30T09:10:00+09:00",
+            submittedAt: "2026-03-30T09:10:00+09:00",
             reviewedAt: "2026-03-30T13:15:00+09:00",
-            rejectionReason: null,
+            reviewComment: null,
+            governingReviewComment:
+              "Please clarify the missing clock-out time.",
+            rootRequestId: "req_manual_001",
+            parentRequestId: null,
+            followUpKind: null,
+            supersededByRequestId: null,
+            activeRequestId: null,
+            activeStatus: null,
+            effectiveRequestId: "req_manual_001",
+            effectiveStatus: "rejected",
+            hasActiveFollowUp: false,
+            nextAction: "none",
           },
         ],
       }),
     ).toThrow();
   });
 
-  it("rejects approved queue items with a rejection reason", () => {
+  it("rejects approved queue items with a review comment", () => {
     expect(() =>
       adminRequestsResponseSchema.parse({
-        statusFilter: "approved",
+        viewFilter: "completed",
         items: [
           {
             id: "req_leave_001",
@@ -1256,7 +1599,18 @@ describe("admin request-review contracts", () => {
             status: "approved",
             requestedAt: "2026-03-30T09:10:00+09:00",
             reviewedAt: "2026-03-30T13:15:00+09:00",
-            rejectionReason: "Should not be present",
+            reviewComment: "Should not be present",
+            governingReviewComment: null,
+            rootRequestId: "req_leave_001",
+            parentRequestId: null,
+            followUpKind: null,
+            supersededByRequestId: null,
+            activeRequestId: null,
+            activeStatus: null,
+            effectiveRequestId: "req_leave_001",
+            effectiveStatus: "approved",
+            hasActiveFollowUp: false,
+            nextAction: "none",
           },
         ],
       }),
@@ -1279,11 +1633,19 @@ describe("admin request-review contracts", () => {
     ).toThrow();
   });
 
+  it("requires a review comment when requesting revision", () => {
+    expect(() =>
+      adminRequestDecisionBodySchema.parse({
+        decision: "request_revision",
+      }),
+    ).toThrow();
+  });
+
   it("rejects rejection reasons on approve decisions", () => {
     expect(() =>
       adminRequestDecisionBodySchema.parse({
         decision: "approve",
-        rejectionReason: "This should not be sent for approvals.",
+        reviewComment: "This should not be sent for approvals.",
       }),
     ).toThrow();
   });
@@ -1293,12 +1655,19 @@ describe("admin request-review contracts", () => {
       adminRequestDecisionResponseSchema.parse({
         id: "req_manual_001",
         requestType: "manual_attendance",
-        status: "rejected",
+        status: "revision_requested",
         reviewedAt: "2026-03-30T13:15:00+09:00",
-        rejectionReason: "Please clarify the missing clock-out time.",
+        reviewComment: "Please clarify the missing clock-out time.",
+        governingReviewComment: "Please clarify the missing clock-out time.",
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "revision_requested",
+        hasActiveFollowUp: false,
+        nextAction: "none",
       }),
     ).toMatchObject({
-      status: "rejected",
+      status: "revision_requested",
     });
   });
 
@@ -1309,31 +1678,52 @@ describe("admin request-review contracts", () => {
         requestType: "manual_attendance",
         status: "pending",
         reviewedAt: "2026-03-30T13:15:00+09:00",
-        rejectionReason: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "none",
       }),
     ).toThrow();
   });
 
-  it("rejects rejected decision responses without a rejection reason", () => {
+  it("rejects revision-requested decision responses without a review comment", () => {
+    expect(() =>
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_manual_001",
+        requestType: "manual_attendance",
+        status: "revision_requested",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        reviewComment: null,
+        governingReviewComment: "Please clarify the missing clock-out time.",
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "revision_requested",
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects rejected decision responses with an empty review comment", () => {
     expect(() =>
       adminRequestDecisionResponseSchema.parse({
         id: "req_manual_001",
         requestType: "manual_attendance",
         status: "rejected",
         reviewedAt: "2026-03-30T13:15:00+09:00",
-        rejectionReason: null,
-      }),
-    ).toThrow();
-  });
-
-  it("rejects rejected decision responses with an empty rejection reason", () => {
-    expect(() =>
-      adminRequestDecisionResponseSchema.parse({
-        id: "req_manual_001",
-        requestType: "manual_attendance",
-        status: "rejected",
-        reviewedAt: "2026-03-30T13:15:00+09:00",
-        rejectionReason: "   ",
+        reviewComment: "   ",
+        governingReviewComment: "Please clarify the missing clock-out time.",
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "rejected",
+        hasActiveFollowUp: false,
+        nextAction: "none",
       }),
     ).toThrow();
   });

@@ -32,13 +32,22 @@ export const nextActionTypeSchema = z.enum([
 ]);
 export const attendanceRecordSourceSchema = z.enum(["beacon", "manual"]);
 
-export const approvalStatusSchema = z.enum(["pending", "approved", "rejected"]);
 export const requestStatusSchema = z.enum([
   "pending",
   "revision_requested",
   "withdrawn",
   "approved",
   "rejected",
+]);
+export const requestReviewDecisionSchema = z.enum([
+  "approve",
+  "reject",
+  "request_revision",
+]);
+export const requestQueueViewSchema = z.enum([
+  "needs_review",
+  "completed",
+  "all",
 ]);
 export const manualAttendanceActionSchema = z.enum([
   "clock_in",
@@ -143,52 +152,36 @@ export const leaveBalanceSchema = z.object({
   remainingDays: z.number(),
 });
 
-export const pendingApprovalStateSchema = z.object({
-  status: z.literal("pending"),
-  reviewedAt: apiDateTimeSchema.nullable(),
-  rejectionReason: z.null(),
-});
-
-export const approvedApprovalStateSchema = z.object({
-  status: z.literal("approved"),
-  reviewedAt: apiDateTimeSchema.nullable(),
-  rejectionReason: z.null(),
-});
-
-export const rejectedApprovalStateSchema = z.object({
-  status: z.literal("rejected"),
-  reviewedAt: apiDateTimeSchema.nullable(),
-  rejectionReason: z.string().trim().min(1),
-});
-
-const leaveRequestBaseSchema = z.object({
+export const companyEventSchema = z.object({
   id: z.string().min(1),
-  requestType: z.literal("leave"),
   date: apiDateSchema,
-  reason: z.string().min(1),
-  requestedAt: apiDateTimeSchema,
+  title: z.string().min(1),
 });
 
-const hourlyLeaveRequestBaseSchema = leaveRequestBaseSchema.extend({
-  leaveType: z.literal("hourly"),
-  hours: z.number(),
+const leaveConflictContextItemSchema = z.object({}).passthrough();
+
+export const leaveConflictSchema = z.object({
+  companyEventContext: z.array(companyEventSchema),
+  effectiveApprovedLeaveContext: z.array(leaveConflictContextItemSchema),
+  pendingLeaveContext: z.array(leaveConflictContextItemSchema),
+  staffingRisk: z.string().min(1),
+  requiresApprovalConfirmation: z.boolean(),
 });
 
-const nonHourlyLeaveRequestBaseSchema = leaveRequestBaseSchema.extend({
-  leaveType: leaveTypeSchema.exclude(["hourly"]),
-  hours: z.null(),
+export const requestReviewStateFieldsSchema = z.object({
+  status: requestStatusSchema,
+  reviewedAt: apiDateTimeSchema.nullable(),
+  reviewComment: z.string().trim().min(1).nullable(),
 });
 
-export const leaveRequestSchema = z.union([
-  hourlyLeaveRequestBaseSchema.merge(pendingApprovalStateSchema),
-  hourlyLeaveRequestBaseSchema.merge(approvedApprovalStateSchema),
-  hourlyLeaveRequestBaseSchema.merge(rejectedApprovalStateSchema),
-  nonHourlyLeaveRequestBaseSchema.merge(pendingApprovalStateSchema),
-  nonHourlyLeaveRequestBaseSchema.merge(approvedApprovalStateSchema),
-  nonHourlyLeaveRequestBaseSchema.merge(rejectedApprovalStateSchema),
-]);
+export const requestRelationFieldsSchema = z.object({
+  rootRequestId: z.string().min(1),
+  parentRequestId: z.string().min(1).nullable(),
+  followUpKind: followUpKindSchema.nullable(),
+  supersededByRequestId: z.string().min(1).nullable(),
+});
 
-const requestChainProjectionBaseSchema = z.object({
+export const requestChainProjectionFieldsSchema = z.object({
   activeRequestId: z.string().min(1).nullable(),
   activeStatus: requestStatusSchema.nullable(),
   effectiveRequestId: z.string().min(1),
@@ -198,8 +191,12 @@ const requestChainProjectionBaseSchema = z.object({
   nextAction: requestNextActionSchema,
 });
 
-function validateRequestChainProjection(
-  value: z.infer<typeof requestChainProjectionBaseSchema>,
+function hasValue(value: string | null | undefined) {
+  return value !== null && value !== undefined;
+}
+
+export function validateRequestChainProjection(
+  value: z.infer<typeof requestChainProjectionFieldsSchema>,
   ctx: z.RefinementCtx,
 ) {
   const hasActiveRequestId = value.activeRequestId !== null;
@@ -242,21 +239,42 @@ function validateRequestChainProjection(
     });
   }
 
-  if (hasActiveRequest && value.effectiveRequestId !== value.activeRequestId) {
+  if (
+    hasActiveRequest &&
+    value.effectiveStatus === "pending" &&
+    value.effectiveRequestId !== value.activeRequestId
+  ) {
     ctx.addIssue({
       code: "custom",
       path: ["effectiveRequestId"],
       message:
-        'Invalid input: "effectiveRequestId" must match "activeRequestId" when active work exists',
+        'Invalid input: "effectiveRequestId" must match "activeRequestId" when the effective status is "pending"',
     });
   }
 
-  if (hasActiveRequest && value.effectiveStatus !== value.activeStatus) {
+  if (
+    hasActiveRequest &&
+    value.effectiveStatus === "pending" &&
+    value.effectiveStatus !== value.activeStatus
+  ) {
     ctx.addIssue({
       code: "custom",
       path: ["effectiveStatus"],
       message:
-        'Invalid input: "effectiveStatus" must match "activeStatus" when active work exists',
+        'Invalid input: "effectiveStatus" must match "activeStatus" when the effective status is "pending"',
+    });
+  }
+
+  if (
+    hasActiveRequest &&
+    value.effectiveStatus !== "pending" &&
+    value.effectiveStatus !== "approved"
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["effectiveStatus"],
+      message:
+        'Invalid input: "effectiveStatus" must stay "pending" or "approved" when active work exists',
     });
   }
 
@@ -288,27 +306,10 @@ function validateRequestChainProjection(
   }
 }
 
-const manualAttendanceRequestResourceBaseSchema = z
-  .object({
-    id: z.string().min(1),
-    requestType: z.literal("manual_attendance"),
-    action: manualAttendanceActionSchema,
-    date: apiDateSchema,
-    requestedAt: apiDateTimeSchema,
-    reason: z.string().min(1),
-    status: requestStatusSchema,
-    reviewedAt: apiDateTimeSchema.nullable(),
-    reviewComment: z.string().trim().min(1).nullable(),
-    rootRequestId: z.string().min(1),
-    parentRequestId: z.string().min(1).nullable(),
-    followUpKind: followUpKindSchema.extract(["resubmission"]).nullable(),
-    supersededByRequestId: z.string().min(1).nullable(),
-  })
-  .merge(requestChainProjectionBaseSchema);
-
-function validateManualAttendanceReviewState(
-  value: z.infer<typeof manualAttendanceRequestResourceBaseSchema>,
+export function validateRequestReviewState(
+  value: z.infer<typeof requestReviewStateFieldsSchema>,
   ctx: z.RefinementCtx,
+  resourceLabel: string,
 ) {
   const requiresReviewedAt =
     value.status === "approved" ||
@@ -321,8 +322,7 @@ function validateManualAttendanceReviewState(
     ctx.addIssue({
       code: "custom",
       path: ["reviewedAt"],
-      message:
-        'Invalid input: "reviewedAt" is required for approved or reviewed manual attendance requests',
+      message: `Invalid input: "reviewedAt" is required for reviewed ${resourceLabel}`,
     });
   }
 
@@ -330,8 +330,7 @@ function validateManualAttendanceReviewState(
     ctx.addIssue({
       code: "custom",
       path: ["reviewedAt"],
-      message:
-        'Invalid input: "reviewedAt" must be null for unreviewed manual attendance requests',
+      message: `Invalid input: "reviewedAt" must be null for unreviewed ${resourceLabel}`,
     });
   }
 
@@ -339,8 +338,7 @@ function validateManualAttendanceReviewState(
     ctx.addIssue({
       code: "custom",
       path: ["reviewComment"],
-      message:
-        'Invalid input: "reviewComment" is required for rejected or revision-requested manual attendance requests',
+      message: `Invalid input: "reviewComment" is required for non-approved reviewed ${resourceLabel}`,
     });
   }
 
@@ -348,18 +346,18 @@ function validateManualAttendanceReviewState(
     ctx.addIssue({
       code: "custom",
       path: ["reviewComment"],
-      message:
-        'Invalid input: "reviewComment" must be null unless the manual attendance request is rejected or revision_requested',
+      message: `Invalid input: "reviewComment" must be null unless the ${resourceLabel} is rejected or revision_requested`,
     });
   }
 }
 
-function validateManualAttendanceRelations(
-  value: z.infer<typeof manualAttendanceRequestResourceBaseSchema>,
+export function validateRequestRelations(
+  value: z.infer<typeof requestRelationFieldsSchema> & { id: string },
   ctx: z.RefinementCtx,
+  resourceLabel: string,
 ) {
-  const hasParentRequestId = value.parentRequestId !== null;
-  const hasFollowUpKind = value.followUpKind !== null;
+  const hasParentRequestId = hasValue(value.parentRequestId);
+  const hasFollowUpKind = hasValue(value.followUpKind);
 
   if (hasParentRequestId && !hasFollowUpKind) {
     ctx.addIssue({
@@ -383,8 +381,7 @@ function validateManualAttendanceRelations(
     ctx.addIssue({
       code: "custom",
       path: ["rootRequestId"],
-      message:
-        'Invalid input: "rootRequestId" must equal "id" for a root manual attendance request',
+      message: `Invalid input: "rootRequestId" must equal "id" for a root ${resourceLabel}`,
     });
   }
 
@@ -392,20 +389,179 @@ function validateManualAttendanceRelations(
     ctx.addIssue({
       code: "custom",
       path: ["rootRequestId"],
-      message:
-        'Invalid input: "rootRequestId" must point to the root request, not the current follow-up request',
+      message: `Invalid input: "rootRequestId" must point to the root ${resourceLabel}, not the current follow-up request`,
     });
   }
 }
 
+function validateManualAttendanceRequestedClockFields(
+  value: {
+    action: z.infer<typeof manualAttendanceActionSchema>;
+    requestedClockInAt: z.infer<typeof apiDateTimeSchema> | null;
+    requestedClockOutAt: z.infer<typeof apiDateTimeSchema> | null;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.action === "clock_in") {
+    if (value.requestedClockInAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockInAt"],
+        message:
+          'Invalid input: "requestedClockInAt" is required when "action" is "clock_in"',
+      });
+    }
+
+    if (value.requestedClockOutAt !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockOutAt"],
+        message:
+          'Invalid input: "requestedClockOutAt" must be null when "action" is "clock_in"',
+      });
+    }
+  }
+
+  if (value.action === "clock_out") {
+    if (value.requestedClockOutAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockOutAt"],
+        message:
+          'Invalid input: "requestedClockOutAt" is required when "action" is "clock_out"',
+      });
+    }
+
+    if (value.requestedClockInAt !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockInAt"],
+        message:
+          'Invalid input: "requestedClockInAt" must be null when "action" is "clock_out"',
+      });
+    }
+  }
+
+  if (value.action === "both") {
+    if (value.requestedClockInAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockInAt"],
+        message:
+          'Invalid input: "requestedClockInAt" is required when "action" is "both"',
+      });
+    }
+
+    if (value.requestedClockOutAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["requestedClockOutAt"],
+        message:
+          'Invalid input: "requestedClockOutAt" is required when "action" is "both"',
+      });
+    }
+  }
+}
+
+function validateLeaveRequestTiming(
+  value: {
+    leaveType: z.infer<typeof leaveTypeSchema>;
+    startAt: z.infer<typeof apiDateTimeSchema> | null;
+    endAt: z.infer<typeof apiDateTimeSchema> | null;
+    hours: number | null;
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (value.leaveType === "hourly") {
+    if (value.startAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["startAt"],
+        message:
+          'Invalid input: "startAt" is required when "leaveType" is "hourly"',
+      });
+    }
+
+    if (value.endAt === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endAt"],
+        message:
+          'Invalid input: "endAt" is required when "leaveType" is "hourly"',
+      });
+    }
+
+    if (value.hours === null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["hours"],
+        message:
+          'Invalid input: "hours" is required output when "leaveType" is "hourly"',
+      });
+    }
+  }
+
+  if (value.leaveType !== "hourly") {
+    if (value.startAt !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["startAt"],
+        message:
+          'Invalid input: "startAt" must be null unless "leaveType" is "hourly"',
+      });
+    }
+
+    if (value.endAt !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["endAt"],
+        message:
+          'Invalid input: "endAt" must be null unless "leaveType" is "hourly"',
+      });
+    }
+
+    if (value.hours !== null) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["hours"],
+        message:
+          'Invalid input: "hours" must be null unless "leaveType" is "hourly"',
+      });
+    }
+  }
+}
+
 export const requestChainProjectionSchema =
-  requestChainProjectionBaseSchema.superRefine(validateRequestChainProjection);
+  requestChainProjectionFieldsSchema.superRefine(
+    validateRequestChainProjection,
+  );
+
+const manualAttendanceRequestRelationFieldsSchema =
+  requestRelationFieldsSchema.extend({
+    followUpKind: followUpKindSchema.extract(["resubmission"]).nullable(),
+  });
+
+const manualAttendanceRequestResourceBaseSchema = z
+  .object({
+    id: z.string().min(1),
+    requestType: z.literal("manual_attendance"),
+    action: manualAttendanceActionSchema,
+    date: apiDateSchema,
+    submittedAt: apiDateTimeSchema,
+    requestedClockInAt: apiDateTimeSchema.nullable(),
+    requestedClockOutAt: apiDateTimeSchema.nullable(),
+    reason: z.string().min(1),
+  })
+  .merge(requestReviewStateFieldsSchema)
+  .merge(manualAttendanceRequestRelationFieldsSchema)
+  .merge(requestChainProjectionFieldsSchema);
 
 export const manualAttendanceRequestResourceSchema =
   manualAttendanceRequestResourceBaseSchema.superRefine((value, ctx) => {
+    validateManualAttendanceRequestedClockFields(value, ctx);
+    validateRequestReviewState(value, ctx, "manual attendance request");
+    validateRequestRelations(value, ctx, "manual attendance request");
     validateRequestChainProjection(value, ctx);
-    validateManualAttendanceReviewState(value, ctx);
-    validateManualAttendanceRelations(value, ctx);
   });
 
 const attendanceSurfaceManualRequestStatusSchema = requestStatusSchema.extract([
@@ -422,10 +578,37 @@ export const attendanceSurfaceManualRequestResourceSchema =
       effectiveStatus: attendanceSurfaceManualRequestStatusSchema,
     })
     .superRefine((value, ctx) => {
+      validateManualAttendanceRequestedClockFields(value, ctx);
+      validateRequestReviewState(value, ctx, "manual attendance request");
+      validateRequestRelations(value, ctx, "manual attendance request");
       validateRequestChainProjection(value, ctx);
-      validateManualAttendanceReviewState(value, ctx);
-      validateManualAttendanceRelations(value, ctx);
     });
+
+const leaveRequestResourceBaseSchema = z
+  .object({
+    id: z.string().min(1),
+    requestType: z.literal("leave"),
+    leaveType: leaveTypeSchema,
+    date: apiDateSchema,
+    startAt: apiDateTimeSchema.nullable(),
+    endAt: apiDateTimeSchema.nullable(),
+    hours: z.number().nullable(),
+    reason: z.string().min(1),
+    requestedAt: apiDateTimeSchema,
+    leaveConflict: leaveConflictSchema.optional(),
+  })
+  .merge(requestReviewStateFieldsSchema)
+  .merge(requestRelationFieldsSchema)
+  .merge(requestChainProjectionFieldsSchema);
+
+export const leaveRequestSchema = leaveRequestResourceBaseSchema.superRefine(
+  (value, ctx) => {
+    validateLeaveRequestTiming(value, ctx);
+    validateRequestReviewState(value, ctx, "leave request");
+    validateRequestRelations(value, ctx, "leave request");
+    validateRequestChainProjection(value, ctx);
+  },
+);
 
 export const errorResponseSchema = z.object({
   error: z.object({
@@ -451,8 +634,9 @@ export type NextActionType = z.infer<typeof nextActionTypeSchema>;
 export type AttendanceRecordSource = z.infer<
   typeof attendanceRecordSourceSchema
 >;
-export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
 export type RequestStatus = z.infer<typeof requestStatusSchema>;
+export type RequestReviewDecision = z.infer<typeof requestReviewDecisionSchema>;
+export type RequestQueueView = z.infer<typeof requestQueueViewSchema>;
 export type ManualAttendanceAction = z.infer<
   typeof manualAttendanceActionSchema
 >;
@@ -477,6 +661,8 @@ export type AttendanceDisplayNextAction = z.infer<
 export type AttendanceDisplay = z.infer<typeof attendanceDisplaySchema>;
 export type PreviousDayOpenRecord = z.infer<typeof previousDayOpenRecordSchema>;
 export type LeaveBalance = z.infer<typeof leaveBalanceSchema>;
+export type CompanyEvent = z.infer<typeof companyEventSchema>;
+export type LeaveConflict = z.infer<typeof leaveConflictSchema>;
 export type LeaveRequest = z.infer<typeof leaveRequestSchema>;
 export type RequestChainProjection = z.infer<
   typeof requestChainProjectionSchema

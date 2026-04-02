@@ -65,7 +65,7 @@ describe("server api helpers", () => {
         body: JSON.stringify({
           date: "2026-03-30",
           action: "check_in",
-          requestedAt: "2026-03-30T09:00:00+09:00",
+          requestedClockInAt: "2026-03-30T09:00:00+09:00",
           reason: "Beacon was not detected at the office entrance.",
         }),
       }),
@@ -97,7 +97,7 @@ describe("server api helpers", () => {
         },
         body: JSON.stringify({
           decision: "reject",
-          rejectionReason: "Please clarify the missing clock-out time.",
+          reviewComment: "Please clarify the missing clock-out time.",
         }),
       }),
     );
@@ -106,7 +106,7 @@ describe("server api helpers", () => {
       success: true,
       data: {
         decision: "reject",
-        rejectionReason: "Please clarify the missing clock-out time.",
+        reviewComment: "Please clarify the missing clock-out time.",
       },
     });
   });
