@@ -1,4 +1,8 @@
-import type { AdminRequestsResponse } from "@/lib/contracts/requests";
+import type {
+  AdminRequestDecisionBody,
+  AdminRequestDecisionResponse,
+  AdminRequestsResponse,
+} from "@/lib/contracts/requests";
 import type {
   RequestChainProjection,
   RequestQueueView,
@@ -13,6 +17,10 @@ import type { CanonicalSeedWorld } from "@/lib/seed/world";
 type SeedLeaveRequest = CanonicalSeedWorld["leaveRequests"][number];
 type SeedManualRequest = CanonicalSeedWorld["manualAttendanceRequests"][number];
 type SeedRequest = SeedLeaveRequest | SeedManualRequest;
+type SeedAttendanceRecord = CanonicalSeedWorld["attendanceRecords"][number];
+
+export class AdminRequestNotFoundError extends Error {}
+export class AdminRequestConflictError extends Error {}
 
 export type RequestChainLookup = Readonly<{
   rootRequestId: string;
@@ -40,6 +48,10 @@ function getRequestById(
   return getAllRequests(world).find((request) => request.id === requestId);
 }
 
+function getAttendanceRecordId(employeeId: string, date: string) {
+  return `attendance_record_${employeeId}_${date}`;
+}
+
 function getChainRequests(
   world: CanonicalSeedWorld,
   rootRequestId: string,
@@ -55,6 +67,189 @@ function getRequestReviewTime(request: SeedRequest) {
   return request.reviewedAt === null
     ? 0
     : new Date(request.reviewedAt).getTime();
+}
+
+function shouldProjectAdminLeaveConflict(
+  request: SeedLeaveRequest,
+  projection: RequestChainProjection,
+) {
+  return (
+    request.id === projection.activeRequestId ||
+    (projection.activeRequestId !== null &&
+      projection.effectiveStatus === "approved" &&
+      projection.effectiveRequestId === request.id)
+  );
+}
+
+function ensureRequestIsWritable(world: CanonicalSeedWorld, requestId: string) {
+  const request = getRequestById(world, requestId);
+
+  if (request === undefined) {
+    throw new AdminRequestNotFoundError(`Request "${requestId}" was not found`);
+  }
+
+  if (request.supersededByRequestId !== null) {
+    throw new AdminRequestConflictError(
+      `Request "${requestId}" has been superseded and is no longer writable`,
+    );
+  }
+
+  const chain = findRequestChainByRequestId(world, requestId);
+
+  if (chain === null) {
+    throw new AdminRequestNotFoundError(`Request "${requestId}" was not found`);
+  }
+
+  if (chain.activeRequestId !== requestId) {
+    if (chain.activeRequestId !== null) {
+      throw new AdminRequestConflictError(
+        `Request "${requestId}" is not the current active request in its chain`,
+      );
+    }
+
+    if (
+      request.status === "rejected" ||
+      request.status === "revision_requested"
+    ) {
+      throw new AdminRequestConflictError(
+        `Request "${requestId}" is locked after review; submit a linked follow-up instead of reopening the same record`,
+      );
+    }
+  }
+
+  if (request.status !== "pending") {
+    throw new AdminRequestConflictError(
+      `Request "${requestId}" is not writable because its status is "${request.status}"`,
+    );
+  }
+
+  return request;
+}
+
+function appendReviewEvent(
+  world: CanonicalSeedWorld,
+  request: SeedRequest,
+  input: {
+    decision: AdminRequestDecisionBody["decision"];
+    reviewComment: string | null;
+    reviewedAt: string;
+    reviewerId: string;
+  },
+) {
+  world.requestReviewEvents.push({
+    id: `request_review_${request.id}`,
+    requestId: request.id,
+    decision: input.decision,
+    reviewComment: input.reviewComment,
+    reviewedAt: input.reviewedAt,
+    reviewerId: input.reviewerId,
+  });
+}
+
+function calculateWorkMinutes(
+  clockInAt: string | null,
+  clockOutAt: string | null,
+) {
+  if (clockInAt === null || clockOutAt === null) {
+    return null;
+  }
+
+  return Math.round(
+    (new Date(clockOutAt).getTime() - new Date(clockInAt).getTime()) / 60000,
+  );
+}
+
+function findAttendanceRecord(
+  world: CanonicalSeedWorld,
+  employeeId: string,
+  date: string,
+) {
+  return (
+    world.attendanceRecords.find(
+      (record) => record.employeeId === employeeId && record.date === date,
+    ) ?? null
+  );
+}
+
+function getOrCreateAttendanceRecord(
+  world: CanonicalSeedWorld,
+  employeeId: string,
+  date: string,
+) {
+  const existingRecord = findAttendanceRecord(world, employeeId, date);
+
+  if (existingRecord !== null) {
+    return existingRecord;
+  }
+
+  const record: SeedAttendanceRecord = {
+    id: getAttendanceRecordId(employeeId, date),
+    employeeId,
+    date,
+    clockInAt: null,
+    clockInSource: null,
+    clockOutAt: null,
+    clockOutSource: null,
+    workMinutes: null,
+    manualRequestId: null,
+  };
+
+  world.attendanceRecords.push(record);
+
+  return record;
+}
+
+function applyApprovedManualAttendanceWriteback(
+  world: CanonicalSeedWorld,
+  request: SeedManualRequest,
+) {
+  const record = getOrCreateAttendanceRecord(
+    world,
+    request.employeeId,
+    request.date,
+  );
+
+  if (request.action === "clock_in" || request.action === "both") {
+    record.clockInAt = request.requestedClockInAt;
+    record.clockInSource = "manual";
+  }
+
+  if (request.action === "clock_out" || request.action === "both") {
+    record.clockOutAt = request.requestedClockOutAt;
+    record.clockOutSource = "manual";
+  }
+
+  record.workMinutes = calculateWorkMinutes(
+    record.clockInAt,
+    record.clockOutAt,
+  );
+  record.manualRequestId = request.id;
+}
+
+function toAdminRequestDecisionResponse(
+  world: CanonicalSeedWorld,
+  request: SeedRequest,
+): AdminRequestDecisionResponse {
+  const projection = buildRequestChainProjection(world, request.id);
+
+  if (projection === null) {
+    throw new Error(`Unable to project request chain for ${request.id}`);
+  }
+
+  return {
+    id: request.id,
+    requestType: request.requestType,
+    status: request.status,
+    reviewedAt: request.reviewedAt,
+    reviewComment: request.reviewComment,
+    governingReviewComment: projection.governingReviewComment,
+    activeRequestId: projection.activeRequestId,
+    activeStatus: projection.activeStatus,
+    effectiveRequestId: projection.effectiveRequestId,
+    effectiveStatus: projection.effectiveStatus,
+    hasActiveFollowUp: projection.hasActiveFollowUp,
+    nextAction: projection.nextAction,
+  };
 }
 
 export function findRequestChainByRequestId(
@@ -224,16 +419,20 @@ function toQueueItem(
     nextAction: projection.nextAction,
   };
 
+  const leaveItem = {
+    ...commonFields,
+    requestedAt: request.requestedAt,
+  };
+
+  if (!shouldProjectAdminLeaveConflict(request, projection)) {
+    return leaveItem;
+  }
+
   const leaveConflict = buildLeaveConflictProjection(world, {
     employeeId: request.employeeId,
     date: request.date,
     excludePendingRequestId: request.id,
   });
-
-  const leaveItem = {
-    ...commonFields,
-    requestedAt: request.requestedAt,
-  };
 
   if (shouldIncludeLeaveConflict(leaveConflict)) {
     return {
@@ -366,6 +565,46 @@ export function getAdminRequests(
           ? completedItems
           : [...needsReviewItems, ...completedItems],
   };
+}
+
+export function reviewAdminRequest(
+  world: CanonicalSeedWorld,
+  requestId: string,
+  decision: AdminRequestDecisionBody,
+  input: {
+    reviewedAt: string;
+    reviewerId: string;
+  },
+): AdminRequestDecisionResponse {
+  const request = ensureRequestIsWritable(world, requestId);
+  const nextStatus =
+    decision.decision === "approve"
+      ? "approved"
+      : decision.decision === "reject"
+        ? "rejected"
+        : "revision_requested";
+  const reviewComment =
+    decision.decision === "approve" ? null : decision.reviewComment;
+
+  request.status = nextStatus;
+  request.reviewedAt = input.reviewedAt;
+  request.reviewComment = reviewComment;
+
+  appendReviewEvent(world, request, {
+    decision: decision.decision,
+    reviewComment,
+    reviewedAt: input.reviewedAt,
+    reviewerId: input.reviewerId,
+  });
+
+  if (
+    request.requestType === "manual_attendance" &&
+    nextStatus === "approved"
+  ) {
+    applyApprovedManualAttendanceWriteback(world, request);
+  }
+
+  return toAdminRequestDecisionResponse(world, request);
 }
 
 function getRequestTimestampForSort(timestamp: string | number) {

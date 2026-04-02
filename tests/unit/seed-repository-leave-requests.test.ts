@@ -83,6 +83,31 @@ function createCanceledLeaveWorld() {
   return world;
 }
 
+function createReviewedHistoryWithWarningContextWorld() {
+  const world = structuredClone(canonicalSeedWorld);
+
+  world.leaveRequests.push({
+    id: "leave_request_emp_001_2026-04-16_rejected",
+    employeeId: "emp_001",
+    requestType: "leave",
+    leaveType: "annual",
+    date: "2026-04-16",
+    startAt: null,
+    endAt: null,
+    reason: "Rejected leave history on a company-event date.",
+    requestedAt: "2026-04-15T09:00:00+09:00",
+    status: "rejected",
+    reviewedAt: "2026-04-15T11:00:00+09:00",
+    reviewComment: "Please resubmit after adjusting the staffing plan.",
+    rootRequestId: "leave_request_emp_001_2026-04-16_rejected",
+    parentRequestId: null,
+    followUpKind: null,
+    supersededByRequestId: null,
+  });
+
+  return world;
+}
+
 describe("request-chain and leave repository helpers", () => {
   it("projects approved leave follow-ups against the governing root approval", () => {
     const projection = buildRequestChainProjection(
@@ -312,5 +337,27 @@ describe("request-chain and leave repository helpers", () => {
         requiresApprovalConfirmation: true,
       }),
     });
+  });
+
+  it("keeps reviewed non-approved leave history free of leave conflict projection in admin completed views", () => {
+    const world = createReviewedHistoryWithWarningContextWorld();
+    const completed = adminRequestsResponseSchema.parse(
+      getAdminRequests(world, { view: "completed" }),
+    );
+    const item = completed.items.find(
+      (candidate) =>
+        candidate.id === "leave_request_emp_001_2026-04-16_rejected",
+    );
+
+    expect(item).toMatchObject({
+      id: "leave_request_emp_001_2026-04-16_rejected",
+      status: "rejected",
+      activeRequestId: null,
+      activeStatus: null,
+      effectiveRequestId: "leave_request_emp_001_2026-04-16_rejected",
+      effectiveStatus: "rejected",
+      nextAction: "none",
+    });
+    expect(item).not.toHaveProperty("leaveConflict");
   });
 });
