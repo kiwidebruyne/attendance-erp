@@ -308,6 +308,7 @@ export function validateRequestChainProjection(
   }
 
   if (
+    hasActiveRequest &&
     value.effectiveStatus === "approved" &&
     value.governingReviewComment !== null
   ) {
@@ -315,7 +316,7 @@ export function validateRequestChainProjection(
       code: "custom",
       path: ["governingReviewComment"],
       message:
-        'Invalid input: "governingReviewComment" must be null when "effectiveStatus" is "approved"',
+        'Invalid input: "governingReviewComment" must be null while approved work remains effective during active follow-up review',
     });
   }
 

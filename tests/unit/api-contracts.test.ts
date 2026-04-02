@@ -321,19 +321,21 @@ describe("shared contract schemas", () => {
     ).toThrow();
   });
 
-  it("rejects governing review comments on completed approved chains", () => {
-    expect(() =>
+  it("allows governing review comments on completed approved chains", () => {
+    expect(
       requestChainProjectionSchema.parse({
         activeRequestId: null,
         activeStatus: null,
         effectiveRequestId: "req_leave_001",
         effectiveStatus: "approved",
         governingReviewComment:
-          "This review comment should no longer govern the chain.",
+          "Please keep the original approved interval until the change is corrected.",
         hasActiveFollowUp: false,
         nextAction: "none",
       }),
-    ).toThrow();
+    ).toMatchObject({
+      effectiveStatus: "approved",
+    });
   });
 
   it("requires governing review comments for unresolved non-approved chains", () => {
@@ -1878,6 +1880,30 @@ describe("admin request-review contracts", () => {
     });
   });
 
+  it("allows leave decision responses to keep the prior approval effective", () => {
+    expect(
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_leave_002",
+        requestType: "leave",
+        status: "rejected",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        reviewComment:
+          "The original approved leave remains effective until a corrected follow-up is submitted.",
+        governingReviewComment:
+          "The original approved leave remains effective until a corrected follow-up is submitted.",
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_leave_001",
+        effectiveStatus: "approved",
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toMatchObject({
+      status: "rejected",
+      effectiveStatus: "approved",
+    });
+  });
+
   it("rejects pending statuses in request decision responses", () => {
     expect(() =>
       adminRequestDecisionResponseSchema.parse({
@@ -1891,6 +1917,27 @@ describe("admin request-review contracts", () => {
         activeStatus: null,
         effectiveRequestId: "req_manual_001",
         effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "none",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects manual-attendance decision responses that keep a prior approval effective", () => {
+    expect(() =>
+      adminRequestDecisionResponseSchema.parse({
+        id: "req_manual_002",
+        requestType: "manual_attendance",
+        status: "rejected",
+        reviewedAt: "2026-03-30T13:15:00+09:00",
+        reviewComment:
+          "Manual attendance follow-ups cannot keep an earlier approval effective.",
+        governingReviewComment:
+          "Manual attendance follow-ups cannot keep an earlier approval effective.",
+        activeRequestId: null,
+        activeStatus: null,
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "approved",
         hasActiveFollowUp: false,
         nextAction: "none",
       }),

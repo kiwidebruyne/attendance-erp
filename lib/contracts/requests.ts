@@ -130,24 +130,6 @@ export const adminRequestDecisionResponseSchema =
       });
     }
 
-    if (value.effectiveRequestId !== value.id) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["effectiveRequestId"],
-        message:
-          'Invalid input: "effectiveRequestId" must match "id" in a request decision response',
-      });
-    }
-
-    if (value.effectiveStatus !== value.status) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["effectiveStatus"],
-        message:
-          'Invalid input: "effectiveStatus" must match "status" in a request decision response',
-      });
-    }
-
     if (value.status === "approved" && value.governingReviewComment !== null) {
       ctx.addIssue({
         code: "custom",
@@ -167,6 +149,67 @@ export const adminRequestDecisionResponseSchema =
         message:
           'Invalid input: "governingReviewComment" must match "reviewComment" for non-approved decision responses',
       });
+    }
+
+    if (value.status === "approved") {
+      if (value.effectiveRequestId !== value.id) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["effectiveRequestId"],
+          message:
+            'Invalid input: "effectiveRequestId" must match "id" when a request decision response is approved',
+        });
+      }
+
+      if (value.effectiveStatus !== "approved") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["effectiveStatus"],
+          message:
+            'Invalid input: "effectiveStatus" must be "approved" when a request decision response is approved',
+        });
+      }
+    }
+
+    if (
+      value.requestType === "manual_attendance" &&
+      value.status !== "approved"
+    ) {
+      if (value.effectiveRequestId !== value.id) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["effectiveRequestId"],
+          message:
+            'Invalid input: "effectiveRequestId" must match "id" for non-approved manual attendance decision responses',
+        });
+      }
+
+      if (value.effectiveStatus !== value.status) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["effectiveStatus"],
+          message:
+            'Invalid input: "effectiveStatus" must match "status" for non-approved manual attendance decision responses',
+        });
+      }
+    }
+
+    if (value.requestType === "leave" && value.status !== "approved") {
+      const reviewedRequestRemainsEffective =
+        value.effectiveRequestId === value.id &&
+        value.effectiveStatus === value.status;
+      const priorApprovalRemainsEffective =
+        value.effectiveRequestId !== value.id &&
+        value.effectiveStatus === "approved";
+
+      if (!reviewedRequestRemainsEffective && !priorApprovalRemainsEffective) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["effectiveStatus"],
+          message:
+            "Invalid input: leave decision responses must keep either the reviewed non-approved result or the prior approved result as effective",
+        });
+      }
     }
   });
 
