@@ -409,10 +409,12 @@ export function resolveAttendanceSurfaceManualRequest(
   previousDayOpenRecord: { date: string } | null,
 ) {
   const buildSurfaceResourceForDate = (targetDate: string) => {
-    const chainRequests = world.manualAttendanceRequests.filter(
-      (request) =>
-        request.employeeId === employeeId && request.date === targetDate,
-    );
+    const chainRequests = world.manualAttendanceRequests
+      .filter(
+        (request) =>
+          request.employeeId === employeeId && request.date === targetDate,
+      )
+      .sort(compareRequestTimes);
 
     if (chainRequests.length === 0) {
       return null;

@@ -222,6 +222,59 @@ describe("manual attendance repository helpers", () => {
     expect(withdrawnSummary).toBeNull();
   });
 
+  it("sorts date-scoped chain requests before deriving the attendance surface summary", () => {
+    const world = createWorld();
+
+    world.manualAttendanceRequests.push(
+      {
+        id: "manual_request_emp_001_2026-04-13_resubmission",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-04-13",
+        submittedAt: "2026-04-13T11:30:00+09:00",
+        requestedClockInAt: "2026-04-13T09:04:00+09:00",
+        requestedClockOutAt: null,
+        reason:
+          "Approved resubmission should clear the stale rejected summary.",
+        status: "approved",
+        reviewedAt: "2026-04-13T12:00:00+09:00",
+        reviewComment: null,
+        rootRequestId: "manual_request_emp_001_2026-04-13_root",
+        parentRequestId: "manual_request_emp_001_2026-04-13_root",
+        followUpKind: "resubmission",
+        supersededByRequestId: null,
+      },
+      {
+        id: "manual_request_emp_001_2026-04-13_root",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-04-13",
+        submittedAt: "2026-04-13T10:05:00+09:00",
+        requestedClockInAt: "2026-04-13T09:05:00+09:00",
+        requestedClockOutAt: null,
+        reason: "The root request was rejected before the approved follow-up.",
+        status: "rejected",
+        reviewedAt: "2026-04-13T11:00:00+09:00",
+        reviewComment: "Please clarify the correction context.",
+        rootRequestId: "manual_request_emp_001_2026-04-13_root",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+      },
+    );
+
+    const summary = resolveAttendanceSurfaceManualRequest(
+      world,
+      "emp_001",
+      "2026-04-13",
+      null,
+    );
+
+    expect(summary).toBeNull();
+  });
+
   it("creates a root request and rejects a second governing request for the same date even when the action differs", () => {
     const world = createWorld();
     const created = createManualAttendanceRequest(
