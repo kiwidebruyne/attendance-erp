@@ -55,6 +55,7 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 - `attempt_failed`
 - `not_checked_in`
 - `absent`
+- `previous_day_checkout_missing`
 - `leave_work_conflict`
 - `manual_request_pending`
 - `manual_request_rejected`
@@ -64,6 +65,7 @@ Attendance lifecycle semantics for `expectedWorkday`, `attendanceAttempt`, `atte
 - `clock_in`
 - `clock_out`
 - `submit_manual_request`
+- `resolve_previous_day_checkout`
 - `review_request_status`
 - `review_leave_conflict`
 - `wait`
@@ -260,6 +262,19 @@ Fields:
 - `relatedRequestId`
 
 `phase` is derived in precedence order: `checked_out` when the requested date already has a same-day checkout fact, `working` when the requested date has a same-day check-in fact without checkout, `non_workday` when no same-day attendance fact exists and `expectedWorkday.isWorkday` is `false`, and `before_check_in` otherwise.
+
+`previous_day_checkout_missing` is evaluated against the `09:00` carry-over cutoff in the workday timezone carried by the attendance facts, not the transport timezone of the request itself.
+
+### `Previous Day Open Record`
+
+Represents the still-open prior workday when checkout is missing.
+
+Fields:
+
+- `date`
+- `clockInAt`
+- `clockOutAt`
+- `expectedClockOutAt`
 
 ## Employee Endpoints
 
@@ -860,7 +875,8 @@ Response:
     "notCheckedInCount": 2,
     "lateCount": 1,
     "onLeaveCount": 1,
-    "failedAttemptCount": 1
+    "failedAttemptCount": 1,
+    "previousDayOpenCount": 1
   },
   "items": [
     {
@@ -890,13 +906,19 @@ Response:
       "display": {
         "phase": "working",
         "flags": [],
-        "activeExceptions": [],
+        "activeExceptions": ["previous_day_checkout_missing"],
         "nextAction": {
-          "type": "clock_out",
+          "type": "resolve_previous_day_checkout",
           "relatedRequestId": null
         }
       },
       "latestFailedAttempt": null,
+      "previousDayOpenRecord": {
+        "date": "2026-04-10",
+        "clockInAt": "2026-04-10T08:56:00+09:00",
+        "clockOutAt": null,
+        "expectedClockOutAt": "2026-04-10T18:00:00+09:00"
+      },
       "manualRequest": null
     }
   ]
@@ -908,10 +930,11 @@ Response notes:
 - This endpoint is the default same-day operations surface for `/admin/attendance`, not a general-purpose historical ledger.
 - `latestFailedAttempt` is `null` unless the employee has an unresolved failed attempt that still matters operationally.
 - When present, `latestFailedAttempt` reuses the shared `Attendance Attempt` shape but must keep `status = failed` and a non-empty `failureReason`; its `date` identifies the target workday even if `attemptedAt` falls on the next calendar date during overnight prior-workday writeback.
-- `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for that employee's same-date attendance state.
+- `previousDayOpenRecord` is `null` unless the prior workday is still open. A populated prior-day `clockOutAt` must not derive `previous_day_checkout_missing`.
+- `manualRequest` is `null` unless a `pending`, `revision_requested`, or `rejected` manual attendance request still matters for that employee's current attendance state; when present it may target the requested workday or the prior workday during carry-over handling.
 - Consumers should treat `manualRequest` as a compact row-level projection rather than a full request detail payload. It appears on `GET /api/attendance/me`, `GET /api/attendance/me/history`, and `GET /api/admin/attendance/today`, but history rows restrict it to same-date `pending` requests only.
 - If an employee edits or withdraws a pending manual request before review, the row should refresh from the latest projection. Approved manual requests should disappear from this embedded surface once canonical attendance writeback completes.
-- No-record employees must still appear when they count toward today's expected workday and their current operational state already needs attention, such as after the adjusted expected start or when a failed attempt or current manual request is still active.
+- No-record employees must still appear when they count toward today's expected workday and their current operational state already needs attention, such as after the adjusted expected start or when a failed attempt, carry-over issue, or current manual request is still active.
 
 ### `GET /api/admin/attendance/list?from=&to=&name=`
 
@@ -978,6 +1001,7 @@ Response notes:
 
 - This endpoint backs the secondary history review mode for `/admin/attendance`, not the default today-first operations surface.
 - When present, `latestFailedAttempt` still represents a failed attempt only, so `status` must be `failed`.
+- Historical rows may still derive `previous_day_checkout_missing` on the current row when an older workday remains open and still governs the selected day.
 - Historical rows stay date-scoped and do not embed the compact `manualRequest` projection used by `GET /api/admin/attendance/today`.
 
 ## Request Review Endpoints

@@ -163,7 +163,7 @@ describe("seed repository", () => {
     expect(parsedListResponse.filters).toEqual({
       name: "minji",
     });
-    expect(parsedListResponse.total).toBe(3);
+    expect(parsedListResponse.total).toBe(4);
     expect(parsedListResponse.records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

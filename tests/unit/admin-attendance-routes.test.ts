@@ -121,6 +121,9 @@ describe("admin attendance route handlers", () => {
     expect(body.summary.checkedInCount).toBe(
       body.items.filter((item) => item.todayRecord !== null).length,
     );
+    expect(body.summary.previousDayOpenCount).toBe(
+      body.items.filter((item) => item.previousDayOpenRecord !== null).length,
+    );
     expect(body.summary.failedAttemptCount).toBe(
       body.items.filter((item) => item.latestFailedAttempt !== null).length,
     );
@@ -138,6 +141,14 @@ describe("admin attendance route handlers", () => {
       ).length,
     );
 
+    const carryOverRow = body.items.find(
+      (item) => item.previousDayOpenRecord !== null,
+    );
+
+    expect(carryOverRow).toBeDefined();
+    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
+    expect(carryOverRow?.manualRequest).toBeNull();
+
     const activeManualRequestRow = body.items.find(
       (item) => item.manualRequest !== null,
     );
@@ -154,32 +165,33 @@ describe("admin attendance route handlers", () => {
     expect(approvedWritebackRow?.manualRequest).toBeNull();
   });
 
-  it("keeps same-day manual request dates on the matching today row", async () => {
-    const seededManualRequestRow = seededRepository
+  it("preserves a prior-workday manual request date on the carry-over row when the prior workday still governs the today surface", async () => {
+    const carryOverRow = seededRepository
       .getAdminAttendanceToday({
         date: baselineDate,
       })
-      .items.find((item) => item.employee.id === "emp_010");
+      .items.find((item) => item.previousDayOpenRecord !== null);
 
-    expect(seededManualRequestRow).toBeDefined();
-    expect(seededManualRequestRow?.manualRequest?.date).toBe("2026-04-13");
+    expect(carryOverRow).toBeDefined();
+    expect(carryOverRow?.employee.id).toBe("emp_001");
+    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
 
     const modifiedWorld = structuredClone(canonicalSeedWorld);
 
     modifiedWorld.manualAttendanceRequests.push({
-      id: "manual_request_emp_001_2026-04-13_root",
+      id: "manual_request_emp_001_2026-04-10_root",
       employeeId: "emp_001",
       requestType: "manual_attendance",
       action: "clock_in",
-      date: "2026-04-13",
-      submittedAt: "2026-04-13T12:30:00+09:00",
-      requestedClockInAt: "2026-04-13T09:04:00+09:00",
+      date: "2026-04-10",
+      submittedAt: "2026-04-10T12:30:00+09:00",
+      requestedClockInAt: "2026-04-10T09:04:00+09:00",
       requestedClockOutAt: null,
-      reason: "Same-day manual request should stay on the same row.",
+      reason: "Prior-day checkout is still being resolved.",
       status: "pending",
       reviewedAt: null,
       reviewComment: null,
-      rootRequestId: "manual_request_emp_001_2026-04-13_root",
+      rootRequestId: "manual_request_emp_001_2026-04-10_root",
       parentRequestId: null,
       followUpKind: null,
       supersededByRequestId: null,
@@ -203,13 +215,14 @@ describe("admin attendance route handlers", () => {
       "Fetched admin attendance today",
     );
 
-    const updatedManualRequestRow = body.items.find(
+    const updatedCarryOverRow = body.items.find(
       (item) => item.employee.id === "emp_001",
     );
 
-    expect(updatedManualRequestRow).toBeDefined();
-    expect(updatedManualRequestRow?.manualRequest?.date).toBe("2026-04-13");
-    expect(updatedManualRequestRow?.manualRequest?.status).toBe("pending");
+    expect(updatedCarryOverRow).toBeDefined();
+    expect(updatedCarryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
+    expect(updatedCarryOverRow?.manualRequest?.date).toBe("2026-04-10");
+    expect(updatedCarryOverRow?.manualRequest?.status).toBe("pending");
   });
 
   it("returns the seeded admin list payload for a valid name filter, logs one fetch event, and keeps attendance-history rows free of embedded carry-over projections", async () => {
@@ -255,6 +268,9 @@ describe("admin attendance route handlers", () => {
     expect(body.records.every((record) => !("manualRequest" in record))).toBe(
       true,
     );
+    expect(
+      body.records.every((record) => !("previousDayOpenRecord" in record)),
+    ).toBe(true);
   });
 
   it.each([

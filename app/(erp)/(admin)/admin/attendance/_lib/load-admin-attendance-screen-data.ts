@@ -4,6 +4,7 @@ import {
 } from "@/lib/api/admin-attendance";
 
 import type { AdminAttendanceUrlState } from "./page-state";
+import { buildAdminAttendanceTodayExceptionRows } from "./today-exception-rows";
 
 type LoadAdminAttendanceScreenDataInput = {
   baseUrl: string;
@@ -24,12 +25,16 @@ export async function loadAdminAttendanceScreenData({
         },
         { baseUrl },
       ),
+      todayExceptionRows: undefined,
       todayResponse: undefined,
     };
   }
 
+  const todayResponse = await fetchAdminAttendanceToday({ baseUrl });
+
   return {
     historyResponse: undefined,
-    todayResponse: await fetchAdminAttendanceToday({ baseUrl }),
+    todayExceptionRows: buildAdminAttendanceTodayExceptionRows(todayResponse),
+    todayResponse,
   };
 }

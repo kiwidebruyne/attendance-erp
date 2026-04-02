@@ -32,7 +32,7 @@ export default async function AdminAttendancePage(
     toUrlSearchParams(rawSearchParams),
   );
   const baseUrl = await getRequestOrigin();
-  const { historyResponse, todayResponse } =
+  const { historyResponse, todayExceptionRows, todayResponse } =
     await loadAdminAttendanceScreenData({
       baseUrl,
       state,
@@ -53,6 +53,7 @@ export default async function AdminAttendancePage(
       <AdminAttendanceWorkspace
         historyResponse={historyResponse}
         state={state}
+        todayExceptionRows={todayExceptionRows}
         todayResponse={todayResponse}
       />
     </div>
