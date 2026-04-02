@@ -20,6 +20,15 @@ export function conflictErrorResponse(message: string): Response {
   return errorResponse("conflict", message, 409);
 }
 
+export function conflictErrorResponseWithActiveRequestId(
+  message: string,
+  activeRequestId: string,
+): Response {
+  return errorResponse("conflict", message, 409, {
+    activeRequestId,
+  });
+}
+
 export function notFoundErrorResponse(message: string): Response {
   return errorResponse("not_found", message, 404);
 }
@@ -28,12 +37,14 @@ function errorResponse(
   code: "validation_error" | "conflict" | "not_found",
   message: string,
   status: number,
+  additionalErrorFields: Record<string, string> = {},
 ): Response {
   return Response.json(
     {
       error: {
         code,
         message,
+        ...additionalErrorFields,
       },
     },
     {

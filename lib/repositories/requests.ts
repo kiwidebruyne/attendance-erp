@@ -120,16 +120,22 @@ export function buildRequestChainProjection(
   }
 
   const effectiveRequest = chainRequests.at(-1) ?? request;
+  const fallbackEffectiveRequest =
+    effectiveRequest.status === "withdrawn" &&
+    effectiveRequest.parentRequestId !== null
+      ? (getRequestById(world, effectiveRequest.parentRequestId) ??
+        effectiveRequest)
+      : effectiveRequest;
 
   return {
     activeRequestId: null,
     activeStatus: null,
-    effectiveRequestId: effectiveRequest.id,
-    effectiveStatus: effectiveRequest.status,
+    effectiveRequestId: fallbackEffectiveRequest.id,
+    effectiveStatus: fallbackEffectiveRequest.status,
     governingReviewComment:
-      effectiveRequest.status === "rejected" ||
-      effectiveRequest.status === "revision_requested"
-        ? effectiveRequest.reviewComment
+      fallbackEffectiveRequest.status === "rejected" ||
+      fallbackEffectiveRequest.status === "revision_requested"
+        ? fallbackEffectiveRequest.reviewComment
         : null,
     hasActiveFollowUp: false,
     nextAction: "none",

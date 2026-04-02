@@ -65,6 +65,24 @@ export function resolveEffectiveApprovedLeaveRequests(
     const latestRequest = sortedRequests.at(-1) ?? null;
 
     if (
+      latestRequest?.status === "withdrawn" &&
+      latestRequest.parentRequestId !== null
+    ) {
+      const parentRequest =
+        sortedRequests.find(
+          (request) => request.id === latestRequest.parentRequestId,
+        ) ?? null;
+
+      if (
+        parentRequest?.status === "approved" &&
+        parentRequest.followUpKind !== "cancel"
+      ) {
+        effectiveApprovedRequests.push(parentRequest);
+        continue;
+      }
+    }
+
+    if (
       latestRequest?.status === "approved" &&
       latestRequest.followUpKind !== "cancel"
     ) {
