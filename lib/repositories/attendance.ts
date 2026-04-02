@@ -115,6 +115,46 @@ function compareDates(left: string, right: string) {
   return left.localeCompare(right);
 }
 
+function toManualAttendanceFollowUpKind(
+  followUpKind: AttendanceRepositoryWorld["manualAttendanceRequests"][number]["followUpKind"],
+) {
+  return followUpKind === "resubmission" ? followUpKind : null;
+}
+
+function toAttendanceSurfaceManualRequestStatus(
+  status: AttendanceRepositoryWorld["manualAttendanceRequests"][number]["status"],
+) {
+  if (status === "revision_requested" || status === "rejected") {
+    return status;
+  }
+
+  return null;
+}
+
+function toAttendanceAttempt(
+  attempt: AttendanceRepositoryWorld["attendanceAttempts"][number],
+): AttendanceAttempt {
+  if (attempt.status === "success") {
+    return {
+      id: attempt.id,
+      date: attempt.date,
+      action: attempt.action,
+      attemptedAt: attempt.attemptedAt,
+      status: "success",
+      failureReason: null,
+    };
+  }
+
+  return {
+    id: attempt.id,
+    date: attempt.date,
+    action: attempt.action,
+    attemptedAt: attempt.attemptedAt,
+    status: "failed",
+    failureReason: attempt.failureReason!,
+  };
+}
+
 function createFallbackWorkday(
   date: string,
   referenceNow: string,
@@ -293,8 +333,14 @@ function resolvePreviousDayOpenRecord(
     return null;
   }
 
+  const latestOpenClockInAt = latestOpenRecord.clockInAt;
+
+  if (latestOpenClockInAt === null) {
+    return null;
+  }
+
   const currentNow = getDateScopedNow(date, now);
-  const cutoff = buildDateTime(date, "09:00:00", latestOpenRecord.clockInAt);
+  const cutoff = buildDateTime(date, "09:00:00", latestOpenClockInAt);
 
   if (new Date(currentNow).getTime() < new Date(cutoff).getTime()) {
     return null;
@@ -302,14 +348,10 @@ function resolvePreviousDayOpenRecord(
 
   return {
     date: latestOpenRecord.date,
-    clockInAt: latestOpenRecord.clockInAt,
+    clockInAt: latestOpenClockInAt,
     clockOutAt: latestOpenRecord.clockOutAt,
     expectedClockOutAt: latestOpenRecord.date
-      ? buildDateTime(
-          latestOpenRecord.date,
-          "18:00:00",
-          latestOpenRecord.clockInAt,
-        )
+      ? buildDateTime(latestOpenRecord.date, "18:00:00", latestOpenClockInAt)
       : null,
   };
 }
@@ -335,7 +377,7 @@ function resolveOperationalAttempts(
   date: string,
   previousDayOpenRecord: PreviousDayOpenRecord | null,
 ) {
-  const relevantAttempts = world.attendanceAttempts.filter((attempt) => {
+  const rawRelevantAttempts = world.attendanceAttempts.filter((attempt) => {
     if (attempt.employeeId !== employeeId) {
       return false;
     }
@@ -349,18 +391,21 @@ function resolveOperationalAttempts(
       attempt.date === previousDayOpenRecord.date
     );
   });
+  const relevantAttempts = rawRelevantAttempts.map(toAttendanceAttempt);
 
   return relevantAttempts
-    .filter(
-      (attempt) =>
-        attempt.status === "success" ||
-        !hasLaterSuccessfulAttempt(
-          attempt,
-          relevantAttempts.filter(
-            (candidateAttempt) => candidateAttempt.date === attempt.date,
-          ),
+    .filter((attempt) => {
+      if (attempt.status === "success") {
+        return true;
+      }
+
+      return !hasLaterSuccessfulAttempt(
+        attempt,
+        relevantAttempts.filter(
+          (candidateAttempt) => candidateAttempt.date === attempt.date,
         ),
-    )
+      );
+    })
     .sort((left, right) =>
       compareDateTimes(left.attemptedAt, right.attemptedAt),
     );
@@ -450,7 +495,7 @@ function resolveManualAttendanceSummary(
       governingReviewComment,
       rootRequestId: activeRequest.rootRequestId,
       parentRequestId: activeRequest.parentRequestId,
-      followUpKind: activeRequest.followUpKind,
+      followUpKind: toManualAttendanceFollowUpKind(activeRequest.followUpKind),
       supersededByRequestId: activeRequest.supersededByRequestId,
       activeRequestId: activeRequest.id,
       activeStatus: "pending",
@@ -465,6 +510,14 @@ function resolveManualAttendanceSummary(
     return null;
   }
 
+  const reviewedStatus = toAttendanceSurfaceManualRequestStatus(
+    reviewedRequest.status,
+  );
+
+  if (reviewedStatus === null) {
+    return null;
+  }
+
   return {
     id: reviewedRequest.id,
     requestType: reviewedRequest.requestType,
@@ -474,18 +527,18 @@ function resolveManualAttendanceSummary(
     requestedClockInAt: reviewedRequest.requestedClockInAt,
     requestedClockOutAt: reviewedRequest.requestedClockOutAt,
     reason: reviewedRequest.reason,
-    status: reviewedRequest.status,
+    status: reviewedStatus,
     reviewedAt: reviewedRequest.reviewedAt,
     reviewComment: reviewedRequest.reviewComment,
     governingReviewComment: reviewedRequest.reviewComment,
     rootRequestId: reviewedRequest.rootRequestId,
     parentRequestId: reviewedRequest.parentRequestId,
-    followUpKind: reviewedRequest.followUpKind,
+    followUpKind: toManualAttendanceFollowUpKind(reviewedRequest.followUpKind),
     supersededByRequestId: reviewedRequest.supersededByRequestId,
     activeRequestId: null,
     activeStatus: null,
     effectiveRequestId: reviewedRequest.id,
-    effectiveStatus: reviewedRequest.status,
+    effectiveStatus: reviewedStatus,
     hasActiveFollowUp: false,
     nextAction: "none",
   };
@@ -651,7 +704,13 @@ export function getAdminAttendanceToday(
     buildAttendanceSurfaceRow(world, employee.id, input.date, input.now),
   );
 
-  const summary = deriveAdminAttendanceSummary(allRows);
+  const summary = deriveAdminAttendanceSummary(
+    allRows.map((row) => ({
+      expectedWorkday: row.expectedWorkday,
+      todayRecord: row.record,
+      display: row.display,
+    })),
+  );
 
   const items = allRows
     .filter(isAdminTodayItemRelevant)
