@@ -233,16 +233,30 @@ function validateRequestChainProjection(
     });
   }
 
-  if (
-    value.hasActiveFollowUp &&
-    value.activeStatus !== null &&
-    value.activeStatus !== "pending"
-  ) {
+  if (value.activeStatus !== null && value.activeStatus !== "pending") {
     ctx.addIssue({
       code: "custom",
       path: ["activeStatus"],
       message:
-        'Invalid input: "activeStatus" must be "pending" when "hasActiveFollowUp" is true',
+        'Invalid input: "activeStatus" must be "pending" when active work exists',
+    });
+  }
+
+  if (hasActiveRequest && value.effectiveRequestId !== value.activeRequestId) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["effectiveRequestId"],
+      message:
+        'Invalid input: "effectiveRequestId" must match "activeRequestId" when active work exists',
+    });
+  }
+
+  if (hasActiveRequest && value.effectiveStatus !== value.activeStatus) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["effectiveStatus"],
+      message:
+        'Invalid input: "effectiveStatus" must match "activeStatus" when active work exists',
     });
   }
 }
