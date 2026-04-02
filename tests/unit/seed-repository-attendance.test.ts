@@ -120,7 +120,8 @@ describe("attendance repository helpers", () => {
         clockOutAt: null,
       },
       display: expect.objectContaining({
-        activeExceptions: ["previous_day_checkout_missing", "not_checked_in"],
+        phase: "working",
+        activeExceptions: ["previous_day_checkout_missing"],
         nextAction: expect.objectContaining({
           type: "resolve_previous_day_checkout",
         }),
@@ -190,10 +191,7 @@ describe("attendance repository helpers", () => {
         expect.objectContaining({
           date: "2026-04-13",
           display: expect.objectContaining({
-            activeExceptions: [
-              "previous_day_checkout_missing",
-              "not_checked_in",
-            ],
+            activeExceptions: ["previous_day_checkout_missing"],
           }),
         }),
       ]),
@@ -321,6 +319,10 @@ describe("attendance repository helpers", () => {
     ).toMatchObject({
       date: "2026-04-13",
       summary: {
+        checkedInCount: 9,
+        notCheckedInCount: 2,
+        lateCount: 1,
+        onLeaveCount: 1,
         previousDayOpenCount: 1,
         failedAttemptCount: 1,
       },

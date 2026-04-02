@@ -76,10 +76,10 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getAllByText("시간차").length).toBeGreaterThan(0);
     expect(screen.getByText("전체 팀 장부")).toBeInTheDocument();
     expect(screen.getAllByText("전날 미퇴근").length).toBeGreaterThan(0);
-    const noRecordRow = screen.getAllByText("Junho Lee")[0]?.closest("tr");
+    const noRecordRow = screen.getAllByText("Nari Oh")[0]?.closest("tr");
     expect(noRecordRow).not.toBeNull();
     expect(noRecordRow).toHaveTextContent("출근 기록 없음");
-    expect(noRecordRow).toHaveTextContent("Engineering");
+    expect(noRecordRow).toHaveTextContent("Finance");
     expect(screen.getAllByText("Minji Park").length).toBeGreaterThan(0);
   });
 

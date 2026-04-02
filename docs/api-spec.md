@@ -862,14 +862,15 @@ Typical error cases:
 ### `GET /api/admin/attendance/today`
 
 Returns today's team-level summary plus employee-level fact and exception rows for same-day operations.
+The seeded example below assumes the deterministic Monday-noon snapshot, so most same-day records are already present while a small set of operational exceptions remains visible.
 
 Response:
 
 ```json
 {
-  "date": "2026-03-30",
+  "date": "2026-04-13",
   "summary": {
-    "checkedInCount": 8,
+    "checkedInCount": 9,
     "notCheckedInCount": 2,
     "lateCount": 1,
     "onLeaveCount": 1,
@@ -880,22 +881,22 @@ Response:
     {
       "employee": {
         "id": "emp_001",
-        "name": "Alex Kim",
-        "department": "Product"
+        "name": "Minji Park",
+        "department": "Operations"
       },
       "expectedWorkday": {
         "isWorkday": true,
-        "expectedClockInAt": "2026-03-30T09:00:00+09:00",
-        "expectedClockOutAt": "2026-03-30T18:00:00+09:00",
-        "adjustedClockInAt": "2026-03-30T09:00:00+09:00",
-        "adjustedClockOutAt": "2026-03-30T18:00:00+09:00",
+        "expectedClockInAt": "2026-04-13T09:00:00+09:00",
+        "expectedClockOutAt": "2026-04-13T18:00:00+09:00",
+        "adjustedClockInAt": "2026-04-13T09:00:00+09:00",
+        "adjustedClockOutAt": "2026-04-13T18:00:00+09:00",
         "countsTowardAdminSummary": true,
         "leaveCoverage": null
       },
       "todayRecord": {
-        "id": "att_20260330_emp_001",
-        "date": "2026-03-30",
-        "clockInAt": "2026-03-30T09:03:00+09:00",
+        "id": "attendance_record_emp_001_2026-04-13",
+        "date": "2026-04-13",
+        "clockInAt": "2026-04-13T08:58:00+09:00",
         "clockInSource": "beacon",
         "clockOutAt": null,
         "clockOutSource": null,
@@ -903,15 +904,20 @@ Response:
       },
       "display": {
         "phase": "working",
-        "flags": ["late"],
-        "activeExceptions": [],
+        "flags": [],
+        "activeExceptions": ["previous_day_checkout_missing"],
         "nextAction": {
-          "type": "clock_out",
+          "type": "resolve_previous_day_checkout",
           "relatedRequestId": null
         }
       },
       "latestFailedAttempt": null,
-      "previousDayOpenRecord": null,
+      "previousDayOpenRecord": {
+        "date": "2026-04-10",
+        "clockInAt": "2026-04-10T08:56:00+09:00",
+        "clockOutAt": null,
+        "expectedClockOutAt": "2026-04-10T18:00:00+09:00"
+      },
       "manualRequest": null
     }
   ]

@@ -1392,7 +1392,7 @@ describe("admin attendance contracts", () => {
       adminAttendanceTodayResponseSchema.parse({
         date: "2026-03-30",
         summary: {
-          checkedInCount: 8,
+          checkedInCount: 9,
           notCheckedInCount: 2,
           lateCount: 1,
           onLeaveCount: 1,
@@ -1441,7 +1441,7 @@ describe("admin attendance contracts", () => {
       }),
     ).toMatchObject({
       summary: {
-        checkedInCount: 8,
+        checkedInCount: 9,
         failedAttemptCount: 1,
       },
     });
@@ -1452,7 +1452,7 @@ describe("admin attendance contracts", () => {
       adminAttendanceTodayResponseSchema.parse({
         date: "2026-03-30",
         summary: {
-          checkedInCount: 8,
+          checkedInCount: 9,
           notCheckedInCount: 2,
           lateCount: 1,
           onLeaveCount: 1,
@@ -1506,7 +1506,7 @@ describe("admin attendance contracts", () => {
       adminAttendanceTodayResponseSchema.parse({
         date: "2026-03-30",
         summary: {
-          checkedInCount: 8,
+          checkedInCount: 9,
           notCheckedInCount: 2,
           lateCount: 1,
           onLeaveCount: 1,

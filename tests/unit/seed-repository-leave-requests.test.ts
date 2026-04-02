@@ -285,16 +285,16 @@ describe("request-chain and leave repository helpers", () => {
     expect(needsReview.items.map((item) => item.id)).toEqual([
       "leave_request_emp_010_2026-04-20_resubmission",
       "leave_request_emp_004_2026-04-16_change",
-      "manual_request_emp_010_2026-04-13_resubmission",
+      "manual_request_emp_011_2026-04-20_root",
+      "manual_request_emp_010_2026-04-17_root",
       "leave_request_emp_006_2026-04-17_root",
-      "manual_request_emp_010_2026-04-09_root",
-      "manual_request_emp_009_2026-04-08_resubmission",
-      "manual_request_emp_011_2026-04-07_root",
+      "manual_request_emp_010_2026-04-13_resubmission",
     ]);
 
     expect(completed.viewFilter).toBe("completed");
     expect(completed.items.map((item) => item.id)).toEqual([
       "leave_request_emp_005_2026-04-18_root",
+      "leave_request_emp_005_2026-04-13_root",
       "manual_request_emp_007_2026-04-03_root",
     ]);
 
@@ -302,12 +302,12 @@ describe("request-chain and leave repository helpers", () => {
     expect(all.items.map((item) => item.id)).toEqual([
       "leave_request_emp_010_2026-04-20_resubmission",
       "leave_request_emp_004_2026-04-16_change",
-      "manual_request_emp_010_2026-04-13_resubmission",
+      "manual_request_emp_011_2026-04-20_root",
+      "manual_request_emp_010_2026-04-17_root",
       "leave_request_emp_006_2026-04-17_root",
-      "manual_request_emp_010_2026-04-09_root",
-      "manual_request_emp_009_2026-04-08_resubmission",
-      "manual_request_emp_011_2026-04-07_root",
+      "manual_request_emp_010_2026-04-13_resubmission",
       "leave_request_emp_005_2026-04-18_root",
+      "leave_request_emp_005_2026-04-13_root",
       "manual_request_emp_007_2026-04-03_root",
     ]);
     expect(emp004QueueItem).toMatchObject({

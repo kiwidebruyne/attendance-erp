@@ -10,7 +10,11 @@ import {
   LeaveRequestConflictError,
 } from "@/lib/repositories/leave";
 import { buildFixedSeoulDateTime } from "@/lib/seed/seoul-clock";
-import { type CanonicalSeedWorld, canonicalSeedWorld } from "@/lib/seed/world";
+import {
+  type CanonicalSeedWorld,
+  canonicalSeedWorld,
+  seedScenarioAnchors,
+} from "@/lib/seed/world";
 import {
   getMockSeedWorld,
   resetMockSeedWorldForTests,
@@ -38,6 +42,18 @@ vi.mock("@/lib/server/logger", () => ({
 
 function createWorld() {
   return structuredClone(canonicalSeedWorld) as CanonicalSeedWorld;
+}
+
+function getSeedManualAttendanceRequest(requestId: string) {
+  const request = canonicalSeedWorld.manualAttendanceRequests.find(
+    (candidate) => candidate.id === requestId,
+  );
+
+  if (request === undefined) {
+    throw new Error(`Missing manual attendance request "${requestId}"`);
+  }
+
+  return request;
 }
 
 async function loadGetRoute() {
@@ -180,22 +196,23 @@ describe("admin request route handlers", () => {
   });
 
   it("approves the current pending manual request, appends a review event, and writes the manual attendance record back", async () => {
-    const response = await patchAdminRequestRoute(
-      "manual_request_emp_010_2026-04-09_root",
-      {
-        decision: "approve",
-      },
+    const request = getSeedManualAttendanceRequest(
+      seedScenarioAnchors.pendingManualEdit.requestId,
     );
+    const response = await patchAdminRequestRoute(request.id, {
+      decision: "approve",
+    });
     const body = adminRequestDecisionResponseSchema.parse(
       await response.json(),
     );
     const world = getMockSeedWorld();
     const approvedRecord = world.attendanceRecords.find(
       (record) =>
-        record.employeeId === "emp_010" && record.date === "2026-04-09",
+        record.employeeId === request.employeeId &&
+        record.date === request.date,
     );
     const reviewEvent = world.requestReviewEvents.find(
-      (event) => event.requestId === "manual_request_emp_010_2026-04-09_root",
+      (event) => event.requestId === request.id,
     );
     const queue = createSeedRepository({ world }).getAdminRequests({
       view: "needs_review",
@@ -203,14 +220,14 @@ describe("admin request route handlers", () => {
 
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
-      id: "manual_request_emp_010_2026-04-09_root",
+      id: request.id,
       requestType: "manual_attendance",
       status: "approved",
       reviewComment: null,
       governingReviewComment: null,
       activeRequestId: null,
       activeStatus: null,
-      effectiveRequestId: "manual_request_emp_010_2026-04-09_root",
+      effectiveRequestId: request.id,
       effectiveStatus: "approved",
       hasActiveFollowUp: false,
       nextAction: "none",
@@ -220,7 +237,7 @@ describe("admin request route handlers", () => {
       ),
     });
     expect(reviewEvent).toMatchObject({
-      requestId: "manual_request_emp_010_2026-04-09_root",
+      requestId: request.id,
       decision: "approve",
       reviewerId: "emp_012",
       reviewComment: null,
@@ -230,20 +247,13 @@ describe("admin request route handlers", () => {
       ),
     });
     expect(approvedRecord).toMatchObject({
-      employeeId: "emp_010",
-      date: "2026-04-09",
-      clockInAt: "2026-04-09T09:07:00+09:00",
-      clockInSource: "manual",
-      clockOutAt: null,
-      clockOutSource: null,
-      workMinutes: null,
-      manualRequestId: "manual_request_emp_010_2026-04-09_root",
+      employeeId: request.employeeId,
+      date: request.date,
+      manualRequestId: request.id,
     });
-    expect(
-      queue.items.some(
-        (item) => item.id === "manual_request_emp_010_2026-04-09_root",
-      ),
-    ).toBe(false);
+    expect(approvedRecord?.clockInAt).toBe(request.requestedClockInAt);
+    expect(approvedRecord?.clockInSource).toBe("manual");
+    expect(queue.items.some((item) => item.id === request.id)).toBe(false);
   });
 
   it("rejects manual approvals that would write negative work minutes and keeps the request pending", async () => {
@@ -336,7 +346,7 @@ describe("admin request route handlers", () => {
     });
 
     const revisionResponse = await patchAdminRequestRoute(
-      "manual_request_emp_009_2026-04-08_resubmission",
+      seedScenarioAnchors.manualAttendanceResubmissionChain.activeRequestId,
       {
         decision: "request_revision",
         reviewComment: "Please add the missing arrival detail.",
@@ -348,14 +358,15 @@ describe("admin request route handlers", () => {
 
     expect(revisionResponse.status).toBe(200);
     expect(revisionBody).toMatchObject({
-      id: "manual_request_emp_009_2026-04-08_resubmission",
+      id: seedScenarioAnchors.manualAttendanceResubmissionChain.activeRequestId,
       requestType: "manual_attendance",
       status: "revision_requested",
       reviewComment: "Please add the missing arrival detail.",
       governingReviewComment: "Please add the missing arrival detail.",
       activeRequestId: null,
       activeStatus: null,
-      effectiveRequestId: "manual_request_emp_009_2026-04-08_resubmission",
+      effectiveRequestId:
+        seedScenarioAnchors.manualAttendanceResubmissionChain.activeRequestId,
       effectiveStatus: "revision_requested",
       nextAction: "none",
     });
@@ -566,7 +577,7 @@ describe("admin request route handlers", () => {
       },
     );
     const inactiveResponse = await patchAdminRequestRoute(
-      "manual_request_emp_010_2026-04-13_root",
+      seedScenarioAnchors.manualAttendanceResubmissionChain.rootRequestId,
       {
         decision: "approve",
       },
