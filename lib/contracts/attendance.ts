@@ -12,14 +12,21 @@ import {
   followUpKindSchema,
   manualAttendanceActionSchema,
   manualAttendanceRequestResourceSchema,
-  previousDayOpenRecordSchema,
   requestStatusSchema,
 } from "@/lib/contracts/shared";
+
+const attendanceHistoryManualRequestSchema =
+  attendanceSurfaceManualRequestResourceSchema.safeExtend({
+    status: requestStatusSchema.extract(["pending"]),
+    activeStatus: requestStatusSchema.extract(["pending"]),
+    effectiveStatus: requestStatusSchema.extract(["pending"]),
+  });
 
 const attendanceHistoryRecordSchema = z.object({
   date: apiDateSchema,
   expectedWorkday: expectedWorkdaySchema,
   record: attendanceRecordSchema.nullable(),
+  manualRequest: attendanceHistoryManualRequestSchema.nullable(),
   display: attendanceDisplaySchema,
 });
 
@@ -27,7 +34,6 @@ export const attendanceTodayResponseSchema = z.object({
   date: apiDateSchema,
   employee: employeeSummarySchema,
   expectedWorkday: expectedWorkdaySchema,
-  previousDayOpenRecord: previousDayOpenRecordSchema.nullable(),
   todayRecord: attendanceRecordSchema.nullable(),
   attempts: z.array(attendanceAttemptSchema),
   manualRequest: attendanceSurfaceManualRequestResourceSchema.nullable(),

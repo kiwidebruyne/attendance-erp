@@ -142,15 +142,15 @@ Represents the attendance expectation for one employee on one calendar date befo
 
 Represents one append-only clock-in or clock-out attempt.
 
-| Field           | Type           | Notes                                                                                                                       |
-| --------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `id`            | string         | stable attempt identifier                                                                                                   |
-| `employeeId`    | string         | relation to `Employee.id`                                                                                                   |
-| `date`          | string         | intended workday for the attempt; may differ from the calendar date of `attemptedAt` during overnight carry-over resolution |
-| `action`        | enum           | `Attendance Attempt Action`                                                                                                 |
-| `attemptedAt`   | string         | actual timestamp of the button click                                                                                        |
-| `status`        | enum           | `Attendance Attempt Status`                                                                                                 |
-| `failureReason` | string or null | non-empty string when the attempt failed                                                                                    |
+| Field           | Type           | Notes                                                                                                                         |
+| --------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `id`            | string         | stable attempt identifier                                                                                                     |
+| `employeeId`    | string         | relation to `Employee.id`                                                                                                     |
+| `date`          | string         | intended workday for the attempt; may differ from the calendar date of `attemptedAt` during overnight prior-workday writeback |
+| `action`        | enum           | `Attendance Attempt Action`                                                                                                   |
+| `attemptedAt`   | string         | actual timestamp of the button click                                                                                          |
+| `status`        | enum           | `Attendance Attempt Status`                                                                                                   |
+| `failureReason` | string or null | non-empty string when the attempt failed                                                                                      |
 
 ### Attendance Record
 
@@ -307,7 +307,7 @@ In the current product, a request record gets at most one review event because r
 
 ### Manual Attendance Request Summary
 
-Represents the endpoint-facing attendance projection for the manual request that still matters to the current attendance state, including prior-workday carry-over corrections.
+Represents the endpoint-facing attendance projection for the manual request that still matters to the current attendance state.
 This is derived from `Manual Attendance Request` rather than persisted as a second source of truth.
 
 | Field                    | Type           | Notes                                                                                                                                                   |
@@ -331,7 +331,8 @@ This is derived from `Manual Attendance Request` rather than persisted as a seco
 | `hasActiveFollowUp`      | boolean        | whether an employee-submitted follow-up is currently active                                                                                             |
 | `nextAction`             | enum           | `Request Next Action`                                                                                                                                   |
 
-This projection is returned only through `GET /api/attendance/me` and `GET /api/admin/attendance/today`. It is not a full request detail payload and is not persisted as a second source of truth.
+This projection is returned through `GET /api/attendance/me`, `GET /api/attendance/me/history`, and `GET /api/admin/attendance/today`. It is not a full request detail payload and is not persisted as a second source of truth.
+History rows use the same compact field set but restrict the surfaced request to the same row date and to `pending` status only.
 
 ### Request Chain Projection
 
@@ -416,6 +417,7 @@ Expected fields:
 Important rule:
 
 - This summary only drives `previous_day_checkout_missing` while the prior workday remains open, meaning `clockOutAt` is still `null`.
+- An unresolved missing checkout from an earlier workday remains a row-local issue on that workday instead of becoming a later-day exception type.
 
 ### Admin Attendance Summary
 

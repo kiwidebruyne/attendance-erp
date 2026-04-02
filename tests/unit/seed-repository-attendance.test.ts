@@ -102,7 +102,7 @@ function createPastDueNoShowWorld() {
 }
 
 describe("attendance repository helpers", () => {
-  it("builds the carry-over attendance today response for the open prior workday", () => {
+  it("builds the baseline today response as an in-progress beacon workday", () => {
     const response = getEmployeeAttendanceToday(canonicalSeedWorld, {
       employeeId: "emp_001",
       date: "2026-04-13",
@@ -115,15 +115,16 @@ describe("attendance repository helpers", () => {
       employee: {
         id: "emp_001",
       },
-      previousDayOpenRecord: {
-        date: "2026-04-10",
+      todayRecord: {
+        date: "2026-04-13",
+        clockInSource: "beacon",
         clockOutAt: null,
       },
       display: expect.objectContaining({
         phase: "working",
-        activeExceptions: ["previous_day_checkout_missing"],
+        activeExceptions: [],
         nextAction: expect.objectContaining({
-          type: "resolve_previous_day_checkout",
+          type: "clock_out",
         }),
       }),
     });
@@ -184,19 +185,88 @@ describe("attendance repository helpers", () => {
       records: expect.arrayContaining([
         expect.objectContaining({
           date: "2026-04-10",
+          manualRequest: null,
           record: expect.objectContaining({
             clockOutAt: null,
           }),
         }),
         expect.objectContaining({
           date: "2026-04-13",
+          manualRequest: null,
+          record: expect.objectContaining({
+            clockInAt: "2026-04-13T09:02:00+09:00",
+            clockOutAt: null,
+          }),
           display: expect.objectContaining({
-            activeExceptions: ["previous_day_checkout_missing"],
+            phase: "working",
+            activeExceptions: [],
           }),
         }),
       ]),
     });
     expect(response.records).toHaveLength(4);
+  });
+
+  it("projects only pending manual attendance requests into history rows", () => {
+    const world = structuredClone(canonicalSeedWorld);
+
+    world.manualAttendanceRequests.push(
+      {
+        id: "manual_request_emp_001_2026-04-10_root",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_out",
+        date: "2026-04-10",
+        submittedAt: "2026-04-13T09:20:00+09:00",
+        requestedClockInAt: null,
+        requestedClockOutAt: "2026-04-10T18:10:00+09:00",
+        reason: "Submitting a carry-over checkout correction.",
+        status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        rootRequestId: "manual_request_emp_001_2026-04-10_root",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+      },
+      {
+        id: "manual_request_emp_001_2026-04-09_reviewed",
+        employeeId: "emp_001",
+        requestType: "manual_attendance",
+        action: "clock_in",
+        date: "2026-04-09",
+        submittedAt: "2026-04-13T09:25:00+09:00",
+        requestedClockInAt: "2026-04-09T09:03:00+09:00",
+        requestedClockOutAt: null,
+        reason: "Rejected requests should stay out of history projection.",
+        status: "rejected",
+        reviewedAt: "2026-04-13T11:00:00+09:00",
+        reviewComment: "Please clarify the correction context.",
+        rootRequestId: "manual_request_emp_001_2026-04-09_reviewed",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+      },
+    );
+
+    const response = getEmployeeAttendanceHistory(world, {
+      employeeId: "emp_001",
+      from: "2026-04-09",
+      to: "2026-04-10",
+      now: snapshotNow,
+    });
+
+    expect(
+      response.records.find((record) => record.date === "2026-04-10")
+        ?.manualRequest,
+    ).toMatchObject({
+      id: "manual_request_emp_001_2026-04-10_root",
+      status: "pending",
+    });
+    expect(
+      response.records.find((record) => record.date === "2026-04-09")
+        ?.manualRequest,
+    ).toBeNull();
   });
 
   it("keeps the seeded employee history populated across the rolling week and month windows", () => {
@@ -208,11 +278,22 @@ describe("attendance repository helpers", () => {
     });
     const monthResponse = getEmployeeAttendanceHistory(canonicalSeedWorld, {
       employeeId: "emp_001",
-      from: "2026-03-24",
+      from: "2026-03-15",
       to: "2026-04-13",
       now: snapshotNow,
     });
+    const monthWorkdayRecords = monthResponse.records.filter(
+      (record) => record.expectedWorkday.isWorkday,
+    );
 
+    expect(
+      weekResponse.records.find((record) => record.date === "2026-04-07")
+        ?.expectedWorkday.leaveCoverage,
+    ).toMatchObject({
+      leaveType: "hourly",
+      startAt: "2026-04-07T13:00:00+09:00",
+      endAt: "2026-04-07T16:00:00+09:00",
+    });
     expect(
       weekResponse.records.find((record) => record.date === "2026-04-07")
         ?.record,
@@ -221,26 +302,64 @@ describe("attendance repository helpers", () => {
       clockOutAt: "2026-04-07T18:04:00+09:00",
     });
     expect(
-      weekResponse.records.find((record) => record.date === "2026-04-08")
-        ?.record,
-    ).toMatchObject({
-      clockInAt: "2026-04-08T09:18:00+09:00",
-      clockOutAt: "2026-04-08T18:02:00+09:00",
-    });
-    expect(
-      weekResponse.records.find((record) => record.date === "2026-04-09")
-        ?.record,
-    ).toMatchObject({
-      clockInAt: "2026-04-09T08:59:00+09:00",
-      clockOutAt: "2026-04-09T17:21:00+09:00",
-    });
-    expect(
       monthResponse.records.find((record) => record.date === "2026-03-24")
+        ?.expectedWorkday.leaveCoverage,
+    ).toMatchObject({
+      leaveType: "annual",
+    });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-16")
         ?.record,
     ).toMatchObject({
-      clockInAt: "2026-03-24T08:58:00+09:00",
-      clockOutAt: "2026-03-24T18:02:00+09:00",
+      clockInAt: "2026-03-16T08:56:00+09:00",
+      clockOutAt: "2026-03-16T18:01:00+09:00",
     });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-23")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-03-23T08:59:00+09:00",
+      clockOutAt: "2026-03-23T18:03:00+09:00",
+    });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-30")
+        ?.record,
+    ).toMatchObject({
+      clockInAt: "2026-03-30T08:58:00+09:00",
+      clockOutAt: "2026-03-30T18:06:00+09:00",
+    });
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-27")
+        ?.display.activeExceptions,
+    ).toContain("absent");
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-03-27")
+        ?.display.activeExceptions,
+    ).not.toContain("not_checked_in");
+    expect(
+      monthResponse.records.find((record) => record.date === "2026-04-13")
+        ?.display.phase,
+    ).toBe("working");
+    expect(
+      monthWorkdayRecords.filter((record) => record.record !== null),
+    ).toHaveLength(19);
+    expect(
+      monthWorkdayRecords.filter((record) =>
+        record.display.activeExceptions.includes("absent"),
+      ),
+    ).toHaveLength(1);
+    expect(
+      monthWorkdayRecords.filter((record) =>
+        record.display.activeExceptions.includes("not_checked_in"),
+      ),
+    ).toHaveLength(0);
+    expect(
+      monthWorkdayRecords.filter(
+        (record) =>
+          record.expectedWorkday.leaveCoverage !== null &&
+          record.record === null,
+      ),
+    ).toHaveLength(1);
   });
 
   it("marks past unattended workdays as absent in history and admin lists", () => {
@@ -319,22 +438,10 @@ describe("attendance repository helpers", () => {
     ).toMatchObject({
       date: "2026-04-13",
       summary: {
-        checkedInCount: 9,
-        notCheckedInCount: 2,
-        lateCount: 1,
-        onLeaveCount: 1,
-        previousDayOpenCount: 1,
         failedAttemptCount: 1,
+        checkedInCount: 9,
       },
       items: expect.arrayContaining([
-        expect.objectContaining({
-          employee: expect.objectContaining({
-            id: "emp_001",
-          }),
-          previousDayOpenRecord: expect.objectContaining({
-            date: "2026-04-10",
-          }),
-        }),
         expect.objectContaining({
           employee: expect.objectContaining({
             id: "emp_010",

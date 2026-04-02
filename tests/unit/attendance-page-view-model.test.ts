@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  buildCarryOverDraft,
+  buildExceptionSurfaceModels,
+  buildHistoryAction,
   buildHistoryCorrectionDraft,
 } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
-import type { AttendanceHistoryResponse } from "@/lib/contracts/attendance";
 import type {
+  AttendanceHistoryResponse,
+  AttendanceTodayResponse,
+} from "@/lib/contracts/attendance";
+import type {
+  AttendanceAttempt,
   AttendanceDisplay,
+  AttendanceSurfaceManualRequestResource,
   ExpectedWorkday,
-  PreviousDayOpenRecord,
 } from "@/lib/contracts/shared";
 
 function createExpectedWorkday(
@@ -49,33 +54,81 @@ function createHistoryRecord(
     expectedWorkday: createExpectedWorkday(),
     record: null,
     display: createDisplay(),
+    manualRequest: null,
     ...overrides,
   };
 }
 
-function createPreviousDayOpenRecord(
-  overrides: Partial<PreviousDayOpenRecord> = {},
-): PreviousDayOpenRecord {
+function createFailedAttempt(
+  overrides: Partial<Extract<AttendanceAttempt, { status: "failed" }>> = {},
+): Extract<AttendanceAttempt, { status: "failed" }> {
   return {
-    date: "2026-04-10",
-    clockInAt: "2026-04-10T09:04:00+09:00",
-    clockOutAt: null,
-    expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+    id: "attempt_failed_001",
+    date: "2026-04-13",
+    action: "clock_in",
+    attemptedAt: "2026-04-13T09:05:00+09:00",
+    status: "failed",
+    failureReason: "BLE beacon not detected",
+    ...overrides,
+  };
+}
+
+function createManualRequest(
+  overrides: Partial<AttendanceSurfaceManualRequestResource> = {},
+): AttendanceSurfaceManualRequestResource {
+  return {
+    id: "manual_request_emp_001_2026-04-13_root",
+    requestType: "manual_attendance",
+    action: "clock_in",
+    date: "2026-04-13",
+    submittedAt: "2026-04-13T10:05:00+09:00",
+    requestedClockInAt: "2026-04-13T09:05:00+09:00",
+    requestedClockOutAt: null,
+    reason: "Beacon was unavailable during check-in.",
+    status: "pending",
+    reviewedAt: null,
+    reviewComment: null,
+    rootRequestId: "manual_request_emp_001_2026-04-13_root",
+    parentRequestId: null,
+    followUpKind: null,
+    supersededByRequestId: null,
+    activeRequestId: "manual_request_emp_001_2026-04-13_root",
+    activeStatus: "pending",
+    effectiveRequestId: "manual_request_emp_001_2026-04-13_root",
+    effectiveStatus: "pending",
+    governingReviewComment: null,
+    hasActiveFollowUp: false,
+    nextAction: "admin_review",
+    ...overrides,
+  };
+}
+
+function createTodayResponse(
+  overrides: Partial<AttendanceTodayResponse> = {},
+): AttendanceTodayResponse {
+  return {
+    date: "2026-04-13",
+    employee: {
+      id: "emp_001",
+      name: "Minji Park",
+      department: "Operations",
+    },
+    expectedWorkday: createExpectedWorkday(),
+    todayRecord: null,
+    attempts: [],
+    manualRequest: null,
+    display: createDisplay({
+      activeExceptions: ["not_checked_in"],
+      nextAction: {
+        type: "submit_manual_request",
+        relatedRequestId: null,
+      },
+    }),
     ...overrides,
   };
 }
 
 describe("attendance page view model", () => {
-  it("prefills carry-over correction as a prior-date clock_out request", () => {
-    expect(buildCarryOverDraft(createPreviousDayOpenRecord())).toEqual({
-      date: "2026-04-10",
-      action: "clock_out",
-      requestedClockInAt: null,
-      requestedClockOutAt: "2026-04-10T18:00:00+09:00",
-      reason: "",
-    });
-  });
-
   it("prefills open-record history rows as a checkout correction", () => {
     expect(
       buildHistoryCorrectionDraft(
@@ -174,5 +227,68 @@ describe("attendance page view model", () => {
       requestedClockOutAt: null,
       reason: "",
     });
+  });
+
+  it("builds a pending history action for rows with an active manual request", () => {
+    expect(
+      buildHistoryAction(
+        createHistoryRecord({
+          date: "2026-04-09",
+          display: createDisplay({
+            activeExceptions: ["manual_request_pending", "absent"],
+            nextAction: {
+              type: "review_request_status",
+              relatedRequestId: "manual_request_emp_001_2026-04-09_root",
+            },
+          }),
+          manualRequest: createManualRequest({
+            id: "manual_request_emp_001_2026-04-09_root",
+            date: "2026-04-09",
+            action: "both",
+            requestedClockInAt: "2026-04-09T09:03:00+09:00",
+            requestedClockOutAt: "2026-04-09T18:04:00+09:00",
+            rootRequestId: "manual_request_emp_001_2026-04-09_root",
+            activeRequestId: "manual_request_emp_001_2026-04-09_root",
+            effectiveRequestId: "manual_request_emp_001_2026-04-09_root",
+          }),
+        }),
+      ),
+    ).toMatchObject({
+      kind: "pending",
+      label: "요청 보기",
+      tone: "warning",
+      title: "근무 기록 정정 요청을 확인하고 있어요",
+      request: {
+        id: "manual_request_emp_001_2026-04-09_root",
+      },
+    });
+  });
+
+  it("suppresses duplicate same-day correction surfaces when a pending request exists", () => {
+    expect(
+      buildExceptionSurfaceModels(
+        createTodayResponse({
+          attempts: [createFailedAttempt()],
+          manualRequest: createManualRequest(),
+          display: createDisplay({
+            activeExceptions: [
+              "attempt_failed",
+              "manual_request_pending",
+              "not_checked_in",
+            ],
+            nextAction: {
+              type: "review_request_status",
+              relatedRequestId: "manual_request_emp_001_2026-04-13_root",
+            },
+          }),
+        }),
+      ),
+    ).toMatchObject([
+      {
+        id: "manual-request-summary",
+        kind: "pending",
+        title: "출근 시간 정정 요청을 확인하고 있어요",
+      },
+    ]);
   });
 });

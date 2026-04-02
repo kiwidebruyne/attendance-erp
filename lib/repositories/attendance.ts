@@ -67,6 +67,10 @@ type AttendanceSurfaceRow = {
   manualRequest: AttendanceSurfaceManualRequestResource | null;
 };
 
+type BuildAttendanceSurfaceRowOptions = Readonly<{
+  includeCarryOver?: boolean;
+}>;
+
 function assertEmployeeExists(
   world: AttendanceRepositoryWorld,
   employeeId: string,
@@ -273,17 +277,11 @@ function resolvePreviousDayOpenRecord(
     compareDates(right.date, left.date),
   )[0];
 
-  if (latestOpenRecord === undefined) {
+  if (latestOpenRecord === undefined || latestOpenRecord.clockInAt === null) {
     return null;
   }
 
-  const latestOpenClockInAt = latestOpenRecord.clockInAt;
-
-  if (latestOpenClockInAt === null) {
-    return null;
-  }
-
-  const cutoff = buildDateTime(date, "09:00:00", latestOpenClockInAt);
+  const cutoff = buildDateTime(date, "09:00:00", latestOpenRecord.clockInAt);
 
   if (new Date(now).getTime() < new Date(cutoff).getTime()) {
     return null;
@@ -291,12 +289,14 @@ function resolvePreviousDayOpenRecord(
 
   return {
     date: latestOpenRecord.date,
-    clockInAt: latestOpenClockInAt,
+    clockInAt: latestOpenRecord.clockInAt,
     clockOutAt: latestOpenRecord.clockOutAt,
-    expectedClockOutAt: latestOpenRecord.date
-      ? buildDateTime(latestOpenRecord.date, "18:00:00", latestOpenClockInAt)
-      : null,
-  };
+    expectedClockOutAt: buildDateTime(
+      latestOpenRecord.date,
+      "18:00:00",
+      latestOpenRecord.clockInAt,
+    ),
+  } satisfies PreviousDayOpenRecord;
 }
 
 function hasLaterSuccessfulAttempt(
@@ -320,21 +320,22 @@ function resolveOperationalAttempts(
   date: string,
   previousDayOpenRecord: PreviousDayOpenRecord | null,
 ) {
-  const rawRelevantAttempts = world.attendanceAttempts.filter((attempt) => {
-    if (attempt.employeeId !== employeeId) {
-      return false;
-    }
+  const relevantAttempts = world.attendanceAttempts
+    .filter((attempt) => {
+      if (attempt.employeeId !== employeeId) {
+        return false;
+      }
 
-    if (attempt.date === date) {
-      return true;
-    }
+      if (attempt.date === date) {
+        return true;
+      }
 
-    return (
-      previousDayOpenRecord !== null &&
-      attempt.date === previousDayOpenRecord.date
-    );
-  });
-  const relevantAttempts = rawRelevantAttempts.map(toAttendanceAttempt);
+      return (
+        previousDayOpenRecord !== null &&
+        attempt.date === previousDayOpenRecord.date
+      );
+    })
+    .map(toAttendanceAttempt);
 
   return relevantAttempts
     .filter((attempt) => {
@@ -375,16 +376,14 @@ function buildAttendanceSurfaceRow(
   employeeId: string,
   date: string,
   now: string,
+  options: BuildAttendanceSurfaceRowOptions = {},
 ): AttendanceSurfaceRow {
   const employee = assertEmployeeExists(world, employeeId);
   const expectedWorkday = resolveExpectedWorkday(world, employeeId, date, now);
   const record = resolveAttendanceRecord(world, employeeId, date);
-  const previousDayOpenRecord = resolvePreviousDayOpenRecord(
-    world,
-    employeeId,
-    date,
-    now,
-  );
+  const previousDayOpenRecord = options.includeCarryOver
+    ? resolvePreviousDayOpenRecord(world, employeeId, date, now)
+    : null;
   const operationalAttempts = resolveOperationalAttempts(
     world,
     employeeId,
@@ -466,6 +465,33 @@ function sortByDateAndNameDesc(
   return left.employee.name.localeCompare(right.employee.name);
 }
 
+function resolvePendingHistoryManualRequest(
+  world: AttendanceRepositoryWorld,
+  employeeId: string,
+  date: string,
+): AttendanceHistoryResponse["records"][number]["manualRequest"] {
+  const manualRequest = resolveAttendanceSurfaceManualRequest(
+    world,
+    employeeId,
+    date,
+  );
+
+  if (
+    manualRequest?.status !== "pending" ||
+    manualRequest.activeStatus !== "pending" ||
+    manualRequest.effectiveStatus !== "pending"
+  ) {
+    return null;
+  }
+
+  return {
+    ...manualRequest,
+    status: "pending",
+    activeStatus: "pending",
+    effectiveStatus: "pending",
+  };
+}
+
 export function getEmployeeAttendanceToday(
   world: AttendanceRepositoryWorld,
   input: EmployeeAttendanceTodayInput,
@@ -481,7 +507,6 @@ export function getEmployeeAttendanceToday(
     date: input.date,
     employee: row.employee,
     expectedWorkday: row.expectedWorkday,
-    previousDayOpenRecord: row.previousDayOpenRecord,
     todayRecord: row.record,
     attempts: row.attempts,
     manualRequest: row.manualRequest,
@@ -505,6 +530,11 @@ export function getEmployeeAttendanceHistory(
       date,
       expectedWorkday: row.expectedWorkday,
       record: row.record,
+      manualRequest: resolvePendingHistoryManualRequest(
+        world,
+        input.employeeId,
+        date,
+      ),
       display: row.display,
     };
   });
@@ -521,7 +551,9 @@ export function getAdminAttendanceToday(
   input: AdminAttendanceTodayInput,
 ): AdminAttendanceTodayResponse {
   const allRows = world.employees.map((employee) =>
-    buildAttendanceSurfaceRow(world, employee.id, input.date, input.now),
+    buildAttendanceSurfaceRow(world, employee.id, input.date, input.now, {
+      includeCarryOver: true,
+    }),
   );
 
   const summary = deriveAdminAttendanceSummary(
@@ -579,7 +611,12 @@ export function getAdminAttendanceToday(
 
   return {
     date: input.date,
-    summary,
+    summary: {
+      ...summary,
+      previousDayOpenCount: allRows.filter(
+        (row) => row.previousDayOpenRecord !== null,
+      ).length,
+    },
     items,
   };
 }
@@ -596,7 +633,9 @@ export function getAdminAttendanceList(
   const rows = getRangeDates(input.from, input.to)
     .flatMap((date) =>
       world.employees.map((employee) =>
-        buildAttendanceSurfaceRow(world, employee.id, date, input.now),
+        buildAttendanceSurfaceRow(world, employee.id, date, input.now, {
+          includeCarryOver: true,
+        }),
       ),
     )
     .filter((row) => {

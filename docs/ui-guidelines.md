@@ -45,17 +45,17 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Keep every current active exception visible in the stack. Do not collapse lower-priority active exceptions into a badge count, overflow menu, or hidden secondary area while they still matter operationally.
 - Each active exception surface should own its own CTA and explanation.
 - Same-day attendance action on `/attendance` should act as an entry point into the existing attendance action UI rather than a second local owner of clock-in or clock-out behavior.
-- Every `/attendance` history row should expose the same compact `정정하기` re-entry action, while still staying less prominent than the top-of-screen surfaces.
+- `/attendance` history rows should keep compact re-entry actions, but the primary label must switch by row state: use `정정하기` for editable correction rows and `요청 보기` for rows that already have an active pending manual request.
 - `/attendance` history should keep special notes, leave usage, check-in time, check-out time, total work time, status, and CTA in separate columns instead of merging actual facts into one dense cell.
 - Sort `/attendance` history newest first within the selected rolling window.
 - Use `-` for missing attendance fact values in the ledger, use `휴일` for non-workday rows, and keep leave usage in its own column with `연차`, `반차`, or `시간차`.
-- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, and `정정 필요`, but allow more than one chip on the same row when multiple attendance interpretations coexist.
-- Place carry-over missing-checkout context on the affected workday row itself, for example through a `퇴근 누락` special note, rather than repeating that note on later dates.
-- Tint only rows whose visible status set includes `정정 필요` with a subtle red-family background so correction-needed rows read as operationally distinct before the user opens the row action.
-- On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for carry-over recovery, pending request edit or withdraw, reviewed-request rationale, and resubmission.
+- For hourly leave in the `/attendance` ledger, render `시간차` on the first line and the derived duration such as `3시간 사용` on the second line.
+- Limit history status chips to `정상`, `지각`, `조퇴`, `결근`, `정정 필요`, and `정정 요청됨`, but allow more than one chip on the same row when multiple attendance interpretations coexist. When a same-row pending manual request exists, suppress duplicate generic `정정 필요` chips and keep `정정 요청됨` plus any factual chips such as `결근`, `지각`, or `조퇴`.
+- Place missing-checkout context on the affected workday row itself, for example through a `퇴근 누락` special note, rather than repeating that note on later dates or promoting it into a later-day exception rail item.
+- Tint history rows whose visible status set includes `정정 필요` or `결근` with a subtle red-family background, and tint rows with `정정 요청됨` with a subtle yellow-family background. When `정정 요청됨` coexists with `결근`, the yellow pending-request treatment should win for the row tint and primary action.
+- On `/attendance`, use one shared in-page sheet or panel as the only correction and review owner for pending request edit or withdraw, reviewed-request rationale, and resubmission.
+- After a manual-attendance mutation succeeds on `/attendance`, immediately refresh the page-local today and history data from the latest API responses in the current browser session so stale correction CTAs or pending chips do not linger until a hard reload.
 - Do not let users dismiss unresolved active-exception surfaces. They should clear only when the underlying state changes.
-- If `previous-day missing checkout` exists, show its carry-over correction surface first and keep the correction entry prefilled for the prior date and `clock_out`.
-- If the relevant carry-over manual request already exists, replace duplicate-request CTA language with status, rationale, or resubmission CTA language. For example, a `pending` request should move to status visibility, while a `rejected` or `revision_requested` request should move to review-reason and resubmission language.
 - If a `leave-work conflict` is active on the employee screen, prefer a conflict-review CTA over immediate correction wording.
 - Only show a beacon-range hint on page load when the product can actually detect that condition at that moment. Otherwise, explain the condition after the related attendance attempt fails.
 - Default `/attendance` history switching to rolling `7` and `30` day windows ending at the route's current page date rather than calendar weeks or calendar months.
@@ -65,10 +65,13 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Put active exceptions near the top of the screen before history tables or secondary summaries.
 - Treat `/admin/attendance` as a today-first operations surface. Historical review should stay secondary to the same-day exception workflow.
 - On `/attendance`, keep exception surfaces in their own left-side rail rather than merging them into the same card grid as the ledger.
-- Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, previous-day missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
+- Surface different causes distinctly. Failed attendance attempts, expected-but-missing check-ins, finalized absences, row-local missing checkouts, leave-work conflicts, and request-review states must not collapse into one vague warning.
 - If an unresolved failed attendance attempt and a same-day expected-but-missing check-in both apply, show separate surfaces for each cause instead of merging them into one card or banner.
 - If the same fact appears in multiple surfaces such as a summary card, badge, queue row, table row, or CTA panel, those surfaces must agree on the latest state.
-- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window so table-level problems stay discoverable before the ledger.
+- On `/attendance`, the left exception rail should lead with today's active exceptions and may append issue cards for older history rows in the selected window only when those rows still show `정정 필요`, `결근`, or `정정 요청됨`, so table-level problems stay discoverable before the ledger without promoting pure lateness-only rows.
+- On employee `/attendance`, if a pending or review-state manual request already covers a rail target date, let that request-status surface replace duplicate generic correction surfaces for the same target in the rail. Keep unrelated exception meanings such as leave-work conflict visible.
+- Historical `정정 요청됨` rail cards should use a yellow warning treatment, action-specific titles such as `출근 시간 정정 요청을 확인하고 있어요`, `퇴근 시간 정정 요청을 확인하고 있어요`, or `근무 기록 정정 요청을 확인하고 있어요`, visible target-date meta, and the CTA `요청 보기`.
+- Keep destructive historical issue cards such as `정정 필요` or `결근` above yellow pending-request cards in the rail ordering.
 - Do not use a left exception rail on `/admin/attendance`; aggregate unresolved employee-surface exceptions in the top exception table instead.
 - Use one horizontal summary row on `/admin/attendance` with `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`; these cards are context, not queue entries.
 - Keep the `/admin/attendance` top exception table focused on unresolved operational exceptions. Do not promote routine historical `지각` or `조퇴` rows into that table when they no longer drive current action.
@@ -80,7 +83,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 
 ## Exception Priority
 
-- Employee attendance views should prioritize: previous-day missing checkout, unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
+- Employee attendance views should prioritize: unresolved failed attempt, active derived manual request summary, leave-work conflict, same-day expected-but-missing check-in, and then lower-risk history states.
 - Admin attendance views should prioritize exceptions over aggregate comfort metrics. The top exception table should group carry-over issues, unresolved failed attempts, request-related exceptions, and then simpler missing or absence cases so unresolved operational risk is easier to notice than nominal counts.
 - Approved leave must suppress generic missing-check-in warnings for the covered period, but a later actual attendance fact on the same leave-covered day must surface as a leave-work conflict.
 
@@ -96,7 +99,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 
 - Every important state should communicate the current state, the reason, and the next action.
 - Warnings should explain why the user is seeing them now, not only what label applies.
-- Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer status visibility rather than a duplicate submission path.
+- Use state-specific surfaces for state-specific follow-up. For example, a failed attendance attempt should offer a correction path, while a pending request should offer `요청 보기` status visibility rather than a duplicate submission path.
 - On `/admin/attendance/requests`, treat reviewed `rejected` and `revision_requested` items as completed review history/context inside `completed` and `all`, not as a separate employee-waiting queue.
 - Default the route to `needs_review`; initial load should not invent extra text or date filters beyond the selected tab.
 - In `needs_review`, order actionable rows newest pending request first.
@@ -125,7 +128,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Prioritize row chips as follows: show active/effective mismatch first when present, then one type-specific chip. Leave rows should prioritize staffing-risk, then company-event, then pending same-date pressure. Manual-attendance rows should prioritize unresolved governing-rationale signal as the second chip.
 - Completed-history rows should keep the same basic row skeleton as `needs_review`, but lighter. Show the outcome plus one-line reason without adding a separate history badge.
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
-- When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface. If the projection points at a prior-workday correction, show the target date explicitly.
+- When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface, and keep the target date explicit in the row context.
 - Keep manual-attendance and leave review structures distinct inside the same route. Manual detail should lead with correction summary, target workday, and current/effective state before showing attendance-fact comparison. Leave detail should lead with current request, effective leave, and risk summary before showing rationale and chain history.
 - Order leave risk summary from effective leave to company-event, staffing-risk, and then pending same-date pressure so the current governing state is read before derived operational pressure.
 - Show `governingReviewComment` as a row-level signal when earlier rationale still governs, and keep the full unresolved rationale visible in detail rather than hiding it behind hover-only disclosure.

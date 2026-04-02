@@ -15,7 +15,7 @@ type DeriveAttendanceDisplayInput = {
   expectedWorkday: ExpectedWorkday;
   record: AttendanceRecord | null;
   attempts: AttendanceAttempt[];
-  previousDayOpenRecord: PreviousDayOpenRecord | null;
+  previousDayOpenRecord?: PreviousDayOpenRecord | null;
   manualRequest?: AttendanceSurfaceManualRequestResource | null;
 };
 
@@ -68,57 +68,6 @@ function getDateInReferenceOffset(
   return new Date(date.getTime() + offsetMinutes * 60_000)
     .toISOString()
     .slice(0, 10);
-}
-
-function getRequestedDate(
-  now: string,
-  expectedWorkday: ExpectedWorkday,
-  record: AttendanceRecord | null,
-  attempts: AttendanceAttempt[],
-  previousDayOpenRecord: PreviousDayOpenRecord | null,
-): string {
-  const latestCurrentWorkdayAttempt = attempts.findLast(
-    (attempt) =>
-      attempt.date !== previousDayOpenRecord?.date &&
-      getDateInReferenceOffset(now, attempt.attemptedAt) === attempt.date,
-  );
-  const currentWorkdayDate =
-    latestCurrentWorkdayAttempt?.date ??
-    (previousDayOpenRecord
-      ? getDateInReferenceOffset(
-          now,
-          previousDayOpenRecord.expectedClockOutAt ??
-            previousDayOpenRecord.clockInAt,
-        )
-      : null);
-
-  return (
-    record?.date ??
-    expectedWorkday.adjustedClockInAt?.slice(0, 10) ??
-    expectedWorkday.expectedClockInAt?.slice(0, 10) ??
-    expectedWorkday.adjustedClockOutAt?.slice(0, 10) ??
-    expectedWorkday.expectedClockOutAt?.slice(0, 10) ??
-    currentWorkdayDate ??
-    now.slice(0, 10)
-  );
-}
-
-function getOperationalAttempts(
-  attempts: AttendanceAttempt[],
-  requestedDate: string,
-  previousDayOpenRecord: PreviousDayOpenRecord | null,
-): AttendanceAttempt[] {
-  const hasOpenPreviousDayRecord = previousDayOpenRecord?.clockOutAt === null;
-
-  return attempts.filter((attempt) => {
-    if (attempt.date === requestedDate) {
-      return true;
-    }
-
-    return (
-      hasOpenPreviousDayRecord && previousDayOpenRecord?.date === attempt.date
-    );
-  });
 }
 
 function hasLaterSuccessfulAttempt(
@@ -202,18 +151,7 @@ function deriveActiveExceptions({
   phase: AttendancePhase;
 }): AttendanceExceptionType[] {
   const activeExceptions: AttendanceExceptionType[] = [];
-  const requestedDate = getRequestedDate(
-    now,
-    expectedWorkday,
-    record,
-    attempts,
-    previousDayOpenRecord,
-  );
-  const operationalAttempts = getOperationalAttempts(
-    attempts,
-    requestedDate,
-    previousDayOpenRecord,
-  );
+  const currentTime = toDate(now);
   const carryOverReferenceDateTime =
     previousDayOpenRecord?.expectedClockOutAt ??
     previousDayOpenRecord?.clockInAt ??
@@ -222,12 +160,12 @@ function deriveActiveExceptions({
   const carryOverCutoff = toDate(
     buildDateTime(currentDate, "09:00:00", carryOverReferenceDateTime),
   );
-  const currentTime = toDate(now);
   const adjustedClockInAt = toDate(expectedWorkday.adjustedClockInAt);
   const adjustedClockOutAt = toDate(expectedWorkday.adjustedClockOutAt);
 
   if (
     previousDayOpenRecord !== null &&
+    previousDayOpenRecord !== undefined &&
     previousDayOpenRecord.clockOutAt === null &&
     currentTime !== null &&
     carryOverCutoff !== null &&
@@ -236,12 +174,12 @@ function deriveActiveExceptions({
     activeExceptions.push("previous_day_checkout_missing");
   }
 
-  const latestOperationalFailure = operationalAttempts.findLast(
+  const latestOperationalFailure = attempts.findLast(
     (attempt) =>
       attempt.status === "failed" &&
       !hasLaterSuccessfulAttempt(
         attempt,
-        operationalAttempts.filter(
+        attempts.filter(
           (candidateAttempt) => candidateAttempt.date === attempt.date,
         ),
       ),
@@ -396,12 +334,6 @@ export function deriveAdminAttendanceSummary(
         summary.failedAttemptCount += 1;
       }
 
-      if (
-        item.display.activeExceptions.includes("previous_day_checkout_missing")
-      ) {
-        summary.previousDayOpenCount += 1;
-      }
-
       return summary;
     },
     {
@@ -410,7 +342,6 @@ export function deriveAdminAttendanceSummary(
       lateCount: 0,
       onLeaveCount: 0,
       failedAttemptCount: 0,
-      previousDayOpenCount: 0,
     },
   );
 }

@@ -405,7 +405,7 @@ export function resolveAttendanceSurfaceManualRequest(
   world: CanonicalSeedWorld,
   employeeId: string,
   date: string,
-  previousDayOpenRecord: { date: string } | null,
+  previousDayOpenRecord: { date: string } | null = null,
 ) {
   const buildSurfaceResourceForDate = (targetDate: string) => {
     const chainRequests = world.manualAttendanceRequests

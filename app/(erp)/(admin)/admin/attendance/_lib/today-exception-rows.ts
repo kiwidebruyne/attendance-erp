@@ -268,23 +268,46 @@ function buildCurrentRows(input: {
     date: input.todayDate,
   });
 
-  return buildExceptionSurfaceModels(employeeToday).map<SortableExceptionRow>(
-    (surface) => ({
+  const rows = buildExceptionSurfaceModels(
+    employeeToday,
+  ).map<SortableExceptionRow>((surface) => ({
+    department: input.item.employee.department,
+    detail: surface.description,
+    employeeId: input.item.employee.id,
+    employeeName: input.item.employee.name,
+    exceptionType: getCurrentSurfaceExceptionType(surface),
+    id: `current-${input.item.employee.id}-${surface.id}`,
+    priority: getCurrentSurfacePriority(surface.id),
+    referenceDate: getCurrentSurfaceReferenceDate(
+      input.item,
+      surface,
+      input.todayDate,
+    ),
+    specialNote: getCurrentSurfaceSpecialNote(surface),
+  }));
+
+  const hasFailedAttemptRow = rows.some((row) =>
+    row.id.includes("attempt-failed"),
+  );
+
+  if (!hasFailedAttemptRow && input.item.latestFailedAttempt !== null) {
+    rows.push({
       department: input.item.employee.department,
-      detail: surface.description,
+      detail: input.item.latestFailedAttempt.failureReason.replace(
+        /[.。]\s*$/,
+        "",
+      ),
       employeeId: input.item.employee.id,
       employeeName: input.item.employee.name,
-      exceptionType: getCurrentSurfaceExceptionType(surface),
-      id: `current-${input.item.employee.id}-${surface.id}`,
-      priority: getCurrentSurfacePriority(surface.id),
-      referenceDate: getCurrentSurfaceReferenceDate(
-        input.item,
-        surface,
-        input.todayDate,
-      ),
-      specialNote: getCurrentSurfaceSpecialNote(surface),
-    }),
-  );
+      exceptionType: "시도 실패",
+      id: `current-${input.item.employee.id}-attempt-failed-admin`,
+      priority: 1,
+      referenceDate: input.item.latestFailedAttempt.date,
+      specialNote: "-",
+    });
+  }
+
+  return rows;
 }
 
 function buildHistoricalRows(input: {
