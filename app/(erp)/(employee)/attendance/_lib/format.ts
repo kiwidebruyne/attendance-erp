@@ -4,7 +4,6 @@ import type {
   AttendanceFlag,
   AttendancePhase,
   AttendanceSurfaceManualRequestResource,
-  ExpectedWorkday,
 } from "@/lib/contracts/shared";
 
 const dateFormatter = new Intl.DateTimeFormat("ko-KR", {
@@ -97,31 +96,9 @@ export function buildDateTimeFromDateAndTime(date: string, time: string) {
   return `${date}T${time}:00+09:00`;
 }
 
-export function formatWorkWindow(expectedWorkday: ExpectedWorkday) {
-  if (!expectedWorkday.isWorkday) {
-    return "주말";
-  }
-
-  if (
-    expectedWorkday.adjustedClockInAt === null ||
-    expectedWorkday.adjustedClockOutAt === null
-  ) {
-    if (
-      expectedWorkday.expectedClockInAt === null ||
-      expectedWorkday.expectedClockOutAt === null
-    ) {
-      return "-";
-    }
-
-    return `${formatAttendanceTime(expectedWorkday.expectedClockInAt)} - ${formatAttendanceTime(expectedWorkday.expectedClockOutAt)}`;
-  }
-
-  return `${formatAttendanceTime(expectedWorkday.adjustedClockInAt)} - ${formatAttendanceTime(expectedWorkday.adjustedClockOutAt)}`;
-}
-
 export function formatWorkMinutes(workMinutes: number | null) {
   if (workMinutes === null) {
-    return "계산 전";
+    return "-";
   }
 
   const hours = Math.floor(workMinutes / 60);

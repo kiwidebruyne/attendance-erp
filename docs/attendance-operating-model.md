@@ -48,6 +48,7 @@ Important model rule:
 - Approved leave adjusts the effective expected work window for the covered period.
 - Actual attendance on a leave-covered day does not erase leave coverage. It surfaces as `leave_work_conflict`.
 - Failed attendance attempts remain distinct from lateness or absence and must not be collapsed into either concept.
+- Open-workday "today worked time" is a display-only calculation derived from `clockInAt` plus the current time or same-day `clockOutAt`. It does not change the stored meaning of `attendanceRecord.workMinutes`.
 
 ## Operational Flow Scenarios
 
@@ -91,6 +92,10 @@ Important rule:
 | Next-day checkout before `09:00`                                                           | append `attendanceAttempt(success)` with `attemptedAt` on the next calendar day and `date` on the prior workday; update previous-day `attendanceRecord.clockOutAt` | previous day is closed normally                             | treat this as closing the prior workday, not as the new day's checkout   |
 | Next day reaches `09:00` in the prior workday timezone and the prior workday is still open | no automatic writeback                                                                                                                                             | `activeExceptions` includes `previous_day_checkout_missing` | employee and admin must both see the carry-over exception prominently    |
 | Manual correction is approved later                                                        | update previous-day `attendanceRecord` from approved request                                                                                                       | carry-over exception clears                                 | today state and previous-day correction history must remain synchronized |
+
+Additional history-ledger rule:
+
+- On employee history surfaces, a missing previous-day checkout should be attached to the affected workday row itself rather than repeated on each later date that still inherits the carry-over exception context.
 
 ### Approved Leave With No Attendance
 

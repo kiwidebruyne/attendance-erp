@@ -342,6 +342,17 @@ export function buildHistoryCorrectionDraft(
     };
   }
 
+  if (record.record !== null) {
+    return {
+      date: record.date,
+      action: "both",
+      requestedClockInAt: record.record.clockInAt,
+      requestedClockOutAt:
+        record.record.clockOutAt ?? getPreferredClockOutAt(record),
+      reason: "",
+    };
+  }
+
   if (record.record === null) {
     return {
       date: record.date,
@@ -505,10 +516,10 @@ export function buildHistoryAction(
         draft,
         title: "퇴근 기록을 정정할 수 있어요",
         description: "빠진 퇴근 시간을 확인해서 정정 요청할 수 있어요",
-        ctaLabel: "퇴근 정정",
+        ctaLabel: "정정하기",
         tone: "default",
       }),
-      label: "퇴근 정정",
+      label: "정정하기",
     };
   }
 
@@ -519,10 +530,10 @@ export function buildHistoryAction(
       title: "근무 기록을 정정할 수 있어요",
       description:
         "빠진 근무 기록이 있다면 출근과 퇴근 시간을 함께 남겨 주세요",
-      ctaLabel: "정정 요청",
+      ctaLabel: "정정하기",
       tone: "default",
     }),
-    label: "정정 요청",
+    label: "정정하기",
   };
 }
 

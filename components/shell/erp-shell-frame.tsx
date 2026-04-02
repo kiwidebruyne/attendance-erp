@@ -3,7 +3,8 @@
 import {
   BellIcon,
   CalendarDaysIcon,
-  ChevronLeftIcon,
+  ChevronsLeftIcon,
+  ChevronsRightIcon,
   Clock3Icon,
   FileTextIcon,
   LayoutDashboardIcon,
@@ -122,20 +123,27 @@ function ShellSidebarNav({
           </div>
         ) : null}
         {onToggleCollapse ? (
-          <Button
+          <button
             aria-controls="erp-sidebar"
             aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? "사이드바 펼치기" : "사이드바 접기"}
             className={cn(
-              "shrink-0 text-white hover:bg-white/10 hover:text-white",
-              isCollapsed && "size-9",
+              "inline-flex size-9 shrink-0 items-center justify-center rounded-none bg-transparent text-white/80 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
             )}
             onClick={onToggleCollapse}
-            size="icon-sm"
-            variant="ghost"
+            type="button"
           >
-            {isCollapsed ? <MenuIcon /> : <ChevronLeftIcon />}
-          </Button>
+            <span
+              aria-hidden="true"
+              className="flex items-center justify-center"
+            >
+              {isCollapsed ? (
+                <ChevronsRightIcon className="size-4" />
+              ) : (
+                <ChevronsLeftIcon className="size-4" />
+              )}
+            </span>
+          </button>
         ) : null}
       </div>
 
@@ -252,7 +260,7 @@ export function ErpShellFrame({
                 size="icon-sm"
                 variant="ghost"
               >
-                <MenuIcon />
+                <MenuIcon aria-hidden="true" />
               </Button>
             </div>
 
@@ -264,10 +272,10 @@ export function ErpShellFrame({
                   </span>
                 </Button>
                 <Button aria-label="메일" size="icon-sm" variant="ghost">
-                  <MailIcon />
+                  <MailIcon aria-hidden="true" />
                 </Button>
                 <Button aria-label="알림" size="icon-sm" variant="ghost">
-                  <BellIcon />
+                  <BellIcon aria-hidden="true" />
                 </Button>
               </div>
 

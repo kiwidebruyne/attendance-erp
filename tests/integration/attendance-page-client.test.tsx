@@ -5,7 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AttendancePageClient } from "@/app/(erp)/(employee)/attendance/_components/attendance-page-client";
 import type { AttendancePageData } from "@/lib/attendance/page-data";
@@ -209,9 +209,14 @@ function createPageData(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useRealTimers();
   navigation.pathname = "/attendance";
   api.createManualAttendanceRequest.mockResolvedValue({});
   api.updateManualAttendanceRequest.mockResolvedValue({});
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("AttendancePageClient", () => {
@@ -220,12 +225,18 @@ describe("AttendancePageClient", () => {
 
     expect(screen.getByText("근태 관리")).toBeInTheDocument();
     expect(
+      screen.getByText("오늘의 근무 상태와 기록을 확인하고 관리합니다"),
+    ).toBeInTheDocument();
+    expect(
       screen.getByText("어제 퇴근 기록이 아직 없어요"),
     ).toBeInTheDocument();
     expect(screen.getByText("출퇴근 이력")).toBeInTheDocument();
   });
 
-  it("shows beacon authentication status in the today card", () => {
+  it("shows beacon authentication status and current worked time in the today card", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-13T12:15:00+09:00"));
+
     const pageData = createPageData({
       today: {
         ...createPageData().today,
@@ -245,12 +256,17 @@ describe("AttendancePageClient", () => {
 
     expect(screen.getByText("비콘 인증 여부")).toBeInTheDocument();
     expect(screen.getByText("인증됨")).toBeInTheDocument();
-    expect(screen.getByText("퇴근 시간").closest("div")).toHaveTextContent(
-      "퇴근 시간-",
-    );
+    expect(screen.getByText("오늘 근무한 시간")).toBeInTheDocument();
+    expect(screen.getByText("3시간 15분")).toBeInTheDocument();
+    expect(
+      screen.getAllByText("퇴근 시간")[0]?.closest("div"),
+    ).toHaveTextContent("퇴근 시간-");
+    expect(
+      screen.queryByRole("button", { name: /우선 확인:/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it("splits history record times and uses dash placeholders for missing values", () => {
+  it("renders special notes, leave usage, and dash placeholders in history rows", () => {
     const pageData = createPageData({
       history: {
         ...createPageData().history,
@@ -274,6 +290,24 @@ describe("AttendancePageClient", () => {
               },
             }),
           },
+          {
+            date: "2026-04-12",
+            expectedWorkday: createExpectedWorkday({
+              leaveCoverage: {
+                requestId: "leave_request_annual_001",
+                leaveType: "annual",
+                startAt: "2026-04-12T09:00:00+09:00",
+                endAt: "2026-04-12T18:00:00+09:00",
+              },
+            }),
+            record: null,
+            display: createDisplay({
+              nextAction: {
+                type: "wait",
+                relatedRequestId: null,
+              },
+            }),
+          },
         ],
       },
     });
@@ -281,21 +315,136 @@ describe("AttendancePageClient", () => {
     render(<AttendancePageClient initialData={pageData} />);
 
     expect(
-      screen.getByRole("columnheader", { name: "출근 시각" }),
+      screen.getByRole("columnheader", { name: "특이사항" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "정정하기" })).toHaveLength(2);
+    expect(
+      screen.getByRole("columnheader", { name: "휴가 사용" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("columnheader", { name: "퇴근 시각" }),
+      screen.getByRole("columnheader", { name: "출근 시간" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("columnheader", { name: "퇴근 시간" }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("columnheader", { name: "총 근무 시간" }),
     ).toBeInTheDocument();
 
-    const row = screen.getByText("주말").closest("tr");
+    const holidayRow = screen.getByText("휴일").closest("tr");
+    const annualLeaveRow = screen.getByText("연차").closest("tr");
 
-    expect(row).not.toBeNull();
-    expect(within(row as HTMLElement).getAllByText("-").length).toBeGreaterThan(
-      0,
-    );
+    expect(holidayRow).not.toBeNull();
+    expect(annualLeaveRow).not.toBeNull();
+    expect(
+      within(holidayRow as HTMLElement).getAllByText("-").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("sorts history newest first and limits row statuses to the planned set", () => {
+    const pageData = createPageData({
+      history: {
+        ...createPageData().history,
+        records: [
+          {
+            date: "2026-04-10",
+            expectedWorkday: createExpectedWorkday({
+              expectedClockInAt: "2026-04-10T09:00:00+09:00",
+              expectedClockOutAt: "2026-04-10T18:00:00+09:00",
+              adjustedClockInAt: "2026-04-10T09:00:00+09:00",
+              adjustedClockOutAt: "2026-04-10T18:00:00+09:00",
+            }),
+            record: {
+              id: "attendance_record_emp_001_2026-04-10",
+              date: "2026-04-10",
+              clockInAt: "2026-04-10T09:08:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: createDisplay({
+              flags: ["late"],
+              activeExceptions: ["previous_day_checkout_missing"],
+            }),
+          },
+          {
+            date: "2026-04-13",
+            expectedWorkday: createExpectedWorkday(),
+            record: {
+              id: "attendance_record_emp_001_2026-04-13",
+              date: "2026-04-13",
+              clockInAt: "2026-04-13T09:00:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: "2026-04-13T18:00:00+09:00",
+              clockOutSource: "beacon",
+              workMinutes: 540,
+            },
+            display: createDisplay({
+              phase: "checked_out",
+              nextAction: {
+                type: "wait",
+                relatedRequestId: null,
+              },
+            }),
+          },
+          {
+            date: "2026-04-09",
+            expectedWorkday: createExpectedWorkday({
+              expectedClockInAt: "2026-04-09T09:00:00+09:00",
+              expectedClockOutAt: "2026-04-09T18:00:00+09:00",
+              adjustedClockInAt: "2026-04-09T09:00:00+09:00",
+              adjustedClockOutAt: "2026-04-09T18:00:00+09:00",
+            }),
+            record: null,
+            display: createDisplay({
+              activeExceptions: ["absent"],
+              nextAction: {
+                type: "submit_manual_request",
+                relatedRequestId: null,
+              },
+            }),
+          },
+        ],
+      },
+    });
+
+    render(<AttendancePageClient initialData={pageData} />);
+
+    const rows = screen.getAllByRole("row");
+
+    expect(rows[1]).toHaveTextContent("2026.04.13");
+    expect(rows[2]).toHaveTextContent("2026.04.10");
+    expect(rows[3]).toHaveTextContent("2026.04.09");
+
+    const correctionRow = screen.getByText("퇴근 누락").closest("tr");
+
+    expect(correctionRow).not.toBeNull();
+    expect(correctionRow).toHaveClass("bg-status-danger-soft/42");
+    expect(
+      within(correctionRow as HTMLElement).getByText("정정 필요"),
+    ).toBeInTheDocument();
+    expect(
+      within(correctionRow as HTMLElement).getByText("지각"),
+    ).toBeInTheDocument();
+    expect(
+      within(correctionRow as HTMLElement).getByRole("button", {
+        name: "정정하기",
+      }),
+    ).toBeInTheDocument();
+
+    const absentRow = screen.getByText("결근").closest("tr");
+
+    expect(absentRow).not.toBeNull();
+    expect(absentRow).not.toHaveClass("bg-status-danger-soft/42");
+    expect(
+      within(rows[1] as HTMLElement).getByText("정상"),
+    ).toBeInTheDocument();
+    expect(
+      within(rows[1] as HTMLElement).getByRole("button", {
+        name: "정정하기",
+      }),
+    ).toBeInTheDocument();
   });
 
   it("keeps failed attempts and missing check-ins as separate surfaces", () => {
@@ -317,6 +466,17 @@ describe("AttendancePageClient", () => {
     expect(screen.getByText("비콘을 찾을 수 없어요")).toBeInTheDocument();
     expect(
       screen.getByText("오늘 출근 기록이 아직 없어요"),
+    ).toBeInTheDocument();
+  });
+
+  it("adds historical issue rows into the exception stack", () => {
+    render(<AttendancePageClient initialData={createPageData()} />);
+
+    expect(screen.getByText("지금 확인할 예외가 있어요")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "결근 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
+      ),
     ).toBeInTheDocument();
   });
 
@@ -517,7 +677,11 @@ describe("AttendancePageClient", () => {
   it("reopens the shared sheet from a history-row action without displacing the today card", () => {
     render(<AttendancePageClient initialData={createPageData()} />);
 
-    fireEvent.click(screen.getAllByRole("button", { name: "정정 요청" })[0]!);
+    const historyTable = screen.getByRole("table");
+
+    fireEvent.click(
+      within(historyTable).getAllByRole("button", { name: "정정하기" })[0]!,
+    );
 
     const sheet = within(
       document.body.querySelector('[data-slot="sheet-content"]') as HTMLElement,

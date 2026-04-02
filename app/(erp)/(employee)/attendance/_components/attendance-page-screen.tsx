@@ -5,16 +5,13 @@ import {
   FileWarningIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { AttendanceSharedSheet } from "@/app/(erp)/(employee)/attendance/_components/attendance-shared-sheet";
 import {
-  formatAttendanceException,
-  formatAttendanceFlag,
   formatAttendancePhase,
   formatAttendanceTime,
-  formatNextAction,
   formatWorkMinutes,
-  formatWorkWindow,
 } from "@/app/(erp)/(employee)/attendance/_lib/format";
 import type { AttendanceManualRequestDraft } from "@/app/(erp)/(employee)/attendance/_lib/view-model";
 import {
@@ -39,7 +36,6 @@ import type {
   AttendanceHistoryView,
   AttendancePageData,
 } from "@/lib/attendance/page-data";
-import type { AttendanceDisplay } from "@/lib/contracts/shared";
 import { cn } from "@/lib/utils";
 
 type AttendancePageScreenProps = {
@@ -60,6 +56,8 @@ type StatusPresentation = Readonly<{
   chipClassName: string;
   label: string;
 }>;
+
+type AttendanceHistoryRecord = AttendancePageData["history"]["records"][number];
 
 const numericDateFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
@@ -102,7 +100,7 @@ function formatWeeklyMinutes(workMinutes: number) {
   const hours = Math.floor(workMinutes / 60);
   const minutes = workMinutes % 60;
 
-  return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+  return `${hours}시간 ${minutes.toString().padStart(2, "0")}분`;
 }
 
 function formatBeaconAuthLabel(today: AttendancePageData["today"]) {
@@ -157,109 +155,209 @@ function getWeeklyWorkMinutes(data: AttendancePageData) {
   }, 0);
 }
 
-function getTodayStatusPresentation(
-  data: AttendancePageData,
-): StatusPresentation {
-  const [firstException] = data.today.display.activeExceptions;
-  const [firstFlag] = data.today.display.flags;
+function getWorkedMinutesBetween(startAt: string, endAt: string) {
+  const startedAt = new Date(startAt).getTime();
+  const finishedAt = new Date(endAt).getTime();
 
-  if (firstException === "manual_request_pending") {
-    return {
-      chipClassName: "bg-status-info-soft text-status-info",
-      label: "검토 중",
-    };
+  if (
+    Number.isNaN(startedAt) ||
+    Number.isNaN(finishedAt) ||
+    finishedAt < startedAt
+  ) {
+    return null;
   }
 
-  if (firstException === "leave_work_conflict") {
-    return {
-      chipClassName: "bg-status-info-soft text-status-info",
-      label: "충돌 확인",
-    };
+  return Math.floor((finishedAt - startedAt) / 60_000);
+}
+
+function getTodayWorkedTimeLabel(
+  today: AttendancePageData["today"],
+  now: string | null,
+) {
+  const clockInAt = today.todayRecord?.clockInAt;
+
+  if (clockInAt === null || clockInAt === undefined) {
+    return "-";
+  }
+
+  const endAt = today.todayRecord?.clockOutAt ?? now;
+
+  if (endAt === null) {
+    return "-";
+  }
+
+  const workMinutes = getWorkedMinutesBetween(clockInAt, endAt);
+
+  if (workMinutes === null) {
+    return "-";
+  }
+
+  return formatWorkMinutes(workMinutes);
+}
+
+function getLeaveUsageLabel(record: AttendanceHistoryRecord) {
+  switch (record.expectedWorkday.leaveCoverage?.leaveType) {
+    case "annual":
+      return "연차";
+    case "half_am":
+    case "half_pm":
+      return "반차";
+    case "hourly":
+      return "시간차";
+    default:
+      return "-";
+  }
+}
+
+function getHistorySpecialNoteLabel(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+) {
+  if (!record.expectedWorkday.isWorkday) {
+    return "휴일";
   }
 
   if (
-    firstException === "attempt_failed" ||
-    firstFlag === "late" ||
-    firstFlag === "early_leave"
+    record.date < todayDate &&
+    record.record?.clockInAt !== null &&
+    record.record?.clockInAt !== undefined &&
+    record.record.clockOutAt === null
   ) {
-    return {
-      chipClassName: "bg-status-warning-soft text-status-warning",
-      label:
-        firstException === "attempt_failed"
-          ? "시도 실패"
-          : formatAttendanceFlag(firstFlag),
-    };
+    return "퇴근 누락";
   }
 
-  if (firstException !== undefined) {
-    return {
-      chipClassName: "bg-status-danger-soft text-status-danger",
-      label: formatAttendanceException(
-        firstException,
-        data.today.manualRequest,
-      ),
-    };
-  }
-
-  if (data.today.display.phase === "working") {
-    return {
-      chipClassName: "bg-status-success-soft text-status-success",
-      label: "정상 근무",
-    };
-  }
-
-  return {
-    chipClassName: "bg-surface-subtle text-secondary",
-    label: formatAttendancePhase(data.today.display.phase),
-  };
+  return "-";
 }
 
-function getHistoryStatusPresentation(
-  display: AttendanceDisplay,
-  request: AttendancePageData["today"]["manualRequest"],
-): StatusPresentation {
-  const [firstException] = display.activeExceptions;
-  const [firstFlag] = display.flags;
+function getHistoryStatusChips(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+): StatusPresentation[] {
+  const statuses: StatusPresentation[] = [];
 
-  if (firstException === "manual_request_pending") {
-    return {
-      chipClassName: "bg-status-info-soft text-status-info",
-      label: "정정 요청",
-    };
-  }
-
-  if (firstException === "leave_work_conflict") {
-    return {
-      chipClassName: "bg-status-info-soft text-status-info",
-      label: "휴가 충돌",
-    };
-  }
-
-  if (firstException === "attempt_failed") {
-    return {
-      chipClassName: "bg-status-warning-soft text-status-warning",
-      label: "시도 실패",
-    };
-  }
-
-  if (firstFlag === "late" || firstFlag === "early_leave") {
-    return {
-      chipClassName: "bg-status-warning-soft text-status-warning",
-      label: formatAttendanceFlag(firstFlag),
-    };
-  }
-
-  if (firstException !== undefined) {
-    return {
+  if (
+    record.display.activeExceptions.includes("attempt_failed") ||
+    record.display.activeExceptions.includes("not_checked_in") ||
+    record.display.activeExceptions.includes("manual_request_pending") ||
+    record.display.activeExceptions.includes("manual_request_rejected") ||
+    (record.date < todayDate &&
+      record.record?.clockInAt !== null &&
+      record.record?.clockInAt !== undefined &&
+      record.record.clockOutAt === null)
+  ) {
+    statuses.push({
       chipClassName: "bg-status-danger-soft text-status-danger",
-      label: formatAttendanceException(firstException, request),
-    };
+      label: "정정 필요",
+    });
   }
 
-  return {
-    chipClassName: "bg-status-success-soft text-status-success",
-    label: "정상",
-  };
+  if (record.display.activeExceptions.includes("absent")) {
+    statuses.push({
+      chipClassName: "bg-status-danger-soft text-status-danger",
+      label: "결근",
+    });
+  }
+
+  if (record.display.flags.includes("late")) {
+    statuses.push({
+      chipClassName: "bg-status-warning-soft text-status-warning",
+      label: "지각",
+    });
+  }
+
+  if (record.display.flags.includes("early_leave")) {
+    statuses.push({
+      chipClassName: "bg-status-warning-soft text-status-warning",
+      label: "조퇴",
+    });
+  }
+
+  if (statuses.length === 0) {
+    if (!record.expectedWorkday.isWorkday || record.record === null) {
+      return [];
+    }
+
+    statuses.push({
+      chipClassName: "bg-status-success-soft text-status-success",
+      label: "정상",
+    });
+  }
+
+  const seen = new Set<string>();
+
+  return statuses.filter((status) => {
+    if (seen.has(status.label)) {
+      return false;
+    }
+
+    seen.add(status.label);
+    return true;
+  });
+}
+
+function getHistoryIssueLabels(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+) {
+  const specialNote = getHistorySpecialNoteLabel(record, todayDate);
+  const statuses = getHistoryStatusChips(record, todayDate);
+  const labels = [
+    specialNote === "-" || specialNote === "휴일" ? null : specialNote,
+    ...statuses
+      .map((status) => status.label)
+      .filter((label) => label !== "정상"),
+  ].filter((label): label is string => label !== null);
+
+  return [...new Set(labels)];
+}
+
+function hasHistoryIssue(record: AttendanceHistoryRecord, todayDate: string) {
+  return getHistoryIssueLabels(record, todayDate).length > 0;
+}
+
+function hasCorrectionNeededStatus(
+  record: AttendanceHistoryRecord,
+  todayDate: string,
+) {
+  return getHistoryStatusChips(record, todayDate).some(
+    (status) => status.label === "정정 필요",
+  );
+}
+
+function getHistoricalIssueDescription(issueLabels: string[]) {
+  if (issueLabels.length === 1) {
+    return `${issueLabels[0]} 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요`;
+  }
+
+  return `${issueLabels.join(", ")} 항목이 함께 보여서 이 날짜 기록을 열어서 정정할 수 있어요`;
+}
+
+function buildHistoricalIssueSurfaces(
+  data: AttendancePageData,
+): AttendanceSurfaceModel[] {
+  return [...data.history.records]
+    .sort((left, right) => right.date.localeCompare(left.date))
+    .filter(
+      (record) => record.date < data.date && hasHistoryIssue(record, data.date),
+    )
+    .map((record) => {
+      const historyAction = buildHistoryAction(record);
+
+      if (historyAction === null) {
+        return null;
+      }
+
+      return {
+        ...historyAction,
+        id: `history-issue-${record.date}`,
+        title: formatNumericDateLabel(record.date),
+        description: getHistoricalIssueDescription(
+          getHistoryIssueLabels(record, data.date),
+        ),
+        tone: "destructive" as const,
+      };
+    })
+    .filter((surface): surface is AttendanceSurfaceModel => surface !== null);
 }
 
 function getSurfaceMetaLabel(
@@ -323,31 +421,6 @@ function getSurfacePresentation(surface: AttendanceSurfaceModel): Readonly<{
   };
 }
 
-function getTodayPrimaryAction(surfaces: AttendanceSurfaceModel[]): Readonly<{
-  href?: string;
-  label: string;
-  surface: AttendanceSurfaceModel | null;
-}> {
-  if (surfaces.length > 0) {
-    return {
-      label: `우선 확인: ${surfaces[0].ctaLabel}`,
-      surface: surfaces[0],
-    };
-  }
-
-  return {
-    href: "#history-ledger",
-    label: "출퇴근 이력 보기",
-    surface: null,
-  };
-}
-
-function getHistoryRowButtonVariant(
-  historyAction: AttendanceHistoryAction,
-): "default" | "outline" | "secondary" {
-  return historyAction.draft.action === "clock_out" ? "outline" : "secondary";
-}
-
 function getSurfaceButtonVariant(surface: AttendanceSurfaceModel) {
   if (surface.tone === "destructive") {
     return "destructive";
@@ -396,50 +469,40 @@ function StatusChip({
   );
 }
 
-function TodayBriefingPanel({
-  data,
-  onOpenSheet,
-}: Pick<AttendancePageScreenProps, "data" | "onOpenSheet">) {
-  const surfaces = buildExceptionSurfaceModels(data.today);
+function TodayBriefingPanel({ data }: Pick<AttendancePageScreenProps, "data">) {
+  const [now, setNow] = useState<string | null>(null);
   const weeklyMinutes = getWeeklyWorkMinutes(data);
-  const status = getTodayStatusPresentation(data);
-  const primaryAction = getTodayPrimaryAction(surfaces);
+
+  useEffect(() => {
+    const syncNow = () => {
+      setNow(new Date().toISOString());
+    };
+
+    syncNow();
+
+    const intervalId = window.setInterval(() => {
+      syncNow();
+    }, 60_000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   return (
     <section className="grid gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(220px,1fr)]">
       <Card>
-        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <CardContent className="flex h-full flex-col gap-5 xl:flex-row xl:items-center">
           <div className="flex flex-1 flex-col gap-5 xl:flex-row xl:items-center xl:gap-8">
             <div className="min-w-[184px] space-y-2">
               <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
                 현재 근무 상태
               </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <span
-                  className={cn(
-                    "size-2 rounded-full",
-                    status.label === "정상 근무"
-                      ? "bg-status-success"
-                      : status.label === "검토 중" ||
-                          status.label === "충돌 확인"
-                        ? "bg-status-info"
-                        : status.label === "시도 실패" ||
-                            status.label === "지각"
-                          ? "bg-status-warning"
-                          : "bg-status-danger",
-                  )}
-                />
-                <p className="text-[28px] font-medium tracking-[-0.03em] text-[#162847]">
+              <div className="flex items-center">
+                <p className="text-[30px] font-semibold tracking-[-0.03em] text-[#162847]">
                   {formatAttendancePhase(data.today.display.phase)}
                 </p>
-                <StatusChip
-                  className={status.chipClassName}
-                  label={status.label}
-                />
               </div>
-              <p className="text-sm leading-6 text-secondary">
-                {formatNextAction(data.today.display)}
-              </p>
             </div>
 
             <div className="hidden h-10 w-px bg-border xl:block" />
@@ -449,7 +512,7 @@ function TodayBriefingPanel({
                 <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
                   출근 시간
                 </p>
-                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground">
+                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
                   {formatAttendanceTime(
                     data.today.todayRecord?.clockInAt ?? null,
                   )}
@@ -459,7 +522,7 @@ function TodayBriefingPanel({
                 <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
                   퇴근 시간
                 </p>
-                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground">
+                <p className="text-[20px] font-semibold tracking-[-0.02em] text-foreground tabular-nums">
                   {formatAttendanceTime(
                     data.today.todayRecord?.clockOutAt ?? null,
                   )}
@@ -475,56 +538,12 @@ function TodayBriefingPanel({
               </div>
               <div className="space-y-1.5">
                 <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                  누적 근무 시간
+                  오늘 근무한 시간
                 </p>
-                <p className="text-[20px] font-bold tracking-[-0.02em] text-primary">
-                  {formatWorkMinutes(
-                    data.today.todayRecord?.workMinutes ?? null,
-                  )}
+                <p className="text-[20px] font-bold tracking-[-0.02em] text-primary tabular-nums">
+                  {getTodayWorkedTimeLabel(data.today, now)}
                 </p>
               </div>
-            </div>
-          </div>
-
-          <div className="flex w-full flex-col gap-3 xl:w-auto xl:min-w-[176px] xl:items-end">
-            {primaryAction.surface === null ? (
-              <Button asChild className="w-full xl:w-auto">
-                <a href={primaryAction.href}>{primaryAction.label}</a>
-              </Button>
-            ) : (
-              <Button
-                className="w-full xl:w-auto"
-                onClick={() => onOpenSheet(primaryAction.surface)}
-              >
-                {primaryAction.label}
-              </Button>
-            )}
-
-            <div className="flex flex-wrap gap-2 xl:max-w-[260px] xl:justify-end">
-              {data.today.display.activeExceptions.map((exception) => (
-                <StatusChip
-                  key={exception}
-                  className="border border-border bg-white text-secondary"
-                  label={formatAttendanceException(
-                    exception,
-                    data.today.manualRequest,
-                  )}
-                />
-              ))}
-              {data.today.display.flags.map((flag) => (
-                <StatusChip
-                  key={flag}
-                  className="border border-border bg-white text-secondary"
-                  label={formatAttendanceFlag(flag)}
-                />
-              ))}
-              {data.today.display.activeExceptions.length === 0 &&
-              data.today.display.flags.length === 0 ? (
-                <StatusChip
-                  className="border border-border bg-white text-secondary"
-                  label="정상 흐름"
-                />
-              ) : null}
             </div>
           </div>
         </CardContent>
@@ -539,7 +558,7 @@ function TodayBriefingPanel({
         </div>
         <div className="space-y-1">
           <p className="text-[11px] text-white/70">이번 주 누적</p>
-          <p className="text-[32px] font-bold tracking-[-0.04em] text-white">
+          <p className="text-[32px] font-bold tracking-[-0.04em] text-white tabular-nums">
             {formatWeeklyMinutes(weeklyMinutes)}
           </p>
         </div>
@@ -552,7 +571,10 @@ function ExceptionStack({
   data,
   onOpenSheet,
 }: Pick<AttendancePageScreenProps, "data" | "onOpenSheet">) {
-  const surfaces = buildExceptionSurfaceModels(data.today);
+  const surfaces = [
+    ...buildExceptionSurfaceModels(data.today),
+    ...buildHistoricalIssueSurfaces(data),
+  ];
 
   return (
     <section className="flex flex-col gap-4">
@@ -561,8 +583,8 @@ function ExceptionStack({
           aria-hidden="true"
           className="size-4 text-status-danger"
         />
-        <h2 className="text-sm font-medium text-foreground">
-          지금 확인할 근태가 있어요
+        <h2 className="text-sm font-medium text-foreground text-balance">
+          지금 확인할 예외가 있어요
         </h2>
         <span className="inline-flex size-5 items-center justify-center rounded-full bg-status-danger-soft text-[10px] font-medium text-status-danger">
           {surfaces.length}
@@ -653,7 +675,7 @@ function HistoryRowAction({
       className="ml-auto"
       onClick={() => onOpenSheet(historyAction)}
       size="sm"
-      variant={getHistoryRowButtonVariant(historyAction)}
+      variant="secondary"
     >
       {historyAction.label}
     </Button>
@@ -669,11 +691,15 @@ function HistorySection({
   AttendancePageScreenProps,
   "data" | "isSubmitting" | "onOpenSheet" | "onViewChange"
 >) {
+  const records = [...data.history.records].sort((left, right) =>
+    right.date.localeCompare(left.date),
+  );
+
   return (
     <Card className="scroll-mt-20" id="history-ledger">
       <div className="flex flex-col gap-4 border-b border-border/80 px-6 py-5 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h2 className="text-xl font-medium tracking-[-0.03em] text-foreground">
+          <h2 className="text-xl font-medium tracking-[-0.03em] text-balance text-foreground">
             출퇴근 이력
           </h2>
           <p className="text-sm leading-6 text-secondary">
@@ -682,7 +708,9 @@ function HistorySection({
           </p>
         </div>
         <ToggleGroup
+          className="rounded-[8px] border border-border/80 bg-muted/75 p-1"
           disabled={isSubmitting}
+          spacing={1}
           type="single"
           value={data.view}
           onValueChange={(value) => {
@@ -693,8 +721,12 @@ function HistorySection({
             onViewChange(value as AttendanceHistoryView);
           }}
         >
-          <ToggleGroupItem value="week">7일</ToggleGroupItem>
-          <ToggleGroupItem value="month">30일</ToggleGroupItem>
+          <ToggleGroupItem className="rounded-[8px]" value="week">
+            7일
+          </ToggleGroupItem>
+          <ToggleGroupItem className="rounded-[8px]" value="month">
+            30일
+          </ToggleGroupItem>
         </ToggleGroup>
       </div>
 
@@ -702,44 +734,62 @@ function HistorySection({
         <TableHeader>
           <TableRow>
             <TableHead>날짜</TableHead>
-            <TableHead>예정 시간</TableHead>
-            <TableHead>출근 시각</TableHead>
-            <TableHead>퇴근 시각</TableHead>
+            <TableHead>특이사항</TableHead>
+            <TableHead>휴가 사용</TableHead>
+            <TableHead>출근 시간</TableHead>
+            <TableHead>퇴근 시간</TableHead>
             <TableHead>총 근무 시간</TableHead>
             <TableHead>상태</TableHead>
             <TableHead className="text-right">작업</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data.history.records.map((record) => {
+          {records.map((record) => {
             const historyAction = buildHistoryAction(record);
-            const status = getHistoryStatusPresentation(
-              record.display,
-              data.today.manualRequest,
+            const specialNote = getHistorySpecialNoteLabel(record, data.date);
+            const leaveUsage = getLeaveUsageLabel(record);
+            const statuses = getHistoryStatusChips(record, data.date);
+            const hasCorrectionNeededRow = hasCorrectionNeededStatus(
+              record,
+              data.date,
             );
 
             return (
-              <TableRow key={record.date}>
-                <TableCell className="font-medium text-foreground">
+              <TableRow
+                key={record.date}
+                className={cn(
+                  hasCorrectionNeededRow &&
+                    "bg-status-danger-soft/42 hover:bg-status-danger-soft/56",
+                )}
+              >
+                <TableCell className="font-medium text-foreground tabular-nums">
                   {formatNumericDateLabel(record.date)}
                 </TableCell>
-                <TableCell>
-                  {formatWorkWindow(record.expectedWorkday)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-foreground">
+                <TableCell className="text-foreground">{specialNote}</TableCell>
+                <TableCell className="text-foreground">{leaveUsage}</TableCell>
+                <TableCell className="whitespace-nowrap text-foreground tabular-nums">
                   {formatAttendanceTime(record.record?.clockInAt ?? null)}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-foreground">
+                <TableCell className="whitespace-nowrap text-foreground tabular-nums">
                   {formatAttendanceTime(record.record?.clockOutAt ?? null)}
                 </TableCell>
-                <TableCell className="whitespace-nowrap text-foreground">
+                <TableCell className="whitespace-nowrap text-foreground tabular-nums">
                   {getTotalWorkTimeLabel(record)}
                 </TableCell>
                 <TableCell>
-                  <StatusChip
-                    className={status.chipClassName}
-                    label={status.label}
-                  />
+                  {statuses.length === 0 ? (
+                    <span className="text-sm text-muted-foreground">-</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {statuses.map((status) => (
+                        <StatusChip
+                          key={`${record.date}-${status.label}`}
+                          className={status.chipClassName}
+                          label={status.label}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
                   <HistoryRowAction
@@ -777,18 +827,18 @@ export function AttendancePageScreen({
 }: AttendancePageScreenProps) {
   return (
     <div className="flex flex-1 flex-col gap-8">
-      <header className="space-y-1">
-        <h1 className="text-[32px] font-medium tracking-[-0.04em] text-foreground">
+      <header>
+        <h1 className="text-[40px] font-semibold tracking-[-0.05em] text-balance text-foreground">
           근태 관리
         </h1>
-        <p className="text-sm leading-6 text-secondary">
+        <p className="mt-1 text-sm leading-6 text-secondary">
           오늘의 근무 상태와 기록을 확인하고 관리합니다
         </p>
       </header>
 
-      <TodayBriefingPanel data={data} onOpenSheet={onOpenSheet} />
+      <TodayBriefingPanel data={data} />
 
-      <section className="grid gap-8 xl:grid-cols-[317px_minmax(0,1fr)]">
+      <section className="grid gap-8 xl:items-start xl:grid-cols-[317px_minmax(0,1fr)]">
         <ExceptionStack data={data} onOpenSheet={onOpenSheet} />
         <HistorySection
           data={data}

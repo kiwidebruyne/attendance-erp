@@ -31,7 +31,7 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 - Global navigation is limited to the four assignment routes in the current scope. Do not expand it into a broader ERP module launcher.
 - `/admin/attendance/requests` owns the queue views `needs_review`, `completed`, and `all` as in-page tabs, not as global navigation items.
 - `/attendance` owns week and month history switching as in-page controls, not as global navigation items.
-- Each route inside the shared shell should expose a consistent page header with a page title and brief context line.
+- Each route inside the shared shell should expose a consistent page header with a page title. A brief context line is optional when the first page surface already explains the route clearly enough.
 
 ## Employee Flow Requirements
 
@@ -39,8 +39,8 @@ It is a structured interpretation of `docs/raw-assignment.md`, not a verbatim co
 
 Required UI:
 
-- a stable today card that remains visible even when active exceptions exist and shows the adjusted expected work window, the current attendance phase, the current next action, and today's active exceptions summary
-- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and uses independent exception surfaces instead of collapsing all problems into one warning
+- a stable today card that remains visible even when active exceptions exist and shows the current attendance phase, today's check-in and check-out facts, beacon-auth state, and a display-only current worked-time value when it can be calculated
+- a separate top-of-screen exception stack that appears before history, keeps every current active exception visible, and may append selected-window historical issue cards so older problem rows are also visible before the table
 - a top-priority carry-over correction surface when the previous workday is still open because checkout is missing
 - a prefilled manual-attendance correction entry for carry-over checkout recovery that targets the prior date with `clock_out` semantics
 - carry-over recovery behavior that swaps same-date duplicate-request submission CTA wording for request-status, review-reason, or resubmission CTA wording when the relevant manual request already exists
@@ -51,9 +51,9 @@ Required UI:
 - visibility into same-day failed attendance attempts, the current derived manual attendance request summary, leave-work conflicts, and dedicated expected-but-missing check-in exception surfaces above history when they still matter operationally
 - separate exception surfaces when an unresolved failed attendance attempt and a same-day expected-but-missing check-in state coexist; the page must not merge them into one generic warning
 - same-day attendance action entry points that deep-link into the existing attendance action UI rather than introducing a second `/attendance`-local clock-in or clock-out owner
-- a rolling 7-day attendance history table ending at the page date, with each date's expected work window summary, recorded check-in and check-out facts, work duration, and derived exceptions
-- a rolling 30-day view of the same attendance history data, also ending at the page date
-- compact row-level re-entry actions in the history table that can reopen the same correction or review flows without replacing or visually competing with the top-of-screen action surfaces
+- a rolling 7-day attendance history table ending at the page date, sorted newest first, with each date's special notes, leave usage, recorded check-in and check-out facts, work duration, limited status chips, and row action
+- a rolling 30-day view of the same attendance history data, also ending at the page date and keeping the same newest-first ordering
+- compact row-level `정정하기` re-entry actions on every history row so the same correction flow can reopen from any date without replacing or visually competing with the top-of-screen action surfaces
 
 Edge cases to keep visible during implementation:
 
