@@ -290,6 +290,32 @@ function validateManualAttendanceReviewState(
   }
 }
 
+function validateManualAttendanceRelations(
+  value: z.infer<typeof manualAttendanceRequestResourceBaseSchema>,
+  ctx: z.RefinementCtx,
+) {
+  const hasParentRequestId = value.parentRequestId !== null;
+  const hasFollowUpKind = value.followUpKind !== null;
+
+  if (hasParentRequestId && !hasFollowUpKind) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["followUpKind"],
+      message:
+        'Invalid input: "followUpKind" is required when "parentRequestId" is present',
+    });
+  }
+
+  if (!hasParentRequestId && hasFollowUpKind) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["parentRequestId"],
+      message:
+        'Invalid input: "parentRequestId" is required when "followUpKind" is present',
+    });
+  }
+}
+
 export const requestChainProjectionSchema =
   requestChainProjectionBaseSchema.superRefine(validateRequestChainProjection);
 
@@ -297,6 +323,7 @@ export const manualAttendanceRequestResourceSchema =
   manualAttendanceRequestResourceBaseSchema.superRefine((value, ctx) => {
     validateRequestChainProjection(value, ctx);
     validateManualAttendanceReviewState(value, ctx);
+    validateManualAttendanceRelations(value, ctx);
   });
 
 const attendanceSurfaceManualRequestStatusSchema = requestStatusSchema.extract([
@@ -315,6 +342,7 @@ export const attendanceSurfaceManualRequestResourceSchema =
     .superRefine((value, ctx) => {
       validateRequestChainProjection(value, ctx);
       validateManualAttendanceReviewState(value, ctx);
+      validateManualAttendanceRelations(value, ctx);
     });
 
 export const errorResponseSchema = z.object({

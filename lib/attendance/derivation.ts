@@ -72,13 +72,29 @@ function getRequestedDate(
   now: string,
   expectedWorkday: ExpectedWorkday,
   record: AttendanceRecord | null,
+  attempts: AttendanceAttempt[],
+  previousDayOpenRecord: PreviousDayOpenRecord | null,
 ): string {
+  const latestCurrentWorkdayAttempt = attempts.findLast(
+    (attempt) => attempt.date !== previousDayOpenRecord?.date,
+  );
+  const currentWorkdayDate =
+    latestCurrentWorkdayAttempt?.date ??
+    (previousDayOpenRecord
+      ? getDateInReferenceOffset(
+          now,
+          previousDayOpenRecord.expectedClockOutAt ??
+            previousDayOpenRecord.clockInAt,
+        )
+      : null);
+
   return (
     record?.date ??
     expectedWorkday.adjustedClockInAt?.slice(0, 10) ??
     expectedWorkday.expectedClockInAt?.slice(0, 10) ??
     expectedWorkday.adjustedClockOutAt?.slice(0, 10) ??
     expectedWorkday.expectedClockOutAt?.slice(0, 10) ??
+    currentWorkdayDate ??
     now.slice(0, 10)
   );
 }
@@ -181,7 +197,13 @@ function deriveActiveExceptions({
   phase: AttendancePhase;
 }): AttendanceExceptionType[] {
   const activeExceptions: AttendanceExceptionType[] = [];
-  const requestedDate = getRequestedDate(now, expectedWorkday, record);
+  const requestedDate = getRequestedDate(
+    now,
+    expectedWorkday,
+    record,
+    attempts,
+    previousDayOpenRecord,
+  );
   const operationalAttempts = getOperationalAttempts(
     attempts,
     requestedDate,

@@ -342,6 +342,32 @@ describe("attendance derivation", () => {
     ).toEqual(["previous_day_checkout_missing", "not_checked_in"]);
   });
 
+  it("keeps same-workday attempts when UTC now falls on the prior calendar date", () => {
+    expect(
+      deriveAttendanceDisplay({
+        now: "2026-03-29T15:05:00Z",
+        expectedWorkday: createExpectedWorkday({
+          isWorkday: false,
+          expectedClockInAt: null,
+          expectedClockOutAt: null,
+          adjustedClockInAt: null,
+          adjustedClockOutAt: null,
+          countsTowardAdminSummary: false,
+        }),
+        record: null,
+        attempts: [
+          createAttendanceAttempt({
+            status: "failed",
+            date: "2026-03-30",
+            attemptedAt: "2026-03-30T00:05:00+09:00",
+            failureReason: "BLE beacon not detected",
+          }),
+        ],
+        previousDayOpenRecord: null,
+      }).activeExceptions,
+    ).toEqual(["attempt_failed"]);
+  });
+
   it("keeps unresolved carry-over failed attempts visible after the cutoff", () => {
     expect(
       deriveAttendanceDisplay({
