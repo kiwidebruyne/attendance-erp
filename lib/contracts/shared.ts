@@ -3,17 +3,43 @@ import { z } from "zod";
 export const apiDateSchema = z.iso.date();
 export const apiDateTimeSchema = z.iso.datetime({ offset: true });
 
-export const attendanceStatusSchema = z.enum([
+export const attendancePhaseSchema = z.enum([
+  "non_workday",
+  "before_check_in",
   "working",
-  "normal",
-  "late",
-  "early_leave",
-  "absent",
-  "on_leave",
+  "checked_out",
 ]);
+export const attendanceFlagSchema = z.enum(["late", "early_leave"]);
+export const attendanceAttemptActionSchema = z.enum(["clock_in", "clock_out"]);
+export const attendanceAttemptStatusSchema = z.enum(["success", "failed"]);
+export const attendanceExceptionTypeSchema = z.enum([
+  "attempt_failed",
+  "not_checked_in",
+  "absent",
+  "previous_day_checkout_missing",
+  "leave_work_conflict",
+  "manual_request_pending",
+  "manual_request_rejected",
+]);
+export const nextActionTypeSchema = z.enum([
+  "clock_in",
+  "clock_out",
+  "submit_manual_request",
+  "resolve_previous_day_checkout",
+  "review_request_status",
+  "review_leave_conflict",
+  "wait",
+]);
+export const attendanceRecordSourceSchema = z.enum(["beacon", "manual"]);
 
-export const verificationMethodSchema = z.enum(["beacon", "manual", "none"]);
 export const approvalStatusSchema = z.enum(["pending", "approved", "rejected"]);
+export const requestStatusSchema = z.enum([
+  "pending",
+  "revision_requested",
+  "withdrawn",
+  "approved",
+  "rejected",
+]);
 export const manualAttendanceActionSchema = z.enum([
   "clock_in",
   "clock_out",
@@ -26,6 +52,8 @@ export const leaveTypeSchema = z.enum([
   "hourly",
 ]);
 export const requestTypeSchema = z.enum(["manual_attendance", "leave"]);
+export const followUpKindSchema = z.enum(["resubmission", "change", "cancel"]);
+export const requestNextActionSchema = z.enum(["admin_review", "none"]);
 export const errorCodeSchema = z.enum([
   "validation_error",
   "conflict",
@@ -38,35 +66,60 @@ export const employeeSummarySchema = z.object({
   department: z.string().min(1),
 });
 
-export const attendanceStateSchema = z.object({
-  clockInAt: apiDateTimeSchema.nullable(),
-  clockOutAt: apiDateTimeSchema.nullable(),
-  workMinutes: z.number().nullable(),
-  status: attendanceStatusSchema,
-  beaconVerified: z.boolean(),
-  verificationMethod: verificationMethodSchema,
+export const leaveCoverageSchema = z.object({
+  requestId: z.string().min(1),
+  leaveType: leaveTypeSchema,
+  startAt: apiDateTimeSchema,
+  endAt: apiDateTimeSchema,
 });
 
-export const attendanceRecordSchema = attendanceStateSchema.extend({
+export const expectedWorkdaySchema = z.object({
+  isWorkday: z.boolean(),
+  expectedClockInAt: apiDateTimeSchema.nullable(),
+  expectedClockOutAt: apiDateTimeSchema.nullable(),
+  adjustedClockInAt: apiDateTimeSchema.nullable(),
+  adjustedClockOutAt: apiDateTimeSchema.nullable(),
+  countsTowardAdminSummary: z.boolean(),
+  leaveCoverage: leaveCoverageSchema.nullable(),
+});
+
+export const attendanceAttemptSchema = z.object({
+  id: z.string().min(1),
   date: apiDateSchema,
+  action: attendanceAttemptActionSchema,
+  attemptedAt: apiDateTimeSchema,
+  status: attendanceAttemptStatusSchema,
+  failureReason: z.string().min(1).nullable(),
 });
 
-export const adminAttendanceItemSchema = z.object({
-  employeeId: z.string().min(1),
-  name: z.string().min(1),
-  department: z.string().min(1),
+export const attendanceRecordSchema = z.object({
+  id: z.string().min(1),
+  date: apiDateSchema,
   clockInAt: apiDateTimeSchema.nullable(),
+  clockInSource: attendanceRecordSourceSchema.nullable(),
   clockOutAt: apiDateTimeSchema.nullable(),
-  status: attendanceStatusSchema,
-  verificationMethod: verificationMethodSchema,
+  clockOutSource: attendanceRecordSourceSchema.nullable(),
+  workMinutes: z.number().nullable(),
 });
 
-export const adminAttendanceListRecordSchema = adminAttendanceItemSchema.extend(
-  {
-    date: apiDateSchema,
-    workMinutes: z.number().nullable(),
-  },
-);
+export const attendanceDisplayNextActionSchema = z.object({
+  type: nextActionTypeSchema,
+  relatedRequestId: z.string().min(1).nullable(),
+});
+
+export const attendanceDisplaySchema = z.object({
+  phase: attendancePhaseSchema,
+  flags: z.array(attendanceFlagSchema),
+  activeExceptions: z.array(attendanceExceptionTypeSchema),
+  nextAction: attendanceDisplayNextActionSchema,
+});
+
+export const previousDayOpenRecordSchema = z.object({
+  date: apiDateSchema,
+  clockInAt: apiDateTimeSchema,
+  clockOutAt: apiDateTimeSchema.nullable(),
+  expectedClockOutAt: apiDateTimeSchema.nullable(),
+});
 
 export const leaveBalanceSchema = z.object({
   totalDays: z.number(),
@@ -119,15 +172,33 @@ export const leaveRequestSchema = z.union([
   nonHourlyLeaveRequestBaseSchema.merge(rejectedApprovalStateSchema),
 ]);
 
-export const manualAttendanceRequestResourceSchema = z.object({
-  id: z.string().min(1),
-  requestType: z.literal("manual_attendance"),
-  action: manualAttendanceActionSchema,
-  date: apiDateSchema,
-  requestedAt: apiDateTimeSchema,
-  reason: z.string().min(1),
-  status: approvalStatusSchema,
+export const requestChainProjectionSchema = z.object({
+  activeRequestId: z.string().min(1).nullable(),
+  activeStatus: requestStatusSchema.nullable(),
+  effectiveRequestId: z.string().min(1),
+  effectiveStatus: requestStatusSchema,
+  governingReviewComment: z.string().trim().min(1).nullable(),
+  hasActiveFollowUp: z.boolean(),
+  nextAction: requestNextActionSchema,
 });
+
+export const manualAttendanceRequestResourceSchema = z
+  .object({
+    id: z.string().min(1),
+    requestType: z.literal("manual_attendance"),
+    action: manualAttendanceActionSchema,
+    date: apiDateSchema,
+    requestedAt: apiDateTimeSchema,
+    reason: z.string().min(1),
+    status: requestStatusSchema,
+    reviewedAt: apiDateTimeSchema.nullable(),
+    reviewComment: z.string().trim().min(1).nullable(),
+    rootRequestId: z.string().min(1),
+    parentRequestId: z.string().min(1).nullable(),
+    followUpKind: followUpKindSchema.nullable(),
+    supersededByRequestId: z.string().min(1).nullable(),
+  })
+  .merge(requestChainProjectionSchema);
 
 export const errorResponseSchema = z.object({
   error: z.object({
@@ -138,19 +209,45 @@ export const errorResponseSchema = z.object({
 
 export type ApiDate = z.infer<typeof apiDateSchema>;
 export type ApiDateTime = z.infer<typeof apiDateTimeSchema>;
-export type AttendanceStatus = z.infer<typeof attendanceStatusSchema>;
-export type VerificationMethod = z.infer<typeof verificationMethodSchema>;
+export type AttendancePhase = z.infer<typeof attendancePhaseSchema>;
+export type AttendanceFlag = z.infer<typeof attendanceFlagSchema>;
+export type AttendanceAttemptAction = z.infer<
+  typeof attendanceAttemptActionSchema
+>;
+export type AttendanceAttemptStatus = z.infer<
+  typeof attendanceAttemptStatusSchema
+>;
+export type AttendanceExceptionType = z.infer<
+  typeof attendanceExceptionTypeSchema
+>;
+export type NextActionType = z.infer<typeof nextActionTypeSchema>;
+export type AttendanceRecordSource = z.infer<
+  typeof attendanceRecordSourceSchema
+>;
 export type ApprovalStatus = z.infer<typeof approvalStatusSchema>;
+export type RequestStatus = z.infer<typeof requestStatusSchema>;
 export type ManualAttendanceAction = z.infer<
   typeof manualAttendanceActionSchema
 >;
 export type LeaveType = z.infer<typeof leaveTypeSchema>;
 export type RequestType = z.infer<typeof requestTypeSchema>;
+export type FollowUpKind = z.infer<typeof followUpKindSchema>;
+export type RequestNextAction = z.infer<typeof requestNextActionSchema>;
 export type EmployeeSummary = z.infer<typeof employeeSummarySchema>;
-export type AttendanceState = z.infer<typeof attendanceStateSchema>;
+export type LeaveCoverage = z.infer<typeof leaveCoverageSchema>;
+export type ExpectedWorkday = z.infer<typeof expectedWorkdaySchema>;
+export type AttendanceAttempt = z.infer<typeof attendanceAttemptSchema>;
 export type AttendanceRecord = z.infer<typeof attendanceRecordSchema>;
+export type AttendanceDisplayNextAction = z.infer<
+  typeof attendanceDisplayNextActionSchema
+>;
+export type AttendanceDisplay = z.infer<typeof attendanceDisplaySchema>;
+export type PreviousDayOpenRecord = z.infer<typeof previousDayOpenRecordSchema>;
 export type LeaveBalance = z.infer<typeof leaveBalanceSchema>;
 export type LeaveRequest = z.infer<typeof leaveRequestSchema>;
+export type RequestChainProjection = z.infer<
+  typeof requestChainProjectionSchema
+>;
 export type ManualAttendanceRequestResource = z.infer<
   typeof manualAttendanceRequestResourceSchema
 >;

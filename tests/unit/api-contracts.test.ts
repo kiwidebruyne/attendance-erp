@@ -26,35 +26,53 @@ import {
 import {
   apiDateSchema,
   apiDateTimeSchema,
-  approvalStatusSchema,
-  attendanceStatusSchema,
+  attendanceExceptionTypeSchema,
+  attendanceFlagSchema,
+  attendancePhaseSchema,
+  attendanceRecordSourceSchema,
   errorResponseSchema,
   leaveTypeSchema,
   manualAttendanceActionSchema,
+  nextActionTypeSchema,
+  requestStatusSchema,
   requestTypeSchema,
-  verificationMethodSchema,
 } from "@/lib/contracts/shared";
 
 describe("shared contract schemas", () => {
   it("accept documented enum vocabulary and ISO date primitives", () => {
-    expect(attendanceStatusSchema.options).toEqual([
+    expect(attendancePhaseSchema.options).toEqual([
+      "non_workday",
+      "before_check_in",
       "working",
-      "normal",
-      "late",
-      "early_leave",
+      "checked_out",
+    ]);
+    expect(attendanceFlagSchema.options).toEqual(["late", "early_leave"]);
+    expect(attendanceExceptionTypeSchema.options).toEqual([
+      "attempt_failed",
+      "not_checked_in",
       "absent",
-      "on_leave",
+      "previous_day_checkout_missing",
+      "leave_work_conflict",
+      "manual_request_pending",
+      "manual_request_rejected",
     ]);
-    expect(verificationMethodSchema.options).toEqual([
-      "beacon",
-      "manual",
-      "none",
+    expect(nextActionTypeSchema.options).toEqual([
+      "clock_in",
+      "clock_out",
+      "submit_manual_request",
+      "resolve_previous_day_checkout",
+      "review_request_status",
+      "review_leave_conflict",
+      "wait",
     ]);
-    expect(approvalStatusSchema.options).toEqual([
+    expect(requestStatusSchema.options).toEqual([
       "pending",
+      "revision_requested",
+      "withdrawn",
       "approved",
       "rejected",
     ]);
+    expect(attendanceRecordSourceSchema.options).toEqual(["beacon", "manual"]);
     expect(manualAttendanceActionSchema.options).toEqual([
       "clock_in",
       "clock_out",
@@ -101,14 +119,44 @@ describe("employee attendance contracts", () => {
           name: "Alex Kim",
           department: "Product",
         },
-        today: {
+        expectedWorkday: {
+          isWorkday: true,
+          expectedClockInAt: "2026-03-30T09:00:00+09:00",
+          expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+          adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+          adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+          countsTowardAdminSummary: true,
+          leaveCoverage: null,
+        },
+        previousDayOpenRecord: null,
+        todayRecord: {
+          id: "att_20260330_emp_001",
+          date: "2026-03-30",
           clockInAt: "2026-03-30T09:03:00+09:00",
+          clockInSource: "beacon",
           clockOutAt: null,
+          clockOutSource: null,
           workMinutes: null,
-          status: "working",
-          beaconVerified: true,
-          verificationMethod: "beacon",
-          manualRequest: null,
+        },
+        attempts: [
+          {
+            id: "attempt_001",
+            date: "2026-03-30",
+            action: "clock_in",
+            attemptedAt: "2026-03-30T09:03:00+09:00",
+            status: "success",
+            failureReason: null,
+          },
+        ],
+        manualRequest: null,
+        display: {
+          phase: "working",
+          flags: ["late"],
+          activeExceptions: [],
+          nextAction: {
+            type: "clock_out",
+            relatedRequestId: null,
+          },
         },
       }),
     ).toMatchObject({
@@ -116,9 +164,11 @@ describe("employee attendance contracts", () => {
       employee: {
         id: "emp_001",
       },
-      today: {
-        status: "working",
-        beaconVerified: true,
+      todayRecord: {
+        id: "att_20260330_emp_001",
+      },
+      display: {
+        phase: "working",
       },
     });
   });
@@ -139,17 +189,38 @@ describe("employee attendance contracts", () => {
         records: [
           {
             date: "2026-03-30",
-            clockInAt: "2026-03-30T09:03:00+09:00",
-            clockOutAt: null,
-            workMinutes: null,
-            status: "working",
-            beaconVerified: true,
-            verificationMethod: "beacon",
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            record: {
+              id: "att_20260330_emp_001",
+              date: "2026-03-30",
+              clockInAt: "2026-03-30T09:03:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: {
+              phase: "working",
+              flags: ["late"],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_out",
+                relatedRequestId: null,
+              },
+            },
           },
         ],
       }),
     ).toMatchObject({
-      records: [{ status: "working" }],
+      records: [{ display: { phase: "working" } }],
     });
   });
 
@@ -174,11 +245,25 @@ describe("employee attendance contracts", () => {
         requestedAt: "2026-03-30T09:00:00+09:00",
         reason: "Beacon was not detected at the office entrance.",
         status: "pending",
+        reviewedAt: null,
+        reviewComment: null,
+        governingReviewComment: null,
+        rootRequestId: "req_manual_001",
+        parentRequestId: null,
+        followUpKind: null,
+        supersededByRequestId: null,
+        activeRequestId: "req_manual_001",
+        activeStatus: "pending",
+        effectiveRequestId: "req_manual_001",
+        effectiveStatus: "pending",
+        hasActiveFollowUp: false,
+        nextAction: "admin_review",
       }),
     ).toMatchObject({
       id: "req_manual_001",
       requestType: "manual_attendance",
       status: "pending",
+      effectiveStatus: "pending",
     });
   });
 });
@@ -335,22 +420,53 @@ describe("admin attendance contracts", () => {
           notCheckedInCount: 2,
           lateCount: 1,
           onLeaveCount: 1,
+          failedAttemptCount: 1,
+          previousDayOpenCount: 1,
         },
         items: [
           {
-            employeeId: "emp_001",
-            name: "Alex Kim",
-            department: "Product",
-            clockInAt: "2026-03-30T09:03:00+09:00",
-            clockOutAt: null,
-            status: "working",
-            verificationMethod: "beacon",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            todayRecord: {
+              id: "att_20260330_emp_001",
+              date: "2026-03-30",
+              clockInAt: "2026-03-30T09:03:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: {
+              phase: "working",
+              flags: ["late"],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_out",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: null,
+            previousDayOpenRecord: null,
+            manualRequest: null,
           },
         ],
       }),
     ).toMatchObject({
       summary: {
         checkedInCount: 8,
+        failedAttemptCount: 1,
       },
     });
   });
@@ -379,20 +495,45 @@ describe("admin attendance contracts", () => {
         records: [
           {
             date: "2026-03-30",
-            employeeId: "emp_001",
-            name: "Alex Kim",
-            department: "Product",
-            clockInAt: "2026-03-30T09:03:00+09:00",
-            clockOutAt: null,
-            workMinutes: null,
-            status: "working",
-            verificationMethod: "beacon",
+            employee: {
+              id: "emp_001",
+              name: "Alex Kim",
+              department: "Product",
+            },
+            expectedWorkday: {
+              isWorkday: true,
+              expectedClockInAt: "2026-03-30T09:00:00+09:00",
+              expectedClockOutAt: "2026-03-30T18:00:00+09:00",
+              adjustedClockInAt: "2026-03-30T09:00:00+09:00",
+              adjustedClockOutAt: "2026-03-30T18:00:00+09:00",
+              countsTowardAdminSummary: true,
+              leaveCoverage: null,
+            },
+            record: {
+              id: "att_20260330_emp_001",
+              date: "2026-03-30",
+              clockInAt: "2026-03-30T09:03:00+09:00",
+              clockInSource: "beacon",
+              clockOutAt: null,
+              clockOutSource: null,
+              workMinutes: null,
+            },
+            display: {
+              phase: "working",
+              flags: ["late"],
+              activeExceptions: [],
+              nextAction: {
+                type: "clock_out",
+                relatedRequestId: null,
+              },
+            },
+            latestFailedAttempt: null,
           },
         ],
       }),
     ).toMatchObject({
       total: 22,
-      records: [{ employeeId: "emp_001" }],
+      records: [{ employee: { id: "emp_001" } }],
     });
   });
 });

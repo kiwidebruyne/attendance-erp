@@ -1,10 +1,34 @@
 import { z } from "zod";
 
 import {
-  adminAttendanceItemSchema,
-  adminAttendanceListRecordSchema,
   apiDateSchema,
+  attendanceAttemptSchema,
+  attendanceDisplaySchema,
+  attendanceRecordSchema,
+  employeeSummarySchema,
+  expectedWorkdaySchema,
+  manualAttendanceRequestResourceSchema,
+  previousDayOpenRecordSchema,
 } from "@/lib/contracts/shared";
+
+const adminAttendanceTodayItemSchema = z.object({
+  employee: employeeSummarySchema,
+  expectedWorkday: expectedWorkdaySchema,
+  todayRecord: attendanceRecordSchema.nullable(),
+  display: attendanceDisplaySchema,
+  latestFailedAttempt: attendanceAttemptSchema.nullable(),
+  previousDayOpenRecord: previousDayOpenRecordSchema.nullable(),
+  manualRequest: manualAttendanceRequestResourceSchema.nullable(),
+});
+
+const adminAttendanceListRecordSchema = z.object({
+  date: apiDateSchema,
+  employee: employeeSummarySchema,
+  expectedWorkday: expectedWorkdaySchema,
+  record: attendanceRecordSchema.nullable(),
+  display: attendanceDisplaySchema,
+  latestFailedAttempt: attendanceAttemptSchema.nullable(),
+});
 
 export const adminAttendanceTodayResponseSchema = z.object({
   date: apiDateSchema,
@@ -13,8 +37,10 @@ export const adminAttendanceTodayResponseSchema = z.object({
     notCheckedInCount: z.number(),
     lateCount: z.number(),
     onLeaveCount: z.number(),
+    failedAttemptCount: z.number(),
+    previousDayOpenCount: z.number(),
   }),
-  items: z.array(adminAttendanceItemSchema),
+  items: z.array(adminAttendanceTodayItemSchema),
 });
 
 export const adminAttendanceListQuerySchema = z.object({
