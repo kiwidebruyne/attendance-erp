@@ -156,8 +156,8 @@ Required UI:
 - within `completed` and `all`, reviewed non-approved requests should remain visible as history/context rather than as a separate admin queue state
 - `completed` should keep the same workspace grammar as `needs_review`, but with lower emphasis and history-first reading
 - `all` should section actionable review work ahead of completed review history rather than mixing both into one undifferentiated list
-- within `completed`, approved or withdrawn results should remain visually distinct from reviewed non-approved history and should appear ahead of that history section
-- `completed` and the completed section inside `all` should sort by latest review activity descending
+- within `completed`, approved or withdrawn results should remain visually distinct from reviewed non-approved history, should appear ahead of that history section, and each section should sort by latest review activity descending
+- the completed section inside `all` should sort by latest review activity descending, while preserving the same approved/withdrawn-before-reviewed-non-approved section order
 - admin-side next action for reviewed non-approved history should be treated as no further admin action on the same record, even when employee pages still expose a page-local resubmission path
 - admin completed-history detail should remain read-only, use quiet outcome footing, and should not show employee-resubmit CTA copy or employee-only suppression metadata
 - post-approval adjustments should route through employee follow-up change or cancel requests rather than an admin-side reversal of the original approval

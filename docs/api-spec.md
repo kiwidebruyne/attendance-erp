@@ -938,8 +938,8 @@ Response notes:
 - `reviewComment` is `null` unless the latest review event used `reject` or `request_revision`
 - `governingReviewComment` stays populated while the latest non-approved reviewed outcome has not yet been resolved by a linked follow-up
 - `needs_review` groups chains whose active request has `status = pending` and should be ordered newest pending request first
-- `completed` groups chains whose effective status is `approved`, `withdrawn`, `revision_requested`, or `rejected` and which have no active follow-up; reviewed non-approved items with no active follow-up remain completed history only, and the view should be ordered by latest review activity descending
-- `all` includes both actionable review work and completed review history; the completed section should be ordered by latest review activity descending
+- `completed` groups chains whose effective status is `approved`, `withdrawn`, `revision_requested`, or `rejected` and which have no active follow-up; reviewed non-approved items with no active follow-up remain completed history only, and each completed-history section should be ordered by latest review activity descending
+- `all` includes both actionable review work and completed review history; the completed section should be ordered by latest review activity descending within the section
 - admin clients may visually separate reviewed non-approved items from approved or withdrawn results inside `completed` and `all`
 - `governingReviewComment` should remain visible in row and detail projections while unresolved rationale still governs
 - request-chain semantics, reviewed-request immutability, and follow-up workflow rules are defined in `docs/request-lifecycle-model.md`
