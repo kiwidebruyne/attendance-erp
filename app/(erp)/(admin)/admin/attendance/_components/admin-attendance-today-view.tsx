@@ -616,7 +616,6 @@ function ExceptionTable({
     () =>
       rows.filter(
         (row) =>
-          matchesTextFilter(row.employeeName, name ?? "") &&
           matchesTextFilter(row.department, departmentFilter) &&
           matchesTextFilter(row.exceptionType, exceptionTypeFilter) &&
           matchesTextFilter(row.specialNote, specialNoteFilter) &&
@@ -631,7 +630,6 @@ function ExceptionTable({
       detailFilter,
       departmentFilter,
       exceptionTypeFilter,
-      name,
       referenceDateFilter.from,
       referenceDateFilter.to,
       rows,
@@ -856,7 +854,6 @@ function LedgerTable({
     () =>
       items.filter(
         (item) =>
-          matchesTextFilter(item.employee.name, name ?? "") &&
           matchesTextFilter(item.employee.department, departmentFilter) &&
           matchesTextFilter(getCurrentStateLabel(item), currentStateFilter) &&
           matchesTextFilter(
@@ -879,7 +876,6 @@ function LedgerTable({
       nextCheckFilter,
       now,
       workTimeFilter,
-      name,
     ],
   );
 

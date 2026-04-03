@@ -333,4 +333,24 @@ describe("AdminAttendanceWorkspace", () => {
       "bg-status-danger-soft/28",
     );
   });
+
+  it("keeps department keyword filtering consistent across today summaries and the ledger", () => {
+    const todayResponse = createTodayResponse();
+
+    render(
+      <AdminAttendanceWorkspace
+        state={createState("?name=재무")}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
+      />,
+    );
+
+    expect(
+      screen.queryByText("조건에 맞는 근무현황이 없어요."),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("강유나").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("오나리").length).toBeGreaterThan(0);
+  });
 });
