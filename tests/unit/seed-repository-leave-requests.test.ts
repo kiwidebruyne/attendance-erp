@@ -98,7 +98,7 @@ function createReviewedHistoryWithWarningContextWorld() {
     requestedAt: "2026-04-15T09:00:00+09:00",
     status: "rejected",
     reviewedAt: "2026-04-15T11:00:00+09:00",
-    reviewComment: "Please resubmit after adjusting the staffing plan.",
+    reviewComment: "운영 인력 계획을 조정한 뒤 다시 제출해 주세요.",
     rootRequestId: "leave_request_emp_001_2026-04-16_rejected",
     parentRequestId: null,
     followUpKind: null,

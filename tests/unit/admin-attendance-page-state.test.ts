@@ -51,8 +51,8 @@ function makeTodayItem(
   return {
     employee: {
       id: "emp_001",
-      name: "Minji Park",
-      department: "Operations",
+      name: "박민지",
+      department: "운영",
     },
     expectedWorkday: {
       isWorkday: true,
@@ -164,7 +164,7 @@ describe("groupAdminAttendanceTodayRows", () => {
         employee: {
           id: "emp_101",
           name: "Prev Day Open",
-          department: "Operations",
+          department: "운영",
         },
         previousDayOpenRecord: {
           date: "2026-04-02",
@@ -188,7 +188,7 @@ describe("groupAdminAttendanceTodayRows", () => {
         employee: {
           id: "emp_102",
           name: "Failed Attempt",
-          department: "Operations",
+          department: "운영",
         },
         latestFailedAttempt: {
           id: "failed_attempt_only",
@@ -208,7 +208,7 @@ describe("groupAdminAttendanceTodayRows", () => {
         employee: {
           id: "emp_103",
           name: "Manual Request",
-          department: "Operations",
+          department: "운영",
         },
         manualRequest: makeManualRequestFixture({
           id: "manual_request_only",
@@ -220,7 +220,7 @@ describe("groupAdminAttendanceTodayRows", () => {
         employee: {
           id: "emp_104",
           name: "Operational",
-          department: "Operations",
+          department: "운영",
         },
       }),
     ]);

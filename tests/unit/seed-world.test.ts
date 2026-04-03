@@ -37,14 +37,14 @@ describe("canonical seed world", () => {
     expect(canonicalSeedWorld.employees).toHaveLength(12);
     expect(canonicalSeedWorld.employees[0]).toEqual({
       id: "emp_001",
-      name: "Minji Park",
-      department: "Operations",
+      name: "박민지",
+      department: "운영",
       role: "employee",
     });
     expect(canonicalSeedWorld.employees.at(-1)).toEqual({
       id: "emp_012",
-      name: "Jiwon Han",
-      department: "People",
+      name: "한지원",
+      department: "인재문화",
       role: "admin",
     });
   });
@@ -157,12 +157,12 @@ describe("canonical seed world", () => {
       {
         id: "company_event_2026-04-16_spring-launch",
         date: "2026-04-16",
-        title: "Spring Launch Dry Run",
+        title: "봄 시즌 론칭 리허설",
       },
       {
         id: "company_event_2026-04-17_inventory-audit",
         date: "2026-04-17",
-        title: "Quarterly Inventory Audit",
+        title: "분기 재고 실사",
       },
     ]);
     expect(Object.isFrozen(canonicalSeedWorld.companyEvents)).toBe(true);

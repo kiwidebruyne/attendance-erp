@@ -882,8 +882,8 @@ Response:
     {
       "employee": {
         "id": "emp_001",
-        "name": "Minji Park",
-        "department": "Operations"
+        "name": "박민지",
+        "department": "운영"
       },
       "expectedWorkday": {
         "isWorkday": true,

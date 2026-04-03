@@ -144,7 +144,7 @@ describe("attendance repository helpers", () => {
       attempts: [
         expect.objectContaining({
           status: "failed",
-          failureReason: "The phone app could not reach the beacon service.",
+          failureReason: "휴대폰 앱이 비콘 서비스에 연결되지 않았어요.",
         }),
       ],
       manualRequest: {
@@ -152,7 +152,7 @@ describe("attendance repository helpers", () => {
         date: "2026-04-03",
         status: "pending",
         governingReviewComment:
-          "Please submit a follow-up if the beacon issue continues.",
+          "비콘 문제가 계속되면 후속 정정 요청을 다시 제출해 주세요.",
         activeRequestId: "manual_request_emp_010_2026-04-03_resubmission",
         activeStatus: "pending",
         effectiveRequestId: "manual_request_emp_010_2026-04-03_resubmission",
@@ -427,7 +427,7 @@ describe("attendance repository helpers", () => {
     const listResponse = getAdminAttendanceList(canonicalSeedWorld, {
       from: "2026-04-03",
       to: "2026-04-03",
-      name: "Hyun",
+      name: "현우",
       now: baselineSnapshotNow,
     });
 
@@ -462,7 +462,7 @@ describe("attendance repository helpers", () => {
         from: "2026-04-03",
         to: "2026-04-03",
         filters: {
-          name: "hyun",
+          name: "현우",
         },
         total: 1,
         records: [
@@ -471,8 +471,7 @@ describe("attendance repository helpers", () => {
               id: "emp_010",
             }),
             latestFailedAttempt: expect.objectContaining({
-              failureReason:
-                "The phone app could not reach the beacon service.",
+              failureReason: "휴대폰 앱이 비콘 서비스에 연결되지 않았어요.",
             }),
           }),
         ],

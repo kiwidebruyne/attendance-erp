@@ -136,7 +136,7 @@ describe("seed repository", () => {
     const listResponse = repository?.getAdminAttendanceList({
       from: "2026-04-10",
       to: "2026-04-13",
-      name: "Minji",
+      name: "민지",
     });
     const requestsResponse = repository?.getAdminRequests({
       view: "all",
@@ -161,7 +161,7 @@ describe("seed repository", () => {
       adminAttendanceListResponseSchema.parse(listResponse);
 
     expect(parsedListResponse.filters).toEqual({
-      name: "minji",
+      name: "민지",
     });
     expect(parsedListResponse.total).toBe(2);
     expect(parsedListResponse.records).toEqual(
@@ -205,7 +205,7 @@ describe("seed repository", () => {
 
     expect(employee).toMatchObject({
       id: "emp_010",
-      name: "Hyunwoo Baek",
+      name: "백현우",
     });
     expect(requestChain).toMatchObject({
       rootRequestId: "leave_request_emp_010_2026-04-20_root",

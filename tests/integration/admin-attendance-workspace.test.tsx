@@ -77,13 +77,13 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getByText("전체 팀 근무현황")).toBeInTheDocument();
     expect(screen.getAllByText("전날 미퇴근").length).toBeGreaterThan(0);
     const ledgerTable = screen.getAllByRole("table")[1];
-    const noRecordRow = within(ledgerTable!).getByText("Nari Oh").closest("tr");
+    const noRecordRow = within(ledgerTable!).getByText("오나리").closest("tr");
 
     expect(noRecordRow).not.toBeNull();
-    expect(noRecordRow).toHaveTextContent("Finance");
+    expect(noRecordRow).toHaveTextContent("재무");
     expect(noRecordRow).toHaveTextContent("출근 기록 없음");
     expect(within(noRecordRow!).getAllByText("-").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Minji Park").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("박민지").length).toBeGreaterThan(0);
   });
 
   it("shows the prior-workday target date for the carry-over row", () => {
@@ -99,7 +99,7 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(screen.getAllByText("Junho Lee").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("이준호").length).toBeGreaterThan(0);
     expect(screen.getAllByText("2026-04-02").length).toBeGreaterThan(0);
   });
 
@@ -116,9 +116,7 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    const pendingRequestRow = screen
-      .getAllByText("Hyunwoo Baek")[0]
-      ?.closest("tr");
+    const pendingRequestRow = screen.getAllByText("백현우")[0]?.closest("tr");
 
     expect(pendingRequestRow).not.toBeNull();
     expect(pendingRequestRow).toHaveTextContent("시도 실패");
@@ -172,18 +170,18 @@ describe("AdminAttendanceWorkspace", () => {
     const { rerender } = render(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-03-28&to=2026-04-03&name=alex",
+          "?mode=history&from=2026-03-28&to=2026-04-03&name=민지",
         )}
         historyResponse={repository.getAdminAttendanceList({
           from: "2026-03-28",
           to: "2026-04-03",
-          name: "alex",
+          name: "민지",
         })}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "이름 필터" }));
-    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("alex");
+    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("민지");
     fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
     expect(screen.getByLabelText("시작일")).toHaveValue("2026-03-28");
     expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-03");
@@ -191,39 +189,41 @@ describe("AdminAttendanceWorkspace", () => {
     rerender(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-03-29&to=2026-04-02&name=junho",
+          "?mode=history&from=2026-03-29&to=2026-04-02&name=준호",
         )}
         historyResponse={repository.getAdminAttendanceList({
           from: "2026-03-29",
           to: "2026-04-02",
-          name: "junho",
+          name: "준호",
         })}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "이름 필터" }));
-    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("junho");
+    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("준호");
     fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
     expect(screen.getByLabelText("시작일")).toHaveValue("2026-03-29");
     expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-02");
   });
 
-  it("renders the history empty state for the alex name filter", () => {
+  it("renders the history empty state for a non-matching Hangul name filter", () => {
     render(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-03-28&to=2026-04-03&name=alex",
+          "?mode=history&from=2026-03-28&to=2026-04-03&name=없는이름",
         )}
         historyResponse={repository.getAdminAttendanceList({
           from: "2026-03-28",
           to: "2026-04-03",
-          name: "alex",
+          name: "없는이름",
         })}
       />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "이름 필터" }));
-    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("alex");
+    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue(
+      "없는이름",
+    );
     fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
     expect(screen.getByLabelText("시작일")).toHaveValue("2026-03-28");
     expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-03");
@@ -243,8 +243,8 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(getRowByEmployeeName("Junho Lee")).toHaveTextContent("전날 미퇴근");
-    expect(getRowByEmployeeName("Hyunwoo Baek")).toHaveTextContent("시도 실패");
+    expect(getRowByEmployeeName("이준호")).toHaveTextContent("전날 미퇴근");
+    expect(getRowByEmployeeName("백현우")).toHaveTextContent("시도 실패");
     expect(
       screen.queryByText("오늘 지각으로 기록됐어요."),
     ).not.toBeInTheDocument();
@@ -284,10 +284,10 @@ describe("AdminAttendanceWorkspace", () => {
         state={createState()}
         todayExceptionRows={[
           {
-            department: "Operations",
+            department: "운영",
             detail: "결근 상태가 남아 있어요",
             employeeId: "emp_absent",
-            employeeName: "Absent Employee",
+            employeeName: "결근 직원",
             exceptionType: "결근",
             id: "exception-absent-row",
             referenceDate: "2026-04-10",
@@ -309,7 +309,7 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(getRowByEmployeeName("Absent Employee")).toHaveClass(
+    expect(getRowByEmployeeName("결근 직원")).toHaveClass(
       "bg-status-danger-soft/28",
     );
   });
