@@ -33,7 +33,7 @@ export type TableHeaderTextFilter = Readonly<{
 export type TableHeaderSelectFilter = Readonly<{
   kind: "select";
   label: string;
-  options: TableFilterOption[];
+  options: readonly TableFilterOption[];
   value: string;
   onChange: (value: string) => void;
 }>;
@@ -47,7 +47,7 @@ export type TableHeaderDateRangeFilter = Readonly<{
   onToChange: (value: string) => void;
   onClear?: () => void;
   preset: string;
-  presetOptions: TableFilterOption[];
+  presetOptions: readonly TableFilterOption[];
   to: string;
 }>;
 
