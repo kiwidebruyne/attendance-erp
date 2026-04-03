@@ -863,13 +863,13 @@ Typical error cases:
 ### `GET /api/admin/attendance/today`
 
 Returns today's team-level summary plus employee-level fact and exception rows for same-day operations.
-The seeded example below assumes the deterministic Monday-noon snapshot, so most same-day records are already present while a small set of operational exceptions remains visible.
+The seeded example below assumes the deterministic Friday-morning snapshot, so most same-day records are already present while a small set of operational exceptions remains visible.
 
 Response:
 
 ```json
 {
-  "date": "2026-04-13",
+  "date": "2026-04-03",
   "summary": {
     "checkedInCount": 9,
     "notCheckedInCount": 2,
@@ -887,17 +887,17 @@ Response:
       },
       "expectedWorkday": {
         "isWorkday": true,
-        "expectedClockInAt": "2026-04-13T09:00:00+09:00",
-        "expectedClockOutAt": "2026-04-13T18:00:00+09:00",
-        "adjustedClockInAt": "2026-04-13T09:00:00+09:00",
-        "adjustedClockOutAt": "2026-04-13T18:00:00+09:00",
+        "expectedClockInAt": "2026-04-03T09:00:00+09:00",
+        "expectedClockOutAt": "2026-04-03T18:00:00+09:00",
+        "adjustedClockInAt": "2026-04-03T09:00:00+09:00",
+        "adjustedClockOutAt": "2026-04-03T18:00:00+09:00",
         "countsTowardAdminSummary": true,
         "leaveCoverage": null
       },
       "todayRecord": {
-        "id": "attendance_record_emp_001_2026-04-13",
-        "date": "2026-04-13",
-        "clockInAt": "2026-04-13T08:58:00+09:00",
+        "id": "attendance_record_emp_001_2026-04-03",
+        "date": "2026-04-03",
+        "clockInAt": "2026-04-03T08:58:00+09:00",
         "clockInSource": "beacon",
         "clockOutAt": null,
         "clockOutSource": null,

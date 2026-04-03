@@ -3,15 +3,9 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 
@@ -20,12 +14,6 @@ type Tone = "default" | "warning" | "history" | "subtle";
 export type AdminRequestFactRow = Readonly<{
   detail: string;
   label: string;
-  tone?: Tone;
-}>;
-
-export type AdminRequestTimelineItem = Readonly<{
-  detail: string;
-  title: string;
   tone?: Tone;
 }>;
 
@@ -49,16 +37,12 @@ export type AdminRequestDetailPanelProps = Readonly<{
   onRequestCommentChange?: (value: string) => void;
   onRequestRevision?: () => void;
   onStartWarningConfirmation?: () => void;
-  requestReasonLabel: string;
-  requestTimeline?: AdminRequestTimelineItem[];
   requestTypeLabel: string;
   reviewedAtLabel?: string | null;
   reviewComment?: string;
   reviewCommentInputId?: string;
   showReviewCommentInput?: boolean;
   submittedAtLabel: string;
-  summaryLabel: string;
-  supportingFooting: string;
   warningConfirmation?: AdminRequestWarningConfirmation | null;
 }>;
 
@@ -102,48 +86,26 @@ function ToneBadge({
   return <Badge variant="outline">{children}</Badge>;
 }
 
-function FactGrid({ facts }: Readonly<{ facts: AdminRequestFactRow[] }>) {
+function FactTable({ facts }: Readonly<{ facts: AdminRequestFactRow[] }>) {
   return (
-    <div className="grid gap-3">
-      {facts.map((fact) => (
-        <Card
-          key={`${fact.label}-${fact.detail}`}
-          className={cn("gap-0", getToneClasses(fact.tone ?? "subtle"))}
-          size="sm"
-        >
-          <CardHeader className="gap-1.5">
-            <CardDescription>{fact.label}</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <p className="text-sm leading-6 text-foreground">{fact.detail}</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-function Timeline({
-  items,
-}: Readonly<{
-  items: AdminRequestTimelineItem[];
-}>) {
-  return (
-    <div className="flex flex-col gap-3">
-      {items.map((item) => (
-        <div
-          key={`${item.title}-${item.detail}`}
-          className={cn(
-            "rounded-[14px] border px-4 py-3",
-            getToneClasses(item.tone ?? "history"),
-          )}
-        >
-          <p className="text-sm font-medium text-foreground">{item.title}</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {item.detail}
-          </p>
-        </div>
-      ))}
+    <div className="overflow-hidden rounded-[14px] border border-border/80">
+      <Table>
+        <TableBody>
+          {facts.map((fact) => (
+            <TableRow
+              key={`${fact.label}-${fact.detail}`}
+              className={cn(getToneClasses(fact.tone ?? "subtle"))}
+            >
+              <TableCell className="w-[124px] align-top text-xs font-medium text-muted-foreground">
+                {fact.label}
+              </TableCell>
+              <TableCell className="align-top text-sm leading-6 text-foreground">
+                {fact.detail}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
@@ -187,17 +149,13 @@ function ActionSurface({
 
   return (
     <Card className="gap-0 border-border/80 bg-card">
-      <CardHeader className="gap-3 border-b border-border/60 bg-muted/20">
+      <CardHeader className="gap-2 border-b border-border/60 bg-muted/20">
         <div className="flex flex-wrap items-center gap-2">
           <ToneBadge>검토 결정</ToneBadge>
           <span className="text-sm text-muted-foreground">
             {requestTypeLabel}
           </span>
         </div>
-        <CardDescription>
-          반려와 보완 요청은 사유가 필요하고, 승인 전 확인이 필요한 항목은 별도
-          확인을 거쳐요
-        </CardDescription>
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4 pt-5">
@@ -209,13 +167,10 @@ function ActionSurface({
               className="min-h-28"
               disabled={isPending}
               id={reviewCommentInputId}
-              placeholder="반려하거나 보완 요청하는 이유를 남겨 주세요"
+              placeholder="반려하거나 보완 요청하는 이유를 적어 주세요"
               value={reviewComment}
               onChange={(event) => onRequestCommentChange?.(event.target.value)}
             />
-            <p className="text-sm leading-6 text-muted-foreground">
-              반려와 보완 요청은 사유를 남겨야 진행할 수 있어요
-            </p>
           </div>
         ) : null}
 
@@ -301,16 +256,12 @@ export function AdminRequestDetailPanel({
   onRequestCommentChange,
   onRequestRevision,
   onStartWarningConfirmation,
-  requestReasonLabel,
-  requestTimeline = [],
   requestTypeLabel,
   reviewedAtLabel,
   reviewComment = "",
   reviewCommentInputId,
   showReviewCommentInput = false,
   submittedAtLabel,
-  summaryLabel,
-  supportingFooting,
   warningConfirmation = null,
 }: AdminRequestDetailPanelProps) {
   const isReadOnlyHistory = mode === "completed_history";
@@ -325,7 +276,6 @@ export function AdminRequestDetailPanel({
                 <CardTitle className="text-base">{employeeName}</CardTitle>
                 <Badge variant="outline">{employeeDepartmentLabel}</Badge>
               </div>
-              <CardDescription>{requestTypeLabel}</CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline">{currentStatusLabel}</Badge>
@@ -348,71 +298,13 @@ export function AdminRequestDetailPanel({
               <AlertTitle>완료된 검토 기록이에요</AlertTitle>
               <AlertDescription>
                 이 항목은 읽기 전용으로 보여요
-                <br />더 이상 같은 기록에서 관리자 작업을 이어서 할 수 없어요
               </AlertDescription>
             </Alert>
           ) : null}
         </CardHeader>
 
-        <CardContent className="flex flex-col gap-6">
-          <div
-            className={cn(
-              "rounded-[14px] border p-4",
-              getToneClasses("default"),
-            )}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex flex-col gap-1">
-                <p className="text-sm font-medium text-foreground">요청 요약</p>
-                <p className="text-sm text-muted-foreground">{summaryLabel}</p>
-              </div>
-              <ToneBadge tone={isReadOnlyHistory ? "history" : "default"}>
-                {currentStatusLabel}
-              </ToneBadge>
-            </div>
-
-            <Separator className="my-4" />
-
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                사유
-              </span>
-              <p className="text-sm leading-6 text-foreground">
-                {requestReasonLabel}
-              </p>
-            </div>
-          </div>
-
-          <FactGrid facts={facts} />
-
-          {requestTimeline.length > 0 ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm font-medium text-foreground">
-                    흐름 요약
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    현재 상태에 이어진 검토 맥락을 짧게 확인해요
-                  </p>
-                </div>
-                <Badge variant="outline">{requestTimeline.length}개</Badge>
-              </div>
-              <Timeline items={requestTimeline} />
-            </div>
-          ) : null}
-
-          <div
-            className={cn(
-              "rounded-[14px] border px-4 py-3",
-              getToneClasses("subtle"),
-            )}
-          >
-            <p className="text-sm font-medium text-foreground">현재 안내</p>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              {supportingFooting}
-            </p>
-          </div>
+        <CardContent className="flex flex-col gap-4">
+          <FactTable facts={facts} />
         </CardContent>
       </Card>
 

@@ -16,7 +16,8 @@ import {
 } from "@/lib/repositories/attendance";
 import { canonicalSeedWorld } from "@/lib/seed/world";
 
-const snapshotNow = "2026-04-13T10:00:00+09:00";
+const baselineSnapshotNow = "2026-04-03T10:00:00+09:00";
+const laterSnapshotNow = "2026-04-13T10:00:00+09:00";
 
 function createCanceledLeaveWorld() {
   const world = structuredClone(canonicalSeedWorld);
@@ -105,18 +106,18 @@ describe("attendance repository helpers", () => {
   it("builds the baseline today response as an in-progress beacon workday", () => {
     const response = getEmployeeAttendanceToday(canonicalSeedWorld, {
       employeeId: "emp_001",
-      date: "2026-04-13",
-      now: snapshotNow,
+      date: "2026-04-03",
+      now: baselineSnapshotNow,
     });
 
     expect(() => attendanceTodayResponseSchema.parse(response)).not.toThrow();
     expect(attendanceTodayResponseSchema.parse(response)).toMatchObject({
-      date: "2026-04-13",
+      date: "2026-04-03",
       employee: {
         id: "emp_001",
       },
       todayRecord: {
-        date: "2026-04-13",
+        date: "2026-04-03",
         clockInSource: "beacon",
         clockOutAt: null,
       },
@@ -133,13 +134,13 @@ describe("attendance repository helpers", () => {
   it("surfaces the unresolved failed attempt together with the active manual request", () => {
     const response = getEmployeeAttendanceToday(canonicalSeedWorld, {
       employeeId: "emp_010",
-      date: "2026-04-13",
-      now: snapshotNow,
+      date: "2026-04-03",
+      now: baselineSnapshotNow,
     });
 
     expect(() => attendanceTodayResponseSchema.parse(response)).not.toThrow();
     expect(attendanceTodayResponseSchema.parse(response)).toMatchObject({
-      date: "2026-04-13",
+      date: "2026-04-03",
       attempts: [
         expect.objectContaining({
           status: "failed",
@@ -147,14 +148,14 @@ describe("attendance repository helpers", () => {
         }),
       ],
       manualRequest: {
-        id: "manual_request_emp_010_2026-04-13_resubmission",
-        date: "2026-04-13",
+        id: "manual_request_emp_010_2026-04-03_resubmission",
+        date: "2026-04-03",
         status: "pending",
         governingReviewComment:
           "비콘 문제가 계속되면 후속 정정 요청을 다시 제출해 주세요.",
-        activeRequestId: "manual_request_emp_010_2026-04-13_resubmission",
+        activeRequestId: "manual_request_emp_010_2026-04-03_resubmission",
         activeStatus: "pending",
-        effectiveRequestId: "manual_request_emp_010_2026-04-13_resubmission",
+        effectiveRequestId: "manual_request_emp_010_2026-04-03_resubmission",
         effectiveStatus: "pending",
       },
       display: expect.objectContaining({
@@ -173,28 +174,28 @@ describe("attendance repository helpers", () => {
   it("assembles a date range history table with every requested day", () => {
     const response = getEmployeeAttendanceHistory(canonicalSeedWorld, {
       employeeId: "emp_001",
-      from: "2026-04-10",
-      to: "2026-04-13",
-      now: snapshotNow,
+      from: "2026-03-31",
+      to: "2026-04-03",
+      now: baselineSnapshotNow,
     });
 
     expect(() => attendanceHistoryResponseSchema.parse(response)).not.toThrow();
     expect(attendanceHistoryResponseSchema.parse(response)).toMatchObject({
-      from: "2026-04-10",
-      to: "2026-04-13",
+      from: "2026-03-31",
+      to: "2026-04-03",
       records: expect.arrayContaining([
         expect.objectContaining({
-          date: "2026-04-10",
+          date: "2026-03-31",
           manualRequest: null,
           record: expect.objectContaining({
-            clockOutAt: null,
+            clockOutAt: "2026-03-31T18:04:00+09:00",
           }),
         }),
         expect.objectContaining({
-          date: "2026-04-13",
+          date: "2026-04-03",
           manualRequest: null,
           record: expect.objectContaining({
-            clockInAt: "2026-04-13T09:02:00+09:00",
+            clockInAt: "2026-04-03T09:02:00+09:00",
             clockOutAt: null,
           }),
           display: expect.objectContaining({
@@ -205,6 +206,33 @@ describe("attendance repository helpers", () => {
       ]),
     });
     expect(response.records).toHaveLength(4);
+  });
+
+  it("keeps the baseline 30 day history window fully inside seeded coverage", () => {
+    const response = getEmployeeAttendanceHistory(canonicalSeedWorld, {
+      employeeId: "emp_001",
+      from: "2026-03-05",
+      to: "2026-04-03",
+      now: baselineSnapshotNow,
+    });
+
+    expect(() => attendanceHistoryResponseSchema.parse(response)).not.toThrow();
+    expect(response.records).toHaveLength(30);
+    expect(
+      response.records.find((record) => record.date === "2026-03-05"),
+    ).toMatchObject({
+      date: "2026-03-05",
+      expectedWorkday: {
+        isWorkday: true,
+      },
+      record: {
+        clockInAt: "2026-03-05T08:57:00+09:00",
+        clockOutAt: "2026-03-05T18:02:00+09:00",
+      },
+      display: {
+        activeExceptions: [],
+      },
+    });
   });
 
   it("projects only pending manual attendance requests into history rows", () => {
@@ -253,7 +281,7 @@ describe("attendance repository helpers", () => {
       employeeId: "emp_001",
       from: "2026-04-09",
       to: "2026-04-10",
-      now: snapshotNow,
+      now: laterSnapshotNow,
     });
 
     expect(
@@ -274,13 +302,13 @@ describe("attendance repository helpers", () => {
       employeeId: "emp_001",
       from: "2026-04-07",
       to: "2026-04-13",
-      now: snapshotNow,
+      now: laterSnapshotNow,
     });
     const monthResponse = getEmployeeAttendanceHistory(canonicalSeedWorld, {
       employeeId: "emp_001",
       from: "2026-03-15",
       to: "2026-04-13",
-      now: snapshotNow,
+      now: laterSnapshotNow,
     });
     const monthWorkdayRecords = monthResponse.records.filter(
       (record) => record.expectedWorkday.isWorkday,
@@ -337,12 +365,12 @@ describe("attendance repository helpers", () => {
         ?.display.activeExceptions,
     ).not.toContain("not_checked_in");
     expect(
-      monthResponse.records.find((record) => record.date === "2026-04-13")
+      monthResponse.records.find((record) => record.date === "2026-04-10")
         ?.display.phase,
     ).toBe("working");
     expect(
       monthWorkdayRecords.filter((record) => record.record !== null),
-    ).toHaveLength(19);
+    ).toHaveLength(18);
     expect(
       monthWorkdayRecords.filter((record) =>
         record.display.activeExceptions.includes("absent"),
@@ -352,7 +380,7 @@ describe("attendance repository helpers", () => {
       monthWorkdayRecords.filter((record) =>
         record.display.activeExceptions.includes("not_checked_in"),
       ),
-    ).toHaveLength(0);
+    ).toHaveLength(1);
     expect(
       monthWorkdayRecords.filter(
         (record) =>
@@ -368,12 +396,12 @@ describe("attendance repository helpers", () => {
       employeeId: "emp_002",
       from: "2026-04-10",
       to: "2026-04-10",
-      now: snapshotNow,
+      now: laterSnapshotNow,
     });
     const listResponse = getAdminAttendanceList(world, {
       from: "2026-04-10",
       to: "2026-04-10",
-      now: snapshotNow,
+      now: laterSnapshotNow,
     });
 
     expect(() =>
@@ -407,7 +435,7 @@ describe("attendance repository helpers", () => {
     const response = getEmployeeAttendanceToday(createCanceledLeaveWorld(), {
       employeeId: "emp_002",
       date: "2026-04-14",
-      now: snapshotNow,
+      now: laterSnapshotNow,
     });
 
     expect(() => attendanceTodayResponseSchema.parse(response)).not.toThrow();
@@ -420,14 +448,14 @@ describe("attendance repository helpers", () => {
 
   it("builds the admin summary and list projections from the same seed world", () => {
     const todayResponse = getAdminAttendanceToday(canonicalSeedWorld, {
-      date: "2026-04-13",
-      now: snapshotNow,
+      date: "2026-04-03",
+      now: baselineSnapshotNow,
     });
     const listResponse = getAdminAttendanceList(canonicalSeedWorld, {
-      from: "2026-04-13",
-      to: "2026-04-13",
+      from: "2026-04-03",
+      to: "2026-04-03",
       name: "현우",
-      now: snapshotNow,
+      now: baselineSnapshotNow,
     });
 
     expect(() =>
@@ -436,7 +464,7 @@ describe("attendance repository helpers", () => {
     expect(
       adminAttendanceTodayResponseSchema.parse(todayResponse),
     ).toMatchObject({
-      date: "2026-04-13",
+      date: "2026-04-03",
       summary: {
         failedAttemptCount: 1,
         checkedInCount: 9,
@@ -458,8 +486,8 @@ describe("attendance repository helpers", () => {
     ).not.toThrow();
     expect(adminAttendanceListResponseSchema.parse(listResponse)).toMatchObject(
       {
-        from: "2026-04-13",
-        to: "2026-04-13",
+        from: "2026-04-03",
+        to: "2026-04-03",
         filters: {
           name: "현우",
         },
@@ -480,15 +508,15 @@ describe("attendance repository helpers", () => {
 
   it("treats a blank admin name filter as unset", () => {
     const unfilteredResponse = getAdminAttendanceList(canonicalSeedWorld, {
-      from: "2026-04-13",
-      to: "2026-04-13",
-      now: snapshotNow,
+      from: "2026-04-03",
+      to: "2026-04-03",
+      now: baselineSnapshotNow,
     });
     const blankFilterResponse = getAdminAttendanceList(canonicalSeedWorld, {
-      from: "2026-04-13",
-      to: "2026-04-13",
+      from: "2026-04-03",
+      to: "2026-04-03",
       name: "   ",
-      now: snapshotNow,
+      now: baselineSnapshotNow,
     });
 
     expect(() =>

@@ -21,9 +21,9 @@ describe("fixed Seoul seed clock", () => {
   it("locks the deterministic Seoul baseline date and window", () => {
     expect(fixedSeoulTimeZone).toBe("Asia/Seoul");
     expect(fixedSeoulUtcOffset).toBe("+09:00");
-    expect(fixedSeoulBaselineDate).toBe("2026-04-13");
+    expect(fixedSeoulBaselineDate).toBe("2026-04-03");
     expect(fixedSeoulCalendarWindow).toEqual({
-      start: "2026-03-15",
+      start: "2026-03-05",
       end: "2026-04-20",
     });
     expect(buildFixedSeoulDateTime("2026-04-15", "08:45:00")).toBe(
@@ -90,8 +90,8 @@ describe("canonical seed world", () => {
     });
     expect(seedScenarioAnchors.manualAttendanceResubmissionChain).toEqual({
       employeeId: "emp_010",
-      rootRequestId: "manual_request_emp_010_2026-04-13_root",
-      activeRequestId: "manual_request_emp_010_2026-04-13_resubmission",
+      rootRequestId: "manual_request_emp_010_2026-04-03_root",
+      activeRequestId: "manual_request_emp_010_2026-04-03_resubmission",
     });
     expect(seedScenarioAnchors.pendingManualEdit).toEqual({
       employeeId: "emp_010",
@@ -147,7 +147,7 @@ describe("canonical seed world", () => {
         (request) => request.id === "leave_request_emp_004_2026-04-16_root",
       ),
     ).toMatchObject({
-      requestedAt: "2026-04-13T09:30:00+09:00",
+      requestedAt: "2026-04-03T09:30:00+09:00",
     });
   });
 
@@ -178,9 +178,9 @@ describe("canonical seed world", () => {
       attendanceAttemptEntitySchema.parse({
         id: "attempt_invalid",
         employeeId: "emp_001",
-        date: "2026-04-13",
+        date: "2026-04-03",
         action: "clock_break",
-        attemptedAt: "2026-04-13T09:00:00+09:00",
+        attemptedAt: "2026-04-03T09:00:00+09:00",
         status: "success",
         failureReason: null,
       }),
@@ -190,8 +190,8 @@ describe("canonical seed world", () => {
       attendanceRecordEntitySchema.parse({
         id: "record_invalid",
         employeeId: "emp_001",
-        date: "2026-04-13",
-        clockInAt: "2026-04-13T09:00:00+09:00",
+        date: "2026-04-03",
+        clockInAt: "2026-04-03T09:00:00+09:00",
         clockInSource: "app",
         clockOutAt: null,
         clockOutSource: null,
@@ -211,7 +211,7 @@ describe("canonical seed world", () => {
         endAt: null,
         reason: "Invalid leave type",
         status: "pending",
-        requestedAt: "2026-04-13T10:00:00+09:00",
+        requestedAt: "2026-04-03T10:00:00+09:00",
         reviewedAt: null,
         reviewComment: null,
         rootRequestId: "leave_invalid",
@@ -227,9 +227,9 @@ describe("canonical seed world", () => {
         employeeId: "emp_001",
         requestType: "manual_attendance",
         action: "clock_pause",
-        date: "2026-04-13",
-        submittedAt: "2026-04-13T11:00:00+09:00",
-        requestedClockInAt: "2026-04-13T09:15:00+09:00",
+        date: "2026-04-03",
+        submittedAt: "2026-04-03T11:00:00+09:00",
+        requestedClockInAt: "2026-04-03T09:15:00+09:00",
         requestedClockOutAt: null,
         reason: "Invalid manual action",
         status: "pending",
@@ -248,9 +248,9 @@ describe("canonical seed world", () => {
         employeeId: "emp_001",
         requestType: "manual_attendance",
         action: "clock_in",
-        date: "2026-04-13",
-        submittedAt: "2026-04-13T11:00:00+09:00",
-        requestedClockInAt: "2026-04-13T09:15:00+09:00",
+        date: "2026-04-03",
+        submittedAt: "2026-04-03T11:00:00+09:00",
+        requestedClockInAt: "2026-04-03T09:15:00+09:00",
         requestedClockOutAt: null,
         reason: "Invalid manual follow-up kind",
         status: "pending",
@@ -269,7 +269,7 @@ describe("canonical seed world", () => {
         requestId: "leave_request_emp_004_2026-04-16_root",
         decision: "revise",
         reviewComment: "Invalid decision",
-        reviewedAt: "2026-04-13T13:00:00+09:00",
+        reviewedAt: "2026-04-03T13:00:00+09:00",
         reviewerId: "emp_012",
       }),
     ).toThrow();

@@ -22,7 +22,6 @@ import { cn } from "@/lib/utils";
 import {
   type AdminRequestItem,
   type AdminRequestsView,
-  buildChainContextLabel,
   buildLeaveConflictLines,
   formatDateLabel,
   formatDateShortLabel,
@@ -32,9 +31,7 @@ import {
   formatRequestSubtypeLabel,
   formatRequestTimestamp,
   formatRequestTypeLabel,
-  formatStateCue,
   formatStatusLabel,
-  getCompletedFooting,
   isLeaveRequestItem,
   isManualRequestItem,
   type LeaveAdminRequestItem,
@@ -49,7 +46,6 @@ const adminRequestsRoute = "/admin/attendance/requests" satisfies Route;
 
 type ManualFilters = Readonly<{
   department: string;
-  effectiveStatus: string;
   name: string;
   reason: string;
   status: string;
@@ -59,7 +55,6 @@ type ManualFilters = Readonly<{
 
 type LeaveFilters = Readonly<{
   department: string;
-  effectiveStatus: string;
   name: string;
   reason: string;
   status: string;
@@ -89,7 +84,6 @@ type DetailPanelInput = Readonly<{
   onStartWarningConfirmation: () => void;
   reviewComment: string;
   reviewCommentInputId: string;
-  view: AdminRequestsView;
 }>;
 
 type ScopedBooleanState = Readonly<{
@@ -109,7 +103,6 @@ type ScopedTextState = Readonly<{
 
 const defaultManualFilters: ManualFilters = {
   department: "",
-  effectiveStatus: "",
   name: "",
   reason: "",
   status: "",
@@ -123,7 +116,6 @@ const defaultManualFilters: ManualFilters = {
 
 const defaultLeaveFilters: LeaveFilters = {
   department: "",
-  effectiveStatus: "",
   name: "",
   reason: "",
   status: "",
@@ -302,7 +294,6 @@ function matchesManualFilters(
     matchesExact(item.subtype, filters.subtype) &&
     matchesDateRange(item.targetDate, filters.targetDate) &&
     matchesExact(item.status, filters.status) &&
-    matchesExact(item.effectiveStatus, filters.effectiveStatus) &&
     matchesContains(item.reason, filters.reason)
   );
 }
@@ -320,7 +311,6 @@ function matchesLeaveFilters(
     matchesContains(getLeaveTimeLabel(item), filters.time) &&
     matchesDateRange(item.targetDate, filters.targetDate) &&
     matchesExact(item.status, filters.status) &&
-    matchesExact(item.effectiveStatus, filters.effectiveStatus) &&
     matchesContains(item.reason, filters.reason) &&
     (filters.warning === "" ||
       (filters.warning === "warning" && warningValue === "경고 있음") ||
@@ -394,28 +384,16 @@ function buildFactRows(item: AdminRequestItem) {
       label: "대상일",
     },
     {
-      detail: `${formatRequestTypeLabel(item)} · ${formatRequestSubtypeLabel(item)}`,
-      label: "요청 유형",
-    },
-    {
-      detail: formatStatusLabel(item.status),
-      label: "현재 요청 상태",
-      tone: item.status === "pending" ? "warning" : "history",
-    },
-    {
-      detail: formatStatusLabel(item.effectiveStatus),
-      label: "현재 반영 상태",
-      tone:
-        item.status === "pending" && item.effectiveStatus === "approved"
-          ? "warning"
-          : "subtle",
+      detail: formatRequestSubtypeLabel(item),
+      label:
+        item.requestType === "manual_attendance" ? "정정 종류" : "휴가 종류",
     },
   ] as AdminRequestDetailPanelProps["facts"];
 
   if (item.followUpKind !== null) {
     facts.push({
       detail: formatFollowUpKindLabel(item) ?? "-",
-      label: "후속 요청 종류",
+      label: "후속 요청",
       tone: "subtle",
     });
   }
@@ -428,14 +406,13 @@ function buildFactRows(item: AdminRequestItem) {
       });
     }
 
-    facts.push({
-      detail: formatLeaveOperationalWarningLabel(item),
-      label: "운영 경고",
-      tone:
-        formatLeaveOperationalWarningLabel(item) === "경고 있음"
-          ? "warning"
-          : "subtle",
-    });
+    if (formatLeaveOperationalWarningLabel(item) === "경고 있음") {
+      facts.push({
+        detail: "경고 있음",
+        label: "운영 경고",
+        tone: "warning",
+      });
+    }
 
     const conflictLines = buildLeaveConflictLines(item);
 
@@ -448,59 +425,21 @@ function buildFactRows(item: AdminRequestItem) {
     }
   }
 
-  return facts;
-}
-
-function buildTimeline(item: AdminRequestItem) {
-  const timeline: NonNullable<AdminRequestDetailPanelProps["requestTimeline"]> =
-    [
-      {
-        detail: `${item.employee.name} 님이 ${formatRequestTimestamp(
-          getSubmittedTimestamp(item),
-        )}에 요청을 보냈어요`,
-        title: "요청 제출",
-      },
-    ];
-
-  if (item.followUpKind !== null) {
-    timeline.push({
-      detail: buildChainContextLabel(item),
-      title: "후속 요청 연결",
-      tone: "subtle",
-    });
-  }
-
-  if (item.reviewedAt !== null) {
-    timeline.push({
-      detail: `${formatRequestTimestamp(item.reviewedAt)}에 ${formatStatusLabel(
-        item.status,
-      )}으로 검토가 끝났어요`,
-      title: "검토 완료",
-      tone: "history",
-    });
-  }
+  facts.push({
+    detail: item.reason,
+    label: "사유",
+    tone: "subtle",
+  });
 
   if (item.governingReviewComment !== null) {
-    timeline.push({
+    facts.push({
       detail: item.governingReviewComment,
-      title: "남아 있는 검토 사유",
+      label: item.status === "pending" ? "남은 검토 사유" : "검토 사유",
       tone: item.status === "pending" ? "warning" : "history",
     });
   }
 
-  if (isLeaveRequestItem(item)) {
-    const warningLines = buildLeaveConflictLines(item);
-
-    if (warningLines.length > 0) {
-      timeline.push({
-        detail: warningLines.join(" "),
-        title: "휴가 운영 경고",
-        tone: "warning",
-      });
-    }
-  }
-
-  return timeline;
+  return facts;
 }
 
 function buildWarningConfirmation(item: AdminRequestItem) {
@@ -530,8 +469,6 @@ function buildDetailPanelProps(
     isPending: input.isPending,
     isWarningConfirmationActive: input.isWarningConfirmationActive,
     mode: item.status === "pending" ? "actionable" : "completed_history",
-    requestReasonLabel: item.reason,
-    requestTimeline: buildTimeline(item),
     requestTypeLabel: `${formatRequestTypeLabel(item)} · ${formatRequestSubtypeLabel(item)}`,
     reviewedAtLabel:
       item.reviewedAt === null
@@ -541,13 +478,6 @@ function buildDetailPanelProps(
     reviewCommentInputId: input.reviewCommentInputId,
     showReviewCommentInput: item.status === "pending",
     submittedAtLabel: `제출 ${formatRequestTimestamp(getSubmittedTimestamp(item))}`,
-    summaryLabel: `${formatRequestSubtypeLabel(item)} · ${formatDateLabel(
-      item.targetDate,
-    )} · ${formatStateCue(item, input.view)}`,
-    supportingFooting:
-      item.status === "pending"
-        ? buildChainContextLabel(item)
-        : getCompletedFooting(item),
     warningConfirmation: buildWarningConfirmation(item),
     ...(item.status === "pending"
       ? {
@@ -913,22 +843,6 @@ export function AdminRequestsWorkspace({
         renderCell: (item) => <StatusBadge status={item.status} />,
       },
       {
-        filter: {
-          kind: "select",
-          label: "반영 상태",
-          options: [...requestStatusOptions],
-          value: manualFilters.effectiveStatus,
-          onChange: (value) =>
-            setManualFilters((current) => ({
-              ...current,
-              effectiveStatus: value,
-            })),
-        },
-        header: "반영 상태",
-        key: "effectiveStatus",
-        renderCell: (item) => <StatusBadge status={item.effectiveStatus} />,
-      },
-      {
         cellClassName: "max-w-[280px] whitespace-normal",
         filter: {
           kind: "text",
@@ -1066,22 +980,6 @@ export function AdminRequestsWorkspace({
     {
       filter: {
         kind: "select",
-        label: "반영 상태",
-        options: [...requestStatusOptions],
-        value: leaveFilters.effectiveStatus,
-        onChange: (value) =>
-          setLeaveFilters((current) => ({
-            ...current,
-            effectiveStatus: value,
-          })),
-      },
-      header: "반영 상태",
-      key: "effectiveStatus",
-      renderCell: (item) => <StatusBadge status={item.effectiveStatus} />,
-    },
-    {
-      filter: {
-        kind: "select",
         label: "운영 경고",
         options: [...leaveWarningOptions],
         value: leaveFilters.warning,
@@ -1136,7 +1034,6 @@ export function AdminRequestsWorkspace({
           onStartWarningConfirmation: () => undefined,
           reviewComment: manualReviewComment,
           reviewCommentInputId: "manual-request-review-comment",
-          view: initialView,
         });
 
   const leaveDetailPanelProps =
@@ -1171,7 +1068,6 @@ export function AdminRequestsWorkspace({
             }),
           reviewComment: leaveReviewComment,
           reviewCommentInputId: "leave-request-review-comment",
-          view: initialView,
         });
 
   const isBusy =
@@ -1189,8 +1085,7 @@ export function AdminRequestsWorkspace({
       isBusy={isBusy}
       leaveSection={{
         columns: leaveColumns,
-        description:
-          "휴가 신청만 따로 보고 시간, 상태, 운영 경고를 바로 비교해요",
+        description: "휴가 신청을 필요한 기준만 남겨서 살펴봐요",
         detailEmptyTitle:
           filteredLeaveItems.length === 0
             ? "조건에 맞는 휴가 신청이 없어요"
@@ -1208,8 +1103,7 @@ export function AdminRequestsWorkspace({
       }}
       manualSection={{
         columns: manualColumns,
-        description:
-          "정정 신청만 따로 보고 대상일과 현재 반영 상태를 빠르게 비교해요",
+        description: "정정 신청을 필요한 기준만 남겨서 살펴봐요",
         detailEmptyTitle:
           filteredManualItems.length === 0
             ? "조건에 맞는 정정 신청이 없어요"

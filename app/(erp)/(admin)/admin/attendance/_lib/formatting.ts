@@ -16,12 +16,22 @@ const seoulTimeFormatter = new Intl.DateTimeFormat("ko-KR", {
   timeZone: "Asia/Seoul",
 });
 
+const seoulShortDateFormatter = new Intl.DateTimeFormat("ko-KR", {
+  day: "numeric",
+  month: "numeric",
+  timeZone: "Asia/Seoul",
+});
+
 function formatDatePart(value: string) {
   return seoulDateFormatter.format(new Date(value));
 }
 
 export function formatDateLabel(value: string) {
   return value;
+}
+
+export function formatDateShortLabel(value: string) {
+  return seoulShortDateFormatter.format(new Date(value));
 }
 
 export function formatDateTimeLabel(value: string | null) {
@@ -34,7 +44,7 @@ export function formatDateTimeLabel(value: string | null) {
 
 export function formatTimeLabel(value: string | null) {
   if (value === null) {
-    return "기록 없음";
+    return "-";
   }
 
   return seoulTimeFormatter.format(new Date(value));
@@ -42,7 +52,7 @@ export function formatTimeLabel(value: string | null) {
 
 export function formatMinutesLabel(value: number | null) {
   if (value === null) {
-    return "계산 전";
+    return "-";
   }
 
   const hours = Math.floor(value / 60);
@@ -165,4 +175,30 @@ export function getManualRequestActionLabel(
   }
 
   return "출근·퇴근 정정";
+}
+
+export function normalizeFilterText(value: string) {
+  return value.trim().toLocaleLowerCase("ko-KR");
+}
+
+export function matchesTextFilter(value: string, query: string) {
+  return normalizeFilterText(query).length === 0
+    ? true
+    : normalizeFilterText(value).includes(normalizeFilterText(query));
+}
+
+export function matchesDateRangeFilter(
+  value: string,
+  from: string,
+  to: string,
+) {
+  if (from.length > 0 && value < from) {
+    return false;
+  }
+
+  if (to.length > 0 && value > to) {
+    return false;
+  }
+
+  return true;
 }

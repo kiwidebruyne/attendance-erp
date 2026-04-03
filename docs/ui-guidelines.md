@@ -75,7 +75,11 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Do not use a left exception rail on `/admin/attendance`; aggregate unresolved employee-surface exceptions in the top exception table instead.
 - Use one horizontal summary row on `/admin/attendance` with `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`; these cards are context, not queue entries.
 - Keep the `/admin/attendance` top exception table focused on unresolved operational exceptions. Do not promote routine historical `지각` or `조퇴` rows into that table when they no longer drive current action.
-- The `/admin/attendance` ledger should expose `기본`, `근무상태별`, and `근태상태별` view toggles, and each grouping must come from the same underlying facts.
+- The `/admin/attendance` `근무현황` should expose `기본`, `근무상태별`, and `근태상태별` view toggles, and each grouping must come from the same underlying facts.
+- On `/admin/attendance`, the today exception table, today `근무현황`, and history table should all expose filters from the column headers. Do not keep a separate history-only filter card or sidebar once those header popovers exist.
+- In `/admin/attendance` tables, show only the employee name in the `직원` column. Keep department or operational context in their own columns or supporting surfaces instead of a second text line under the name.
+- In `/admin/attendance` tables, render missing `출근`, `퇴근`, and total work-time values as `-` for scanability instead of explanatory placeholder copy.
+- In `/admin/attendance` history mode, remove the top summary-card row so the tab opens directly into the filterable history table.
 - No-record employees should enter the top exception table only when their current operational state needs attention, not as all-day placeholder rows.
 - Use the same danger-family row tint for `/admin/attendance` top-table `결근` rows that you use for other missing-record rows such as `출근 누락` or `퇴근 누락`.
 - Do not make hover the primary disclosure mechanism for any important reason, exception, or next action.
@@ -115,6 +119,7 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Put name search inside the `이름` header popover for each table, keeping manual-attendance and leave filtering independent.
 - Use a date-range popover for the `대상일` header with `오늘 / 최근 7일 / 최근 30일` presets plus direct `시작일 / 종료일` inputs.
 - Remove the `후속 요청` column from the review tables; keep follow-up context inside the right-side detail surface.
+- Do not show `반영 상태` as a review-table column or right-side detail fact row on `/admin/attendance/requests`.
 - Add a `시간` column to the leave table and show `HH:MM-HH:MM` only for hourly leave rows, using `-` for non-hourly rows.
 - Give each section a wider right-side review workspace and split it into a read-only detail surface plus a separate action surface when the request is actionable.
 - Treat chain context and request summary as section-local supporting detail inside the detail surface rather than a third equal primary column.
@@ -129,10 +134,10 @@ For the attendance-shell refresh, the provided Figma frame is the higher-priorit
 - Completed-history rows should keep the same basic row skeleton as `needs_review`, but lighter. Show the outcome plus one-line reason without adding a separate history badge.
 - Lead with known facts rather than speculative questions when the product already knows what is wrong. Put any follow-up user-judgment question inside the next step only when the product genuinely needs that judgment.
 - When `/admin/attendance` shows manual-request context inside a row, keep it as a compact derived projection rather than a full request detail surface, and keep the target date explicit in the row context.
-- Keep manual-attendance and leave review structures distinct inside the same route. Manual detail should lead with correction summary, target workday, and current/effective state before showing attendance-fact comparison. Leave detail should lead with current request, effective leave, and risk summary before showing rationale and chain history.
+- Keep manual-attendance and leave review structures distinct inside the same route, but render their right-side detail as compact two-column fact rows instead of stacked summary cards.
 - Order leave risk summary from effective leave to company-event, staffing-risk, and then pending same-date pressure so the current governing state is read before derived operational pressure.
 - Show `governingReviewComment` as a row-level signal when earlier rationale still governs, and keep the full unresolved rationale visible in detail rather than hiding it behind hover-only disclosure.
-- Use a compact chain timeline in detail instead of a full audit-log table. In completed-history detail, show the result and rationale before that timeline.
+- Do not keep a separate flow-summary block in the right-side review panel; if prior rationale still matters, keep it as one factual row inside the detail surface.
 - After an approval, rejection, resubmission, or successful correction, stale warnings, badges, and CTAs must be replaced or cleared promptly.
 - Let reviewed `revision_requested` history read as correction-oriented and reviewed `rejected` history read as refusal-oriented without implying an admin-side next step.
 - For actionable review detail, keep review actions in a sticky footer rather than in the queue row. Hide those actions entirely on completed-history detail and replace them with quiet read-only outcome copy that owns the admin display of `nextAction = none`.

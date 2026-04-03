@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AdminAttendanceWorkspace } from "@/app/(erp)/(admin)/admin/attendance/_components/admin-attendance-workspace";
@@ -74,12 +74,15 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getAllByText("연차").length).toBeGreaterThan(0);
     expect(screen.getAllByText("반차").length).toBeGreaterThan(0);
     expect(screen.getAllByText("시간차").length).toBeGreaterThan(0);
-    expect(screen.getByText("전체 팀 장부")).toBeInTheDocument();
+    expect(screen.getByText("전체 팀 근무현황")).toBeInTheDocument();
     expect(screen.getAllByText("전날 미퇴근").length).toBeGreaterThan(0);
-    const noRecordRow = screen.getAllByText("오나리")[0]?.closest("tr");
+    const ledgerTable = screen.getAllByRole("table")[1];
+    const noRecordRow = within(ledgerTable!).getByText("오나리").closest("tr");
+
     expect(noRecordRow).not.toBeNull();
-    expect(noRecordRow).toHaveTextContent("출근 기록 없음");
     expect(noRecordRow).toHaveTextContent("재무");
+    expect(noRecordRow).toHaveTextContent("출근 기록 없음");
+    expect(within(noRecordRow!).getAllByText("-").length).toBeGreaterThan(0);
     expect(screen.getAllByText("박민지").length).toBeGreaterThan(0);
   });
 
@@ -96,8 +99,8 @@ describe("AdminAttendanceWorkspace", () => {
       />,
     );
 
-    expect(screen.getAllByText("박민지").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("2026-04-10").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("이준호").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("2026-04-02").length).toBeGreaterThan(0);
   });
 
   it("keeps failed-attempt rows visible in the exception table", () => {
@@ -136,7 +139,7 @@ describe("AdminAttendanceWorkspace", () => {
 
     expect(replaceMock).toHaveBeenCalledTimes(1);
     expect(replaceMock).toHaveBeenCalledWith(
-      "/admin/attendance?mode=history&from=2026-04-07&to=2026-04-13",
+      "/admin/attendance?mode=history&from=2026-03-28&to=2026-04-03",
     );
   });
 
@@ -159,7 +162,7 @@ describe("AdminAttendanceWorkspace", () => {
 
     expect(replaceMock).toHaveBeenCalledTimes(1);
     expect(replaceMock).toHaveBeenCalledWith(
-      "/admin/attendance?mode=history&from=2026-04-07&to=2026-04-13",
+      "/admin/attendance?mode=history&from=2026-03-28&to=2026-04-03",
     );
   });
 
@@ -167,76 +170,108 @@ describe("AdminAttendanceWorkspace", () => {
     const { rerender } = render(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-04-07&to=2026-04-13&name=없는이름",
+          "?mode=history&from=2026-03-28&to=2026-04-03&name=민지",
         )}
         historyResponse={repository.getAdminAttendanceList({
-          from: "2026-04-07",
-          to: "2026-04-13",
-          name: "없는이름",
+          from: "2026-03-28",
+          to: "2026-04-03",
+          name: "민지",
         })}
       />,
     );
 
-    expect(screen.getByDisplayValue("없는이름")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-04-07")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-04-13")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "이름 필터" }));
+    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("민지");
+    fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
+    expect(screen.getByLabelText("시작일")).toHaveValue("2026-03-28");
+    expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-03");
 
     rerender(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-04-08&to=2026-04-12&name=준호",
+          "?mode=history&from=2026-03-29&to=2026-04-02&name=준호",
         )}
         historyResponse={repository.getAdminAttendanceList({
-          from: "2026-04-08",
-          to: "2026-04-12",
+          from: "2026-03-29",
+          to: "2026-04-02",
           name: "준호",
         })}
       />,
     );
 
-    expect(screen.getByDisplayValue("준호")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-04-08")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-04-12")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "이름 필터" }));
+    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue("준호");
+    fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
+    expect(screen.getByLabelText("시작일")).toHaveValue("2026-03-29");
+    expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-02");
+  });
+
+  it("applies history date presets through a single URL replacement", () => {
+    render(
+      <AdminAttendanceWorkspace
+        state={createState("?mode=history&from=2026-03-29&to=2026-04-03")}
+        historyResponse={repository.getAdminAttendanceList({
+          from: "2026-03-29",
+          to: "2026-04-03",
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
+    fireEvent.click(screen.getByRole("radio", { name: "최근 30일" }));
+
+    expect(replaceMock).toHaveBeenCalledTimes(1);
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/admin/attendance?mode=history&from=2026-03-05&to=2026-04-03",
+    );
   });
 
   it("renders the history empty state for a non-matching Hangul name filter", () => {
     render(
       <AdminAttendanceWorkspace
         state={createState(
-          "?mode=history&from=2026-04-07&to=2026-04-13&name=없는이름",
+          "?mode=history&from=2026-03-28&to=2026-04-03&name=없는이름",
         )}
         historyResponse={repository.getAdminAttendanceList({
-          from: "2026-04-07",
-          to: "2026-04-13",
+          from: "2026-03-28",
+          to: "2026-04-03",
           name: "없는이름",
         })}
       />,
     );
 
-    expect(screen.getByDisplayValue("없는이름")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-04-07")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("2026-04-13")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "이름 필터" }));
+    expect(screen.getByPlaceholderText("이름으로 찾아요")).toHaveValue(
+      "없는이름",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
+    expect(screen.getByLabelText("시작일")).toHaveValue("2026-03-28");
+    expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-03");
     expect(
-      screen.getByText("조건에 맞는 근태 이력이 없어요"),
+      screen.getByText(/조건에 맞는 근태 이력이 없어요/),
     ).toBeInTheDocument();
   });
 
   it("renders explicit seeded history exception labels without today-copy phrasing", () => {
     render(
       <AdminAttendanceWorkspace
-        state={createState("?mode=history&from=2026-04-13&to=2026-04-13")}
+        state={createState("?mode=history&from=2026-04-03&to=2026-04-03")}
         historyResponse={repository.getAdminAttendanceList({
-          from: "2026-04-13",
-          to: "2026-04-13",
+          from: "2026-04-03",
+          to: "2026-04-03",
         })}
       />,
     );
 
-    expect(getRowByEmployeeName("박민지")).toHaveTextContent("전날 미퇴근");
+    expect(getRowByEmployeeName("이준호")).toHaveTextContent("전날 미퇴근");
     expect(getRowByEmployeeName("백현우")).toHaveTextContent("시도 실패");
     expect(
       screen.queryByText("오늘 지각으로 기록됐어요."),
     ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("근태 이력을 한눈에 보고 있어요"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("운영 요약")).not.toBeInTheDocument();
   });
 
   it("renders an explicit today empty state when no grouped rows exist", () => {
@@ -297,5 +332,25 @@ describe("AdminAttendanceWorkspace", () => {
     expect(getRowByEmployeeName("결근 직원")).toHaveClass(
       "bg-status-danger-soft/28",
     );
+  });
+
+  it("keeps department keyword filtering consistent across today summaries and the ledger", () => {
+    const todayResponse = createTodayResponse();
+
+    render(
+      <AdminAttendanceWorkspace
+        state={createState("?name=재무")}
+        todayExceptionRows={buildAdminAttendanceTodayExceptionRows(
+          todayResponse,
+        )}
+        todayResponse={todayResponse}
+      />,
+    );
+
+    expect(
+      screen.queryByText("조건에 맞는 근무현황이 없어요."),
+    ).not.toBeInTheDocument();
+    expect(screen.getAllByText("강유나").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("오나리").length).toBeGreaterThan(0);
   });
 });
