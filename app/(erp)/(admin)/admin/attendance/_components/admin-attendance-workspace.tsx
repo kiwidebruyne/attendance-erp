@@ -111,6 +111,23 @@ export function AdminAttendanceWorkspace({
     }
   }
 
+  function replaceHistoryDateRange(
+    nextRange: Readonly<{
+      from: string;
+      to: string;
+    }>,
+  ) {
+    if (state.mode !== "history") {
+      return;
+    }
+
+    replaceState({
+      ...state,
+      from: nextRange.from,
+      to: nextRange.to,
+    });
+  }
+
   return (
     <Tabs className="gap-6" value={state.mode}>
       <TabsList className="rounded-[12px] bg-muted p-1">
@@ -156,6 +173,7 @@ export function AdminAttendanceWorkspace({
           <AdminAttendanceHistoryView
             from={state.from}
             name={state.name}
+            onDateRangeChange={replaceHistoryDateRange}
             onFromChange={(from) =>
               replaceState({
                 ...state,

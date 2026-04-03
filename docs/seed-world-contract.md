@@ -15,7 +15,7 @@ Those contracts remain owned by `docs/attendance-operating-model.md`, `docs/requ
 | Timezone         | `Asia/Seoul`                                | All seeded datetimes use `+09:00`.                                                                                 |
 | Baseline date    | `2026-04-03`                                | Fixed current-date anchor for the seed world.                                                                      |
 | Baseline weekday | Friday                                      | The baseline stays aligned to a workday.                                                                           |
-| Calendar window  | `2026-03-15` through `2026-04-20` inclusive | Deterministic date range that fully covers the employee-facing rolling 30-day attendance view around the baseline. |
+| Calendar window  | `2026-03-05` through `2026-04-20` inclusive | Deterministic date range that fully covers the employee-facing rolling 30-day attendance view around the baseline. |
 
 ## Seed Composition
 

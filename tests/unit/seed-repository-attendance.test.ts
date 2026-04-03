@@ -208,6 +208,33 @@ describe("attendance repository helpers", () => {
     expect(response.records).toHaveLength(4);
   });
 
+  it("keeps the baseline 30 day history window fully inside seeded coverage", () => {
+    const response = getEmployeeAttendanceHistory(canonicalSeedWorld, {
+      employeeId: "emp_001",
+      from: "2026-03-05",
+      to: "2026-04-03",
+      now: baselineSnapshotNow,
+    });
+
+    expect(() => attendanceHistoryResponseSchema.parse(response)).not.toThrow();
+    expect(response.records).toHaveLength(30);
+    expect(
+      response.records.find((record) => record.date === "2026-03-05"),
+    ).toMatchObject({
+      date: "2026-03-05",
+      expectedWorkday: {
+        isWorkday: true,
+      },
+      record: {
+        clockInAt: "2026-03-05T08:57:00+09:00",
+        clockOutAt: "2026-03-05T18:02:00+09:00",
+      },
+      display: {
+        activeExceptions: [],
+      },
+    });
+  });
+
   it("projects only pending manual attendance requests into history rows", () => {
     const world = structuredClone(canonicalSeedWorld);
 

@@ -206,6 +206,26 @@ describe("AdminAttendanceWorkspace", () => {
     expect(screen.getByLabelText("종료일")).toHaveValue("2026-04-02");
   });
 
+  it("applies history date presets through a single URL replacement", () => {
+    render(
+      <AdminAttendanceWorkspace
+        state={createState("?mode=history&from=2026-03-29&to=2026-04-03")}
+        historyResponse={repository.getAdminAttendanceList({
+          from: "2026-03-29",
+          to: "2026-04-03",
+        })}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "날짜 필터" }));
+    fireEvent.click(screen.getByRole("radio", { name: "최근 30일" }));
+
+    expect(replaceMock).toHaveBeenCalledTimes(1);
+    expect(replaceMock).toHaveBeenCalledWith(
+      "/admin/attendance?mode=history&from=2026-03-05&to=2026-04-03",
+    );
+  });
+
   it("renders the history empty state for a non-matching Hangul name filter", () => {
     render(
       <AdminAttendanceWorkspace

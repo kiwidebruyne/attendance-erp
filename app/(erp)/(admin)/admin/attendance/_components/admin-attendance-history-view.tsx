@@ -34,6 +34,7 @@ import { TableHeaderFilterButton } from "./table-header-filter";
 type AdminAttendanceHistoryViewProps = {
   from: string;
   name?: string;
+  onDateRangeChange: (value: { from: string; to: string }) => void;
   onFromChange: (value: string) => void;
   onNameChange: (value: string) => void;
   onToChange: (value: string) => void;
@@ -336,6 +337,7 @@ function getDateRangeLabel(from: string, to: string) {
 export function AdminAttendanceHistoryView({
   from,
   name,
+  onDateRangeChange,
   onFromChange,
   onNameChange,
   onToChange,
@@ -451,8 +453,10 @@ export function AdminAttendanceHistoryView({
                             anchorDate,
                             value as DateRangePreset,
                           );
-                          onFromChange(nextRange.from);
-                          onToChange(nextRange.to);
+                          onDateRangeChange({
+                            from: nextRange.from,
+                            to: nextRange.to,
+                          });
                         },
                         onToChange: (value) => onToChange(value),
                         preset: dateRangePreset,

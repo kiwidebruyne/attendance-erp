@@ -23,7 +23,7 @@ describe("fixed Seoul seed clock", () => {
     expect(fixedSeoulUtcOffset).toBe("+09:00");
     expect(fixedSeoulBaselineDate).toBe("2026-04-03");
     expect(fixedSeoulCalendarWindow).toEqual({
-      start: "2026-03-15",
+      start: "2026-03-05",
       end: "2026-04-20",
     });
     expect(buildFixedSeoulDateTime("2026-04-15", "08:45:00")).toBe(
