@@ -13,7 +13,7 @@ import { adminRequestsResponseSchema } from "@/lib/contracts/requests";
 import { createSeedRepository } from "@/lib/repositories";
 import { canonicalSeedWorld } from "@/lib/seed/world";
 
-const repositoryNow = "2026-04-13T10:00:00+09:00";
+const repositoryNow = "2026-04-03T10:00:00+09:00";
 
 describe("seed repository", () => {
   it("exports the read-only repository factory", () => {
@@ -45,12 +45,12 @@ describe("seed repository", () => {
 
     const todayResponse = repository?.getEmployeeAttendanceToday({
       employeeId: "emp_001",
-      date: "2026-04-13",
+      date: "2026-04-03",
     });
     const historyResponse = repository?.getEmployeeAttendanceHistory({
       employeeId: "emp_001",
-      from: "2026-04-10",
-      to: "2026-04-13",
+      from: "2026-03-31",
+      to: "2026-04-03",
     });
     const leaveOverview = repository?.getEmployeeLeaveOverview({
       employeeId: "emp_004",
@@ -61,12 +61,12 @@ describe("seed repository", () => {
       attendanceTodayResponseSchema.parse(todayResponse),
     ).not.toThrow();
     expect(attendanceTodayResponseSchema.parse(todayResponse)).toMatchObject({
-      date: "2026-04-13",
+      date: "2026-04-03",
       employee: {
         id: "emp_001",
       },
       todayRecord: {
-        date: "2026-04-13",
+        date: "2026-04-03",
         clockInSource: "beacon",
         clockOutAt: null,
       },
@@ -83,11 +83,11 @@ describe("seed repository", () => {
     expect(
       attendanceHistoryResponseSchema.parse(historyResponse),
     ).toMatchObject({
-      from: "2026-04-10",
-      to: "2026-04-13",
+      from: "2026-03-31",
+      to: "2026-04-03",
       records: expect.arrayContaining([
         expect.objectContaining({
-          date: "2026-04-10",
+          date: "2026-04-03",
         }),
       ]),
     });
@@ -131,7 +131,7 @@ describe("seed repository", () => {
     });
 
     const todayResponse = repository?.getAdminAttendanceToday({
-      date: "2026-04-13",
+      date: "2026-04-03",
     });
     const listResponse = repository?.getAdminAttendanceList({
       from: "2026-04-10",
@@ -148,7 +148,7 @@ describe("seed repository", () => {
     expect(
       adminAttendanceTodayResponseSchema.parse(todayResponse),
     ).toMatchObject({
-      date: "2026-04-13",
+      date: "2026-04-03",
       summary: {
         checkedInCount: 9,
       },
@@ -163,7 +163,7 @@ describe("seed repository", () => {
     expect(parsedListResponse.filters).toEqual({
       name: "minji",
     });
-    expect(parsedListResponse.total).toBe(4);
+    expect(parsedListResponse.total).toBe(2);
     expect(parsedListResponse.records).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -185,7 +185,7 @@ describe("seed repository", () => {
           requestType: "leave",
         }),
         expect.objectContaining({
-          id: "manual_request_emp_010_2026-04-13_resubmission",
+          id: "manual_request_emp_010_2026-04-03_resubmission",
           requestType: "manual_attendance",
         }),
       ]),

@@ -32,19 +32,19 @@ function addPendingManualRequest(
   > = {},
 ) {
   world.manualAttendanceRequests.push({
-    id: "manual_request_emp_001_2026-04-13_root",
+    id: "manual_request_emp_001_2026-04-03_root",
     employeeId: "emp_001",
     requestType: "manual_attendance",
     action: "clock_in",
-    date: "2026-04-13",
-    submittedAt: "2026-04-13T10:05:00+09:00",
-    requestedClockInAt: "2026-04-13T09:05:00+09:00",
+    date: "2026-04-03",
+    submittedAt: "2026-04-03T10:05:00+09:00",
+    requestedClockInAt: "2026-04-03T09:05:00+09:00",
     requestedClockOutAt: null,
     reason: "Beacon was unavailable during check-in.",
     status: "pending",
     reviewedAt: null,
     reviewComment: null,
-    rootRequestId: "manual_request_emp_001_2026-04-13_root",
+    rootRequestId: "manual_request_emp_001_2026-04-03_root",
     parentRequestId: null,
     followUpKind: null,
     supersededByRequestId: null,
@@ -64,12 +64,12 @@ describe("employee attendance route handlers", () => {
     expect(
       attendanceTodayResponseSchema.parse(await response.json()),
     ).toMatchObject({
-      date: "2026-04-13",
+      date: "2026-04-03",
       employee: {
         id: "emp_001",
       },
       todayRecord: {
-        date: "2026-04-13",
+        date: "2026-04-03",
         clockInSource: "beacon",
         clockOutAt: null,
       },
@@ -80,7 +80,7 @@ describe("employee attendance route handlers", () => {
   it("keeps today-card manual requests scoped to the requested date", async () => {
     const world = createWorld();
     addPendingManualRequest(world, {
-      id: "manual_request_emp_001_2026-04-13_root",
+      id: "manual_request_emp_001_2026-04-03_root",
     });
     setMockSeedWorldForTests(world);
 
@@ -88,8 +88,8 @@ describe("employee attendance route handlers", () => {
     const body = attendanceTodayResponseSchema.parse(await response.json());
 
     expect(body.manualRequest).toMatchObject({
-      id: "manual_request_emp_001_2026-04-13_root",
-      date: "2026-04-13",
+      id: "manual_request_emp_001_2026-04-03_root",
+      date: "2026-04-03",
       status: "pending",
     });
   });
@@ -98,8 +98,8 @@ describe("employee attendance route handlers", () => {
     const approvedWorld = createWorld();
     addPendingManualRequest(approvedWorld, {
       status: "approved",
-      reviewedAt: "2026-04-13T11:00:00+09:00",
-      rootRequestId: "manual_request_emp_001_2026-04-13_root",
+      reviewedAt: "2026-04-03T11:00:00+09:00",
+      rootRequestId: "manual_request_emp_001_2026-04-03_root",
     });
     setMockSeedWorldForTests(approvedWorld);
 
@@ -112,7 +112,7 @@ describe("employee attendance route handlers", () => {
     const withdrawnWorld = createWorld();
     addPendingManualRequest(withdrawnWorld, {
       status: "withdrawn",
-      rootRequestId: "manual_request_emp_001_2026-04-13_root",
+      rootRequestId: "manual_request_emp_001_2026-04-03_root",
     });
     setMockSeedWorldForTests(withdrawnWorld);
 
@@ -224,9 +224,9 @@ describe("employee attendance route handlers", () => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          date: "2026-04-13",
+          date: "2026-04-03",
           action: "clock_in",
-          requestedClockInAt: "2026-04-13T09:05:00+09:00",
+          requestedClockInAt: "2026-04-03T09:05:00+09:00",
           reason: "Beacon was unavailable during check-in.",
         }),
       }),
@@ -237,7 +237,7 @@ describe("employee attendance route handlers", () => {
       manualAttendanceRequestResponseSchema.parse(await response.json()),
     ).toMatchObject({
       requestType: "manual_attendance",
-      date: "2026-04-13",
+      date: "2026-04-03",
       status: "pending",
       activeStatus: "pending",
       effectiveStatus: "pending",
@@ -256,10 +256,10 @@ describe("employee attendance route handlers", () => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          date: "2026-04-13",
+          date: "2026-04-03",
           action: "both",
-          requestedClockInAt: "2026-04-13T09:05:00+09:00",
-          requestedClockOutAt: "2026-04-13T18:05:00+09:00",
+          requestedClockInAt: "2026-04-03T09:05:00+09:00",
+          requestedClockOutAt: "2026-04-03T18:05:00+09:00",
           reason: "Submitting a duplicate request should conflict.",
         }),
       }),
@@ -270,7 +270,7 @@ describe("employee attendance route handlers", () => {
       error: {
         code: "conflict",
         message:
-          'A governing manual attendance chain already exists for employee "emp_001" on date "2026-04-13"',
+          'A governing manual attendance chain already exists for employee "emp_001" on date "2026-04-03"',
       },
     });
   });
@@ -282,7 +282,7 @@ describe("employee attendance route handlers", () => {
 
     const editResponse = await patchManualAttendance(
       new Request(
-        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-13_root",
+        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-03_root",
         {
           method: "PATCH",
           headers: {
@@ -295,7 +295,7 @@ describe("employee attendance route handlers", () => {
       ),
       {
         params: Promise.resolve({
-          id: "manual_request_emp_001_2026-04-13_root",
+          id: "manual_request_emp_001_2026-04-03_root",
         }),
       },
     );
@@ -306,7 +306,7 @@ describe("employee attendance route handlers", () => {
     );
     expect(editedBody).toMatchObject({
       reason: "Edited note before review.",
-      submittedAt: "2026-04-13T10:05:00+09:00",
+      submittedAt: "2026-04-03T10:05:00+09:00",
     });
 
     const todayAfterEdit = attendanceTodayResponseSchema.parse(
@@ -318,7 +318,7 @@ describe("employee attendance route handlers", () => {
 
     const withdrawResponse = await patchManualAttendance(
       new Request(
-        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-13_root",
+        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-03_root",
         {
           method: "PATCH",
           headers: {
@@ -331,7 +331,7 @@ describe("employee attendance route handlers", () => {
       ),
       {
         params: Promise.resolve({
-          id: "manual_request_emp_001_2026-04-13_root",
+          id: "manual_request_emp_001_2026-04-03_root",
         }),
       },
     );
@@ -452,9 +452,9 @@ describe("employee attendance route handlers", () => {
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          date: "2026-04-13",
+          date: "2026-04-03",
           action: "clock_in",
-          requestedClockInAt: "2026-04-13T09:05:00+09:00",
+          requestedClockInAt: "2026-04-03T09:05:00+09:00",
           reason: "Beacon was unavailable during check-in.",
         }),
       }),
@@ -478,7 +478,7 @@ describe("employee attendance route handlers", () => {
 
     expect(adminTodayEmployeeRow?.manualRequest).toMatchObject({
       id: createdRequest.id,
-      date: "2026-04-13",
+      date: "2026-04-03",
       status: "pending",
     });
 
@@ -486,14 +486,14 @@ describe("employee attendance route handlers", () => {
       await (
         await getAdminAttendanceList(
           new Request(
-            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=minji",
+            "https://example.com/api/admin/attendance/list?from=2026-04-03&to=2026-04-03&name=minji",
           ),
         )
       ).json(),
     );
     const adminListEmployeeRow = adminListAfterCreate.records.find(
       (record) =>
-        record.employee.id === "emp_001" && record.date === "2026-04-13",
+        record.employee.id === "emp_001" && record.date === "2026-04-03",
     );
 
     expect(adminListEmployeeRow?.display.activeExceptions).toContain(
@@ -539,14 +539,14 @@ describe("employee attendance route handlers", () => {
       await (
         await getAdminAttendanceList(
           new Request(
-            "https://example.com/api/admin/attendance/list?from=2026-04-13&to=2026-04-13&name=minji",
+            "https://example.com/api/admin/attendance/list?from=2026-04-03&to=2026-04-03&name=minji",
           ),
         )
       ).json(),
     );
     const adminListRowAfterWithdraw = adminListAfterWithdraw.records.find(
       (record) =>
-        record.employee.id === "emp_001" && record.date === "2026-04-13",
+        record.employee.id === "emp_001" && record.date === "2026-04-03",
     );
 
     expect(adminListRowAfterWithdraw?.display.activeExceptions).not.toContain(
@@ -581,17 +581,17 @@ describe("employee attendance route handlers", () => {
 
     const world = createWorld();
     addPendingManualRequest(world, {
-      id: "manual_request_emp_001_2026-04-13_reviewed",
+      id: "manual_request_emp_001_2026-04-03_reviewed",
       status: "rejected",
-      reviewedAt: "2026-04-13T11:00:00+09:00",
+      reviewedAt: "2026-04-03T11:00:00+09:00",
       reviewComment: "Please clarify the correction context.",
-      rootRequestId: "manual_request_emp_001_2026-04-13_reviewed",
+      rootRequestId: "manual_request_emp_001_2026-04-03_reviewed",
     });
     setMockSeedWorldForTests(world);
 
     const reviewedResponse = await patchManualAttendance(
       new Request(
-        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-13_reviewed",
+        "https://example.com/api/attendance/manual/manual_request_emp_001_2026-04-03_reviewed",
         {
           method: "PATCH",
           headers: {
@@ -604,7 +604,7 @@ describe("employee attendance route handlers", () => {
       ),
       {
         params: Promise.resolve({
-          id: "manual_request_emp_001_2026-04-13_reviewed",
+          id: "manual_request_emp_001_2026-04-03_reviewed",
         }),
       },
     );
@@ -614,7 +614,7 @@ describe("employee attendance route handlers", () => {
       error: {
         code: "conflict",
         message:
-          'Manual attendance request "manual_request_emp_001_2026-04-13_reviewed" is no longer pending',
+          'Manual attendance request "manual_request_emp_001_2026-04-03_reviewed" is no longer pending',
       },
     });
   });

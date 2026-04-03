@@ -146,7 +146,8 @@ describe("admin attendance route handlers", () => {
     );
 
     expect(carryOverRow).toBeDefined();
-    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
+    expect(carryOverRow?.employee.id).toBe("emp_002");
+    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-02");
     expect(carryOverRow?.manualRequest).toBeNull();
 
     const activeManualRequestRow = body.items.find(
@@ -173,25 +174,25 @@ describe("admin attendance route handlers", () => {
       .items.find((item) => item.previousDayOpenRecord !== null);
 
     expect(carryOverRow).toBeDefined();
-    expect(carryOverRow?.employee.id).toBe("emp_001");
-    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
+    expect(carryOverRow?.employee.id).toBe("emp_002");
+    expect(carryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-02");
 
     const modifiedWorld = structuredClone(canonicalSeedWorld);
 
     modifiedWorld.manualAttendanceRequests.push({
-      id: "manual_request_emp_001_2026-04-10_root",
-      employeeId: "emp_001",
+      id: "manual_request_emp_002_2026-04-02_root",
+      employeeId: "emp_002",
       requestType: "manual_attendance",
-      action: "clock_in",
-      date: "2026-04-10",
-      submittedAt: "2026-04-10T12:30:00+09:00",
-      requestedClockInAt: "2026-04-10T09:04:00+09:00",
-      requestedClockOutAt: null,
+      action: "clock_out",
+      date: "2026-04-02",
+      submittedAt: "2026-04-03T09:20:00+09:00",
+      requestedClockInAt: null,
+      requestedClockOutAt: "2026-04-02T18:11:00+09:00",
       reason: "Prior-day checkout is still being resolved.",
       status: "pending",
       reviewedAt: null,
       reviewComment: null,
-      rootRequestId: "manual_request_emp_001_2026-04-10_root",
+      rootRequestId: "manual_request_emp_002_2026-04-02_root",
       parentRequestId: null,
       followUpKind: null,
       supersededByRequestId: null,
@@ -216,12 +217,12 @@ describe("admin attendance route handlers", () => {
     );
 
     const updatedCarryOverRow = body.items.find(
-      (item) => item.employee.id === "emp_001",
+      (item) => item.employee.id === "emp_002",
     );
 
     expect(updatedCarryOverRow).toBeDefined();
-    expect(updatedCarryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-10");
-    expect(updatedCarryOverRow?.manualRequest?.date).toBe("2026-04-10");
+    expect(updatedCarryOverRow?.previousDayOpenRecord?.date).toBe("2026-04-02");
+    expect(updatedCarryOverRow?.manualRequest?.date).toBe("2026-04-02");
     expect(updatedCarryOverRow?.manualRequest?.status).toBe("pending");
   });
 

@@ -7,7 +7,7 @@ import {
 import type { AdminAttendanceTodayResponse } from "@/lib/contracts/admin-attendance";
 import type { AttendanceSurfaceManualRequestResource } from "@/lib/contracts/shared";
 
-const seededToday = "2026-04-13";
+const seededToday = "2026-04-03";
 
 function makeManualRequestFixture(
   overrides: Partial<AttendanceSurfaceManualRequestResource> = {},
@@ -22,9 +22,9 @@ function makeManualRequestFixture(
     id,
     requestType: "manual_attendance",
     action: "clock_in",
-    date: "2026-04-13",
-    submittedAt: "2026-04-13T09:20:00+09:00",
-    requestedClockInAt: "2026-04-13T09:08:00+09:00",
+    date: "2026-04-03",
+    submittedAt: "2026-04-03T09:20:00+09:00",
+    requestedClockInAt: "2026-04-03T09:08:00+09:00",
     requestedClockOutAt: null,
     reason: "Need to correct clock-in time.",
     status,
@@ -94,7 +94,7 @@ describe("normalizeAdminAttendanceUrlState", () => {
 
     expect(normalized).toEqual({
       mode: "history",
-      from: "2026-04-07",
+      from: "2026-03-28",
       to: seededToday,
     });
   });
@@ -106,17 +106,17 @@ describe("normalizeAdminAttendanceUrlState", () => {
       ),
     ).toEqual({
       mode: "history",
-      from: "2026-04-07",
+      from: "2026-03-28",
       to: seededToday,
     });
 
     expect(
       normalizeAdminAttendanceUrlState(
-        new URLSearchParams("mode=history&from=not-a-date&to=2026-04-13"),
+        new URLSearchParams("mode=history&from=not-a-date&to=2026-04-03"),
       ),
     ).toEqual({
       mode: "history",
-      from: "2026-04-07",
+      from: "2026-03-28",
       to: seededToday,
     });
   });
@@ -124,11 +124,11 @@ describe("normalizeAdminAttendanceUrlState", () => {
   it("falls back to the seeded 7-day history window when history dates are reversed", () => {
     expect(
       normalizeAdminAttendanceUrlState(
-        new URLSearchParams("mode=history&from=2026-04-13&to=2026-04-07"),
+        new URLSearchParams("mode=history&from=2026-04-03&to=2026-03-28"),
       ),
     ).toEqual({
       mode: "history",
-      from: "2026-04-07",
+      from: "2026-03-28",
       to: seededToday,
     });
   });
@@ -145,12 +145,12 @@ describe("normalizeAdminAttendanceUrlState", () => {
     expect(
       normalizeAdminAttendanceUrlState(
         new URLSearchParams(
-          "mode=history&from=2026-04-07&to=2026-04-13&name=alex",
+          "mode=history&from=2026-03-28&to=2026-04-03&name=alex",
         ),
       ),
     ).toEqual({
       mode: "history",
-      from: "2026-04-07",
+      from: "2026-03-28",
       to: seededToday,
       name: "alex",
     });
@@ -167,16 +167,16 @@ describe("groupAdminAttendanceTodayRows", () => {
           department: "Operations",
         },
         previousDayOpenRecord: {
-          date: "2026-04-12",
-          clockInAt: "2026-04-12T09:00:00+09:00",
+          date: "2026-04-02",
+          clockInAt: "2026-04-02T09:00:00+09:00",
           clockOutAt: null,
-          expectedClockOutAt: "2026-04-12T18:00:00+09:00",
+          expectedClockOutAt: "2026-04-02T18:00:00+09:00",
         },
         latestFailedAttempt: {
           id: "failed_attempt",
-          date: "2026-04-13",
+          date: "2026-04-03",
           action: "clock_in",
-          attemptedAt: "2026-04-13T09:05:00+09:00",
+          attemptedAt: "2026-04-03T09:05:00+09:00",
           status: "failed",
           failureReason: "Beacon not found",
         },
@@ -192,9 +192,9 @@ describe("groupAdminAttendanceTodayRows", () => {
         },
         latestFailedAttempt: {
           id: "failed_attempt_only",
-          date: "2026-04-13",
+          date: "2026-04-03",
           action: "clock_out",
-          attemptedAt: "2026-04-13T18:05:00+09:00",
+          attemptedAt: "2026-04-03T18:05:00+09:00",
           status: "failed",
           failureReason: "Beacon not found",
         },

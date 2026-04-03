@@ -737,7 +737,7 @@ function ExceptionStack({
           className="size-4 text-status-danger"
         />
         <h2 className="text-sm font-medium text-foreground text-balance">
-          지금 확인할 예외가 있어요
+          지금 정정해야 해요
         </h2>
         <span className="inline-flex size-5 items-center justify-center rounded-full bg-status-danger-soft text-[10px] font-medium text-status-danger">
           {surfaces.length}

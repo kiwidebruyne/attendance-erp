@@ -797,7 +797,7 @@ describe("AttendancePageClient", () => {
       />,
     );
 
-    expect(screen.getByText("지금 확인할 예외가 있어요")).toBeInTheDocument();
+    expect(screen.getByText("지금 정정해야 해요")).toBeInTheDocument();
     expect(
       screen.getByText(
         "결근 상태가 보여서 이 날짜 기록을 열어서 정정할 수 있어요",
@@ -885,7 +885,7 @@ describe("AttendancePageClient", () => {
     );
 
     const exceptionStack = screen
-      .getByText("지금 확인할 예외가 있어요")
+      .getByText("지금 정정해야 해요")
       .closest("section");
 
     expect(exceptionStack).not.toBeNull();

@@ -1,7 +1,7 @@
 "use client";
 
-import { SearchIcon, TriangleAlertIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { TriangleAlertIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import {
@@ -18,8 +18,6 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -37,12 +35,15 @@ import {
   formatDateLabel,
   formatMinutesLabel,
   formatTimeLabel,
+  matchesDateRangeFilter,
+  matchesTextFilter,
 } from "../_lib/formatting";
 import type {
   AdminAttendanceLedgerView,
   AdminAttendanceTodayExceptionRow,
 } from "../_lib/today-exception-rows";
 import { AdminAttendanceSummaryCards } from "./admin-attendance-summary-cards";
+import { TableHeaderFilterButton } from "./table-header-filter";
 
 type AdminAttendanceTodayViewProps = {
   exceptionRows: AdminAttendanceTodayExceptionRow[];
@@ -60,6 +61,12 @@ type ItemBadge = Readonly<{
   tone: BadgeTone;
 }>;
 
+type DateRangeFilter = Readonly<{
+  from: string;
+  preset: string;
+  to: string;
+}>;
+
 const ledgerViewOptions: ReadonlyArray<{
   label: string;
   value: AdminAttendanceLedgerView;
@@ -68,6 +75,63 @@ const ledgerViewOptions: ReadonlyArray<{
   { label: "근무상태별", value: "by-work-state" },
   { label: "근태상태별", value: "by-attendance-status" },
 ];
+
+const emptyDateRangeFilter: DateRangeFilter = {
+  from: "",
+  preset: "",
+  to: "",
+};
+
+type DateRangePreset = "" | "last_30_days" | "last_7_days" | "today";
+
+const dateRangePresetOptions: ReadonlyArray<{
+  label: string;
+  value: DateRangePreset;
+}> = [
+  { label: "오늘", value: "today" },
+  { label: "최근 7일", value: "last_7_days" },
+  { label: "최근 30일", value: "last_30_days" },
+];
+
+const seoulDateFormatter = new Intl.DateTimeFormat("sv-SE", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+});
+
+function formatSeoulDate(date: Date) {
+  return seoulDateFormatter.format(date);
+}
+
+function shiftSeoulDate(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00+09:00`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return formatSeoulDate(date);
+}
+
+function buildDateRangeForPreset(
+  anchorDate: string,
+  preset: DateRangePreset,
+): DateRangeFilter {
+  if (preset === "") {
+    return emptyDateRangeFilter;
+  }
+
+  if (preset === "today") {
+    return {
+      from: anchorDate,
+      preset,
+      to: anchorDate,
+    };
+  }
+
+  return {
+    from: shiftSeoulDate(anchorDate, preset === "last_7_days" ? -6 : -29),
+    preset,
+    to: anchorDate,
+  };
+}
 
 function getLeaveCoverageLabel(item: TodayItem) {
   switch (item.expectedWorkday.leaveCoverage?.leaveType) {
@@ -299,7 +363,7 @@ function getContextLabel(item: TodayItem) {
     return `출근 ${formatTimeLabel(item.todayRecord.clockInAt)} · 퇴근 ${formatTimeLabel(item.todayRecord.clockOutAt)}`;
   }
 
-  return "오늘 장부를 확인해요";
+  return "오늘 근무현황을 확인해요";
 }
 
 function getNextCheckLabel(item: TodayItem) {
@@ -335,17 +399,7 @@ function getNextCheckLabel(item: TodayItem) {
     return "조퇴 사유 확인";
   }
 
-  return "오늘 장부 확인";
-}
-
-function getSearchableEmployeeValue(item: TodayItem) {
-  return `${item.employee.name} ${item.employee.department}`.toLocaleLowerCase(
-    "ko-KR",
-  );
-}
-
-function getSearchableExceptionValue(row: AdminAttendanceTodayExceptionRow) {
-  return `${row.employeeName} ${row.department}`.toLocaleLowerCase("ko-KR");
+  return "오늘 근무현황 확인";
 }
 
 function getWorkedMinutesBetween(startAt: string, endAt: string) {
@@ -383,7 +437,15 @@ function getResolvedWorkMinutes(item: TodayItem, now: string) {
 }
 
 function getTotalWorkTimeLabel(item: TodayItem, now: string) {
-  return formatMinutesLabel(getResolvedWorkMinutes(item, now));
+  return formatCompactMinutesLabel(getResolvedWorkMinutes(item, now));
+}
+
+function formatCompactTimeLabel(value: string | null) {
+  return value === null ? "-" : formatTimeLabel(value);
+}
+
+function formatCompactMinutesLabel(value: number | null) {
+  return value === null ? "-" : formatMinutesLabel(value);
 }
 
 function getLedgerRowToneClass(item: TodayItem) {
@@ -531,6 +593,7 @@ function ExceptionTable({
   name,
   onNameChange,
   onSelectRow,
+  pageDate,
   rows,
   selectedRowId,
 }: Readonly<{
@@ -538,69 +601,69 @@ function ExceptionTable({
   name?: string;
   onNameChange?: (name: string) => void;
   onSelectRow: (row: AdminAttendanceTodayExceptionRow) => void;
+  pageDate: string;
   rows: AdminAttendanceTodayExceptionRow[];
   selectedRowId: string | null;
 }>) {
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [detailFilter, setDetailFilter] = useState("");
+  const [exceptionTypeFilter, setExceptionTypeFilter] = useState("");
+  const [referenceDateFilter, setReferenceDateFilter] =
+    useState<DateRangeFilter>(emptyDateRangeFilter);
+  const [specialNoteFilter, setSpecialNoteFilter] = useState("");
+
+  const filteredRows = useMemo(
+    () =>
+      rows.filter(
+        (row) =>
+          matchesTextFilter(row.employeeName, name ?? "") &&
+          matchesTextFilter(row.department, departmentFilter) &&
+          matchesTextFilter(row.exceptionType, exceptionTypeFilter) &&
+          matchesTextFilter(row.specialNote, specialNoteFilter) &&
+          matchesDateRangeFilter(
+            row.referenceDate,
+            referenceDateFilter.from,
+            referenceDateFilter.to,
+          ) &&
+          matchesTextFilter(row.detail, detailFilter),
+      ),
+    [
+      detailFilter,
+      departmentFilter,
+      exceptionTypeFilter,
+      name,
+      referenceDateFilter.from,
+      referenceDateFilter.to,
+      rows,
+      specialNoteFilter,
+    ],
+  );
+
   return (
     <Card>
       <CardHeader className="gap-4">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <TriangleAlertIcon
-                aria-hidden="true"
-                className="size-4 text-status-danger"
-              />
-              <CardTitle>누적 예외</CardTitle>
-              <Badge className="bg-status-danger-soft text-status-danger">
-                {rows.length}
-              </Badge>
-            </div>
-            <CardDescription>
-              직원 화면에서 아직 해소되지 않은 예외를 한 번에 모아봐요
-            </CardDescription>
-          </div>
-
-          <div className="w-full max-w-[320px]">
-            <Label
-              className="mb-2 inline-flex text-sm font-medium text-foreground"
-              htmlFor="admin-attendance-name-search"
-            >
-              이름 검색
-            </Label>
-            <div className="relative">
-              <SearchIcon
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
-              />
-              <Input
-                autoComplete="off"
-                id="admin-attendance-name-search"
-                className="pl-9"
-                name="name"
-                placeholder="이름이나 부서로 찾아요…"
-                type="search"
-                value={name ?? ""}
-                onChange={(event) => onNameChange?.(event.target.value)}
-              />
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <TriangleAlertIcon
+            aria-hidden="true"
+            className="size-4 text-status-danger"
+          />
+          <CardTitle>누적 예외</CardTitle>
+          <Badge className="bg-status-danger-soft text-status-danger">
+            {filteredRows.length}
+          </Badge>
         </div>
+        <CardDescription>
+          열 제목에서 바로 조건을 바꾸면서 아직 해소되지 않은 예외를 좁혀봐요
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="p-0">
-        {rows.length === 0 ? (
+        {!hasAnyRows ? (
           <Empty className="rounded-none border-0">
             <EmptyHeader>
-              <EmptyTitle>
-                {hasAnyRows
-                  ? "검색 결과에 맞는 예외가 없어요"
-                  : "지금 누적 예외가 없어요"}
-              </EmptyTitle>
+              <EmptyTitle>지금 누적 예외가 없어요</EmptyTitle>
               <EmptyDescription>
-                {hasAnyRows
-                  ? "검색어를 지우면 다른 누적 예외를 바로 확인할 수 있어요"
-                  : "새로운 예외가 생기면 이 표에서 먼저 보여줘요"}
+                새로운 예외가 생기면 이 표에서 먼저 보여줘요
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -609,55 +672,155 @@ function ExceptionTable({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>직원</TableHead>
-                  <TableHead>부서</TableHead>
-                  <TableHead>예외 유형</TableHead>
-                  <TableHead>특이사항</TableHead>
-                  <TableHead>기준일</TableHead>
-                  <TableHead>상세</TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "직원",
+                        placeholder: "이름으로 찾아요",
+                        value: name ?? "",
+                        onChange: (value) => onNameChange?.(value),
+                      }}
+                      header="직원"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "부서",
+                        placeholder: "부서로 찾아요",
+                        value: departmentFilter,
+                        onChange: setDepartmentFilter,
+                      }}
+                      header="부서"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "예외 유형",
+                        placeholder: "예외 유형으로 찾아요",
+                        value: exceptionTypeFilter,
+                        onChange: setExceptionTypeFilter,
+                      }}
+                      header="예외 유형"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "특이사항",
+                        placeholder: "특이사항으로 찾아요",
+                        value: specialNoteFilter,
+                        onChange: setSpecialNoteFilter,
+                      }}
+                      header="특이사항"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "date_range",
+                        from: referenceDateFilter.from,
+                        label: "기준일",
+                        onClear: () =>
+                          setReferenceDateFilter(emptyDateRangeFilter),
+                        onFromChange: (value) =>
+                          setReferenceDateFilter((current) => ({
+                            ...current,
+                            from: value,
+                            preset: "",
+                          })),
+                        onPresetChange: (value) =>
+                          setReferenceDateFilter(
+                            buildDateRangeForPreset(
+                              pageDate,
+                              value as DateRangePreset,
+                            ),
+                          ),
+                        onToChange: (value) =>
+                          setReferenceDateFilter((current) => ({
+                            ...current,
+                            preset: "",
+                            to: value,
+                          })),
+                        preset: referenceDateFilter.preset,
+                        presetOptions: dateRangePresetOptions,
+                        to: referenceDateFilter.to,
+                      }}
+                      header="기준일"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "상세",
+                        placeholder: "상세 내용으로 찾아요",
+                        value: detailFilter,
+                        onChange: setDetailFilter,
+                      }}
+                      header="상세"
+                    />
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((row) => {
-                  const isSelected = row.id === selectedRowId;
-
-                  return (
-                    <TableRow
-                      key={row.id}
-                      aria-selected={isSelected}
-                      className={cn(
-                        "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
-                        getExceptionRowToneClass(row),
-                        isSelected &&
-                          "bg-primary/8 hover:bg-primary/10 data-[state=selected]:bg-primary/8",
-                      )}
-                      data-state={isSelected ? "selected" : undefined}
-                      tabIndex={0}
-                      onClick={() => onSelectRow(row)}
-                      onKeyDown={(event) => {
-                        if (event.key !== "Enter" && event.key !== " ") {
-                          return;
-                        }
-
-                        event.preventDefault();
-                        onSelectRow(row);
-                      }}
+                {filteredRows.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      className="py-10 text-center text-sm text-muted-foreground"
+                      colSpan={6}
                     >
-                      <TableCell className="font-medium text-foreground">
-                        {row.employeeName}
-                      </TableCell>
-                      <TableCell>{row.department}</TableCell>
-                      <TableCell>{row.exceptionType}</TableCell>
-                      <TableCell>{row.specialNote}</TableCell>
-                      <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                        {formatDateLabel(row.referenceDate)}
-                      </TableCell>
-                      <TableCell className="min-w-[280px] text-secondary">
-                        {row.detail}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
+                      조건에 맞는 예외가 없어요. 열 제목 필터를 초기화하면 다른
+                      누적 예외를 바로 볼 수 있어요.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredRows.map((row) => {
+                    const isSelected = row.id === selectedRowId;
+
+                    return (
+                      <TableRow
+                        key={row.id}
+                        aria-selected={isSelected}
+                        className={cn(
+                          "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
+                          getExceptionRowToneClass(row),
+                          isSelected &&
+                            "bg-primary/8 hover:bg-primary/10 data-[state=selected]:bg-primary/8",
+                        )}
+                        data-state={isSelected ? "selected" : undefined}
+                        tabIndex={0}
+                        onClick={() => onSelectRow(row)}
+                        onKeyDown={(event) => {
+                          if (event.key !== "Enter" && event.key !== " ") {
+                            return;
+                          }
+
+                          event.preventDefault();
+                          onSelectRow(row);
+                        }}
+                      >
+                        <TableCell className="font-medium text-foreground">
+                          {row.employeeName}
+                        </TableCell>
+                        <TableCell>{row.department}</TableCell>
+                        <TableCell>{row.exceptionType}</TableCell>
+                        <TableCell>{row.specialNote}</TableCell>
+                        <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                          {formatDateLabel(row.referenceDate)}
+                        </TableCell>
+                        <TableCell className="min-w-[280px] text-secondary">
+                          {row.detail}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
@@ -668,90 +831,231 @@ function ExceptionTable({
 }
 
 function LedgerTable({
+  name,
+  onNameChange,
   items,
   now,
   onSelectEmployee,
   selectedEmployeeId,
 }: Readonly<{
+  name?: string;
+  onNameChange?: (name: string) => void;
   items: TodayItem[];
   now: string;
   onSelectEmployee: (employeeId: string) => void;
   selectedEmployeeId: string | null;
 }>) {
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [clockInFilter, setClockInFilter] = useState("");
+  const [clockOutFilter, setClockOutFilter] = useState("");
+  const [currentStateFilter, setCurrentStateFilter] = useState("");
+  const [nextCheckFilter, setNextCheckFilter] = useState("");
+  const [workTimeFilter, setWorkTimeFilter] = useState("");
+
+  const filteredItems = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          matchesTextFilter(item.employee.name, name ?? "") &&
+          matchesTextFilter(item.employee.department, departmentFilter) &&
+          matchesTextFilter(getCurrentStateLabel(item), currentStateFilter) &&
+          matchesTextFilter(
+            formatCompactTimeLabel(item.todayRecord?.clockInAt ?? null),
+            clockInFilter,
+          ) &&
+          matchesTextFilter(
+            formatCompactTimeLabel(item.todayRecord?.clockOutAt ?? null),
+            clockOutFilter,
+          ) &&
+          matchesTextFilter(getTotalWorkTimeLabel(item, now), workTimeFilter) &&
+          matchesTextFilter(getNextCheckLabel(item), nextCheckFilter),
+      ),
+    [
+      clockInFilter,
+      clockOutFilter,
+      currentStateFilter,
+      departmentFilter,
+      items,
+      nextCheckFilter,
+      now,
+      workTimeFilter,
+      name,
+    ],
+  );
+
+  if (items.length === 0) {
+    return (
+      <Empty className="border border-border bg-card">
+        <EmptyHeader>
+          <EmptyTitle>근무현황 항목이 없어요</EmptyTitle>
+          <EmptyDescription>
+            다른 view에서 전체 근무현황을 계속 볼 수 있어요
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>직원</TableHead>
-            <TableHead>부서</TableHead>
-            <TableHead>현재 상태</TableHead>
-            <TableHead>출근</TableHead>
-            <TableHead>퇴근</TableHead>
-            <TableHead>총 근무시간</TableHead>
-            <TableHead>다음 확인</TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "직원",
+                  placeholder: "이름으로 찾아요",
+                  value: name ?? "",
+                  onChange: (value) => onNameChange?.(value),
+                }}
+                header="직원"
+              />
+            </TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "부서",
+                  placeholder: "부서로 찾아요",
+                  value: departmentFilter,
+                  onChange: setDepartmentFilter,
+                }}
+                header="부서"
+              />
+            </TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "현재 상태",
+                  placeholder: "현재 상태로 찾아요",
+                  value: currentStateFilter,
+                  onChange: setCurrentStateFilter,
+                }}
+                header="현재 상태"
+              />
+            </TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "출근",
+                  placeholder: "출근 시간으로 찾아요",
+                  value: clockInFilter,
+                  onChange: setClockInFilter,
+                }}
+                header="출근"
+              />
+            </TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "퇴근",
+                  placeholder: "퇴근 시간으로 찾아요",
+                  value: clockOutFilter,
+                  onChange: setClockOutFilter,
+                }}
+                header="퇴근"
+              />
+            </TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "총 근무시간",
+                  placeholder: "근무시간으로 찾아요",
+                  value: workTimeFilter,
+                  onChange: setWorkTimeFilter,
+                }}
+                header="총 근무시간"
+              />
+            </TableHead>
+            <TableHead className="p-1">
+              <TableHeaderFilterButton
+                control={{
+                  kind: "text",
+                  label: "다음 확인",
+                  placeholder: "다음 확인으로 찾아요",
+                  value: nextCheckFilter,
+                  onChange: setNextCheckFilter,
+                }}
+                header="다음 확인"
+              />
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {items.map((item) => {
-            const isSelected = item.employee.id === selectedEmployeeId;
-
-            return (
-              <TableRow
-                key={item.employee.id}
-                aria-selected={isSelected}
-                className={cn(
-                  "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
-                  getLedgerRowToneClass(item),
-                  isSelected &&
-                    "bg-primary/8 hover:bg-primary/10 data-[state=selected]:bg-primary/8",
-                )}
-                data-state={isSelected ? "selected" : undefined}
-                tabIndex={0}
-                onClick={() => onSelectEmployee(item.employee.id)}
-                onKeyDown={(event) => {
-                  if (event.key !== "Enter" && event.key !== " ") {
-                    return;
-                  }
-
-                  event.preventDefault();
-                  onSelectEmployee(item.employee.id);
-                }}
+          {filteredItems.length === 0 ? (
+            <TableRow>
+              <TableCell
+                className="py-10 text-center text-sm text-muted-foreground"
+                colSpan={7}
               >
-                <TableCell className="whitespace-normal">
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium text-foreground">
-                      {item.employee.name}
-                    </span>
-                    <span className="text-xs leading-5 text-secondary">
-                      {getContextLabel(item)}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>{item.employee.department}</TableCell>
-                <TableCell className="whitespace-normal">
-                  <div className="flex flex-col gap-2">
-                    <p className="font-medium text-foreground">
-                      {getCurrentStateLabel(item)}
-                    </p>
-                    <StatusBadges item={item} />
-                  </div>
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                  {formatTimeLabel(item.todayRecord?.clockInAt ?? null)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                  {formatTimeLabel(item.todayRecord?.clockOutAt ?? null)}
-                </TableCell>
-                <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                  {getTotalWorkTimeLabel(item, now)}
-                </TableCell>
-                <TableCell className="whitespace-normal text-secondary">
-                  {getNextCheckLabel(item)}
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                조건에 맞는 근무현황이 없어요. 열 제목의 필터를 지우면 다른
+                근무현황을 다시 볼 수 있어요.
+              </TableCell>
+            </TableRow>
+          ) : (
+            filteredItems.map((item) => {
+              const isSelected = item.employee.id === selectedEmployeeId;
+
+              return (
+                <TableRow
+                  key={item.employee.id}
+                  aria-selected={isSelected}
+                  className={cn(
+                    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-inset",
+                    getLedgerRowToneClass(item),
+                    isSelected &&
+                      "bg-primary/8 hover:bg-primary/10 data-[state=selected]:bg-primary/8",
+                  )}
+                  data-state={isSelected ? "selected" : undefined}
+                  tabIndex={0}
+                  onClick={() => onSelectEmployee(item.employee.id)}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Enter" && event.key !== " ") {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    onSelectEmployee(item.employee.id);
+                  }}
+                >
+                  <TableCell className="font-medium text-foreground">
+                    {item.employee.name}
+                  </TableCell>
+                  <TableCell>{item.employee.department}</TableCell>
+                  <TableCell className="whitespace-normal">
+                    <div className="flex flex-col gap-2">
+                      <p className="font-medium text-foreground">
+                        {getCurrentStateLabel(item)}
+                      </p>
+                      <StatusBadges item={item} />
+                    </div>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                    {formatCompactTimeLabel(
+                      item.todayRecord?.clockInAt ?? null,
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                    {formatCompactTimeLabel(
+                      item.todayRecord?.clockOutAt ?? null,
+                    )}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                    {getTotalWorkTimeLabel(item, now)}
+                  </TableCell>
+                  <TableCell className="whitespace-normal text-secondary">
+                    {getNextCheckLabel(item)}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </div>
@@ -762,14 +1066,18 @@ function LedgerSection({
   description,
   items,
   now,
+  name,
   onSelectEmployee,
+  onNameChange,
   selectedEmployeeId,
   title,
 }: Readonly<{
   description: string;
   items: TodayItem[];
   now: string;
+  name?: string;
   onSelectEmployee: (employeeId: string) => void;
+  onNameChange?: (name: string) => void;
   selectedEmployeeId: string | null;
   title: string;
 }>) {
@@ -790,14 +1098,16 @@ function LedgerSection({
           <EmptyHeader>
             <EmptyTitle>{title} 항목이 없어요</EmptyTitle>
             <EmptyDescription>
-              다른 view에서 전체 장부를 계속 볼 수 있어요
+              다른 view에서 전체 근무현황을 계속 볼 수 있어요
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
         <LedgerTable
+          name={name}
           items={items}
           now={now}
+          onNameChange={onNameChange}
           onSelectEmployee={onSelectEmployee}
           selectedEmployeeId={selectedEmployeeId}
         />
@@ -809,13 +1119,17 @@ function LedgerSection({
 function LedgerContent({
   items,
   now,
+  name,
   onSelectEmployee,
+  onNameChange,
   selectedEmployeeId,
   view,
 }: Readonly<{
   items: TodayItem[];
   now: string;
+  name?: string;
   onSelectEmployee: (employeeId: string) => void;
+  onNameChange?: (name: string) => void;
   selectedEmployeeId: string | null;
   view: AdminAttendanceLedgerView;
 }>) {
@@ -825,7 +1139,7 @@ function LedgerContent({
         <EmptyHeader>
           <EmptyTitle>검색 결과가 없어요</EmptyTitle>
           <EmptyDescription>
-            다른 이름으로 찾아보거나 검색어를 지우면 전체 장부를 다시 볼 수
+            다른 이름으로 찾아보거나 검색어를 지우면 전체 근무현황을 다시 볼 수
             있어요
           </EmptyDescription>
         </EmptyHeader>
@@ -836,8 +1150,10 @@ function LedgerContent({
   if (view === "default") {
     return (
       <LedgerTable
+        name={name}
         items={items}
         now={now}
+        onNameChange={onNameChange}
         onSelectEmployee={onSelectEmployee}
         selectedEmployeeId={selectedEmployeeId}
       />
@@ -864,7 +1180,9 @@ function LedgerContent({
           description="휴가가 반영된 인원만 모아봐요"
           items={leaveItems}
           now={now}
+          name={name}
           title="휴가중"
+          onNameChange={onNameChange}
           onSelectEmployee={onSelectEmployee}
           selectedEmployeeId={selectedEmployeeId}
         />
@@ -872,7 +1190,9 @@ function LedgerContent({
           description="현재 근무중인 인원이에요"
           items={workingItems}
           now={now}
+          name={name}
           title="근무중"
+          onNameChange={onNameChange}
           onSelectEmployee={onSelectEmployee}
           selectedEmployeeId={selectedEmployeeId}
         />
@@ -880,7 +1200,9 @@ function LedgerContent({
           description="아직 출근 전으로 보이는 인원이에요"
           items={beforeCheckInItems}
           now={now}
+          name={name}
           title="출근 전"
+          onNameChange={onNameChange}
           onSelectEmployee={onSelectEmployee}
           selectedEmployeeId={selectedEmployeeId}
         />
@@ -888,7 +1210,9 @@ function LedgerContent({
           description="오늘 근무를 마친 인원이에요"
           items={checkedOutItems}
           now={now}
+          name={name}
           title="퇴근"
+          onNameChange={onNameChange}
           onSelectEmployee={onSelectEmployee}
           selectedEmployeeId={selectedEmployeeId}
         />
@@ -912,7 +1236,9 @@ function LedgerContent({
         description="지각이나 조퇴 플래그가 없는 인원이에요"
         items={normalItems}
         now={now}
+        name={name}
         title="정상"
+        onNameChange={onNameChange}
         onSelectEmployee={onSelectEmployee}
         selectedEmployeeId={selectedEmployeeId}
       />
@@ -920,7 +1246,9 @@ function LedgerContent({
         description="지각 플래그가 있는 인원이에요"
         items={lateItems}
         now={now}
+        name={name}
         title="지각"
+        onNameChange={onNameChange}
         onSelectEmployee={onSelectEmployee}
         selectedEmployeeId={selectedEmployeeId}
       />
@@ -928,7 +1256,9 @@ function LedgerContent({
         description="조퇴 플래그가 있는 인원이에요"
         items={earlyLeaveItems}
         now={now}
+        name={name}
         title="조퇴"
+        onNameChange={onNameChange}
         onSelectEmployee={onSelectEmployee}
         selectedEmployeeId={selectedEmployeeId}
       />
@@ -939,6 +1269,7 @@ function LedgerContent({
 function LedgerPanel({
   items,
   name,
+  onNameChange,
   onSelectEmployee,
   selectedEmployeeId,
   setLedgerView,
@@ -946,6 +1277,7 @@ function LedgerPanel({
 }: Readonly<{
   items: TodayItem[];
   name?: string;
+  onNameChange?: (name: string) => void;
   onSelectEmployee: (employeeId: string) => void;
   selectedEmployeeId: string | null;
   setLedgerView: (view: AdminAttendanceLedgerView) => void;
@@ -976,9 +1308,9 @@ function LedgerPanel({
       <CardHeader className="gap-4">
         <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
           <div className="flex flex-col gap-1">
-            <CardTitle>전체 팀 장부</CardTitle>
+            <CardTitle>전체 팀 근무현황</CardTitle>
             <CardDescription>
-              오늘 장부를 기본 view 또는 상태별 view로 나눠서 봐요
+              오늘 근무현황을 기본 view 또는 상태별 view로 나눠서 봐요
             </CardDescription>
           </div>
           <ToggleGroup
@@ -1015,6 +1347,8 @@ function LedgerPanel({
         <LedgerContent
           items={items}
           now={now}
+          name={name}
+          onNameChange={onNameChange}
           onSelectEmployee={onSelectEmployee}
           selectedEmployeeId={selectedEmployeeId}
           view={view}
@@ -1049,18 +1383,23 @@ export function AdminAttendanceTodayView({
     useState<AdminAttendanceLedgerView>("default");
 
   const trimmedName = name?.trim() ?? "";
-  const normalizedName = trimmedName.toLocaleLowerCase("ko-KR");
   const visibleItems =
-    normalizedName.length === 0
+    trimmedName.length === 0
       ? response.items
       : response.items.filter((item) =>
-          getSearchableEmployeeValue(item).includes(normalizedName),
+          matchesTextFilter(
+            `${item.employee.name} ${item.employee.department}`,
+            trimmedName,
+          ),
         );
   const visibleExceptionRows =
-    normalizedName.length === 0
+    trimmedName.length === 0
       ? exceptionRows
       : exceptionRows.filter((row) =>
-          getSearchableExceptionValue(row).includes(normalizedName),
+          matchesTextFilter(
+            `${row.employeeName} ${row.department}`,
+            trimmedName,
+          ),
         );
 
   return (
@@ -1069,6 +1408,7 @@ export function AdminAttendanceTodayView({
         hasAnyRows={exceptionRows.length > 0}
         name={name}
         onNameChange={onNameChange}
+        pageDate={response.date}
         rows={visibleExceptionRows}
         selectedRowId={selectedExceptionRowId}
         onSelectRow={(row) => {
@@ -1082,6 +1422,7 @@ export function AdminAttendanceTodayView({
       <LedgerPanel
         items={visibleItems}
         name={name}
+        onNameChange={onNameChange}
         onSelectEmployee={(employeeId) => {
           setSelectedEmployeeId(employeeId);
           setSelectedExceptionRowId(null);

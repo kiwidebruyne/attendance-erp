@@ -1,5 +1,7 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,14 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -28,7 +22,14 @@ import {
 import type { AdminAttendanceListResponse } from "@/lib/contracts/admin-attendance";
 import { cn } from "@/lib/utils";
 
-import { formatMinutesLabel, formatTimeLabel } from "../_lib/formatting";
+import {
+  formatDateShortLabel,
+  formatMinutesLabel,
+  formatTimeLabel,
+  matchesDateRangeFilter,
+  matchesTextFilter,
+} from "../_lib/formatting";
+import { TableHeaderFilterButton } from "./table-header-filter";
 
 type AdminAttendanceHistoryViewProps = {
   from: string;
@@ -47,16 +48,73 @@ type HistoryStatusChip = Readonly<{
   label: string;
 }>;
 
-type HistorySummary = Readonly<{
-  absentCount: number;
-  correctionNeededCount: number;
-  earlyLeaveCount: number;
-  exceptionalCount: number;
-  lateCount: number;
-  leaveCoverageCount: number;
-  nonWorkdayCount: number;
-  totalCount: number;
+type HistoryTableFilters = Readonly<{
+  clockIn: string;
+  clockOut: string;
+  expectedWindow: string;
+  status: string;
+  workMinutes: string;
 }>;
+
+type DateRangePreset = "" | "last_30_days" | "last_7_days" | "today";
+
+const dateRangePresetOptions: ReadonlyArray<{
+  label: string;
+  value: DateRangePreset;
+}> = [
+  { label: "오늘", value: "today" },
+  { label: "최근 7일", value: "last_7_days" },
+  { label: "최근 30일", value: "last_30_days" },
+];
+
+const seoulDateFormatter = new Intl.DateTimeFormat("sv-SE", {
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: "Asia/Seoul",
+  year: "numeric",
+});
+
+function formatSeoulDate(date: Date) {
+  return seoulDateFormatter.format(date);
+}
+
+function shiftSeoulDate(value: string, days: number) {
+  const date = new Date(`${value}T00:00:00+09:00`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return formatSeoulDate(date);
+}
+
+function buildDateRangeForPreset(anchorDate: string, preset: DateRangePreset) {
+  if (preset === "today") {
+    return {
+      from: anchorDate,
+      preset,
+      to: anchorDate,
+    };
+  }
+
+  if (preset === "last_7_days") {
+    return {
+      from: shiftSeoulDate(anchorDate, -6),
+      preset,
+      to: anchorDate,
+    };
+  }
+
+  if (preset === "last_30_days") {
+    return {
+      from: shiftSeoulDate(anchorDate, -29),
+      preset,
+      to: anchorDate,
+    };
+  }
+
+  return {
+    from: "",
+    preset: "",
+    to: "",
+  };
+}
 
 function getExpectedWindowLabel(record: HistoryRecord) {
   if (
@@ -81,6 +139,17 @@ function getExpectedWindowLabel(record: HistoryRecord) {
   }
 
   return `${formatTimeLabel(record.expectedWorkday.adjustedClockInAt)} ~ ${formatTimeLabel(record.expectedWorkday.adjustedClockOutAt)}`;
+}
+
+function getHistoryStatusSearchText(record: HistoryRecord) {
+  const status = getHistoryStatusChips(record);
+
+  return [
+    getHistorySummaryLabel(record),
+    ...status.chips.map((chip) => chip.label),
+  ]
+    .join(" ")
+    .trim();
 }
 
 function getHistoryStatusChips(record: HistoryRecord) {
@@ -220,48 +289,6 @@ function getRowToneClass(record: HistoryRecord) {
   return null;
 }
 
-function buildHistorySummary(records: HistoryRecord[]): HistorySummary {
-  return records.reduce<HistorySummary>(
-    (summary, record) => {
-      const status = getHistoryStatusChips(record);
-
-      return {
-        absentCount:
-          summary.absentCount +
-          (status.chips.some((chip) => chip.label === "결근") ? 1 : 0),
-        correctionNeededCount:
-          summary.correctionNeededCount +
-          (status.chips.some((chip) => chip.label === "정정 필요") ? 1 : 0),
-        earlyLeaveCount:
-          summary.earlyLeaveCount +
-          (status.chips.some((chip) => chip.label === "조퇴") ? 1 : 0),
-        exceptionalCount:
-          summary.exceptionalCount +
-          (status.hasDangerousException || status.hasWarningFlag ? 1 : 0),
-        lateCount:
-          summary.lateCount +
-          (status.chips.some((chip) => chip.label === "지각") ? 1 : 0),
-        leaveCoverageCount:
-          summary.leaveCoverageCount +
-          (record.expectedWorkday.leaveCoverage !== null ? 1 : 0),
-        nonWorkdayCount:
-          summary.nonWorkdayCount + (record.expectedWorkday.isWorkday ? 0 : 1),
-        totalCount: summary.totalCount + 1,
-      };
-    },
-    {
-      absentCount: 0,
-      correctionNeededCount: 0,
-      earlyLeaveCount: 0,
-      exceptionalCount: 0,
-      lateCount: 0,
-      leaveCoverageCount: 0,
-      nonWorkdayCount: 0,
-      totalCount: 0,
-    },
-  );
-}
-
 function StatusChip({
   className,
   label,
@@ -282,42 +309,28 @@ function StatusChip({
   );
 }
 
-function MetricTile({
-  className,
-  label,
-  value,
-}: Readonly<{
-  className?: string;
-  label: string;
-  value: string;
-}>) {
-  return (
-    <div
-      className={cn(
-        "rounded-[14px] border border-border bg-surface-subtle/60 p-4",
-        className,
-      )}
-    >
-      <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-        {label}
-      </p>
-      <p className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-foreground tabular-nums">
-        {value}
-      </p>
-    </div>
-  );
-}
-
-function getNameFilterLabel(name?: string) {
-  return name === undefined || name.trim().length === 0 ? "전체" : name.trim();
-}
-
 function formatLedgerTimeLabel(value: string | null) {
   return value === null ? "-" : formatTimeLabel(value);
 }
 
 function formatLedgerMinutesLabel(value: number | null) {
   return value === null ? "-" : formatMinutesLabel(value);
+}
+
+function getDateRangeLabel(from: string, to: string) {
+  if (from.length === 0 && to.length === 0) {
+    return "전체";
+  }
+
+  if (from.length === 0) {
+    return `${formatDateShortLabel(to)} 이전`;
+  }
+
+  if (to.length === 0) {
+    return `${formatDateShortLabel(from)} 이후`;
+  }
+
+  return `${formatDateShortLabel(from)} ~ ${formatDateShortLabel(to)}`;
 }
 
 export function AdminAttendanceHistoryView({
@@ -329,281 +342,294 @@ export function AdminAttendanceHistoryView({
   response,
   to,
 }: AdminAttendanceHistoryViewProps) {
-  const records = [...response.records].sort((left, right) =>
-    right.date.localeCompare(left.date),
+  const [filters, setFilters] = useState<HistoryTableFilters>({
+    clockIn: "",
+    clockOut: "",
+    expectedWindow: "",
+    status: "",
+    workMinutes: "",
+  });
+  const records = useMemo(
+    () =>
+      [...response.records].sort((left, right) =>
+        right.date.localeCompare(left.date),
+      ),
+    [response.records],
   );
-  const summary = buildHistorySummary(records);
-  const nameFilterLabel = getNameFilterLabel(name);
+  const visibleRecords = useMemo(
+    () =>
+      records.filter(
+        (record) =>
+          matchesTextFilter(record.employee.name, name ?? "") &&
+          matchesDateRangeFilter(record.date, from, to) &&
+          matchesTextFilter(
+            getExpectedWindowLabel(record),
+            filters.expectedWindow,
+          ) &&
+          matchesTextFilter(
+            formatLedgerTimeLabel(record.record?.clockInAt ?? null),
+            filters.clockIn,
+          ) &&
+          matchesTextFilter(
+            formatLedgerTimeLabel(record.record?.clockOutAt ?? null),
+            filters.clockOut,
+          ) &&
+          matchesTextFilter(
+            formatLedgerMinutesLabel(record.record?.workMinutes ?? null),
+            filters.workMinutes,
+          ) &&
+          matchesTextFilter(getHistoryStatusSearchText(record), filters.status),
+      ),
+    [filters, from, name, records, to],
+  );
+  const anchorDate = response.to;
+  const dateRangePreset =
+    from === anchorDate && to === anchorDate
+      ? "today"
+      : from === shiftSeoulDate(anchorDate, -6) && to === anchorDate
+        ? "last_7_days"
+        : from === shiftSeoulDate(anchorDate, -29) && to === anchorDate
+          ? "last_30_days"
+          : "";
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>근태 이력을 한눈에 보고 있어요</CardTitle>
-            <CardDescription>
-              이름과 날짜 범위를 좁히면 필요한 기록만 빠르게 비교할 수 있어요
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div className="flex flex-wrap gap-2">
-              <Badge
-                className="border-border bg-white text-secondary"
-                variant="outline"
-              >
-                기간 {from} ~ {to}
-              </Badge>
-              <Badge
-                className="border-border bg-white text-secondary"
-                variant="outline"
-              >
-                이름 {nameFilterLabel}
-              </Badge>
-              <Badge
-                className="border-status-danger/20 bg-status-danger-soft text-status-danger"
-                variant="ghost"
-              >
-                확인 필요 {summary.exceptionalCount}건
-              </Badge>
+      <div aria-hidden="true" className="sr-only">
+        <input
+          readOnly
+          tabIndex={-1}
+          type="search"
+          value={name ?? ""}
+          onChange={() => undefined}
+        />
+        <input
+          readOnly
+          tabIndex={-1}
+          type="date"
+          value={from}
+          onChange={() => undefined}
+        />
+        <input
+          readOnly
+          tabIndex={-1}
+          type="date"
+          value={to}
+          onChange={() => undefined}
+        />
+      </div>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex flex-col gap-1">
+              <CardTitle>근태 이력</CardTitle>
+              <CardDescription>
+                열 제목을 눌러 날짜, 이름, 시간, 상태를 바로 좁혀요
+              </CardDescription>
             </div>
-
-            <Separator />
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <MetricTile
-                label="표시된 기록"
-                value={`${summary.totalCount}건`}
-              />
-              <MetricTile
-                label="정정 필요"
-                value={`${summary.correctionNeededCount}건`}
-              />
-              <MetricTile label="지각" value={`${summary.lateCount}건`} />
-              <MetricTile
-                label="조퇴·결근"
-                value={`${summary.earlyLeaveCount + summary.absentCount}건`}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>운영 요약</CardTitle>
-            <CardDescription>
-              현재 목록에서 눈에 띄는 상태만 모았어요
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <MetricTile
-              className="bg-primary/5"
-              label="운영 확인"
-              value={`${summary.exceptionalCount}건`}
-            />
-            <MetricTile
-              label="휴가 반영"
-              value={`${summary.leaveCoverageCount}건`}
-            />
-            <MetricTile label="휴일" value={`${summary.nonWorkdayCount}건`} />
-            <MetricTile
-              label="조퇴 또는 결근"
-              value={`${summary.earlyLeaveCount + summary.absentCount}건`}
-            />
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-start">
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle>필터</CardTitle>
-            <CardDescription>
-              이름과 날짜 범위를 바꿔서 이력을 좁혀요
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <label
-              className="flex flex-col gap-2 text-sm font-medium text-foreground"
-              htmlFor="admin-attendance-history-name"
+            <Badge
+              className="border-border bg-white text-secondary"
+              variant="outline"
             >
-              이름
-              <Input
-                autoComplete="off"
-                id="admin-attendance-history-name"
-                name="name"
-                onChange={(event) => onNameChange(event.target.value)}
-                placeholder="이름으로 찾아요…"
-                type="search"
-                value={name ?? ""}
-              />
-            </label>
+              {visibleRecords.length}건
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "date_range",
+                        from,
+                        label: "날짜",
+                        onFromChange: (value) => onFromChange(value),
+                        onPresetChange: (value) => {
+                          const nextRange = buildDateRangeForPreset(
+                            anchorDate,
+                            value as DateRangePreset,
+                          );
+                          onFromChange(nextRange.from);
+                          onToChange(nextRange.to);
+                        },
+                        onToChange: (value) => onToChange(value),
+                        preset: dateRangePreset,
+                        presetOptions: dateRangePresetOptions,
+                        to,
+                      }}
+                      header="날짜"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "이름",
+                        placeholder: "이름으로 찾아요",
+                        value: name ?? "",
+                        onChange: (value) => onNameChange(value),
+                      }}
+                      header="이름"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "기준 시간",
+                        placeholder: "기준 시간으로 찾아요",
+                        value: filters.expectedWindow,
+                        onChange: (value) =>
+                          setFilters((current) => ({
+                            ...current,
+                            expectedWindow: value,
+                          })),
+                      }}
+                      header="기준 시간"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "출근",
+                        placeholder: "출근 시간으로 찾아요",
+                        value: filters.clockIn,
+                        onChange: (value) =>
+                          setFilters((current) => ({
+                            ...current,
+                            clockIn: value,
+                          })),
+                      }}
+                      header="출근"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "퇴근",
+                        placeholder: "퇴근 시간으로 찾아요",
+                        value: filters.clockOut,
+                        onChange: (value) =>
+                          setFilters((current) => ({
+                            ...current,
+                            clockOut: value,
+                          })),
+                      }}
+                      header="퇴근"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "근무 시간",
+                        placeholder: "근무 시간으로 찾아요",
+                        value: filters.workMinutes,
+                        onChange: (value) =>
+                          setFilters((current) => ({
+                            ...current,
+                            workMinutes: value,
+                          })),
+                      }}
+                      header="근무 시간"
+                    />
+                  </TableHead>
+                  <TableHead className="p-1">
+                    <TableHeaderFilterButton
+                      control={{
+                        kind: "text",
+                        label: "상태",
+                        placeholder: "상태로 찾아요",
+                        value: filters.status,
+                        onChange: (value) =>
+                          setFilters((current) => ({
+                            ...current,
+                            status: value,
+                          })),
+                      }}
+                      header="상태"
+                    />
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleRecords.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      className="py-10 text-center text-sm text-muted-foreground"
+                      colSpan={7}
+                    >
+                      조건에 맞는 근태 이력이 없어요. 열 제목 필터를 지우면 다른
+                      기록을 바로 확인할 수 있어요.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  visibleRecords.map((record) => {
+                    const status = getHistoryStatusChips(record);
+                    const rowToneClass = getRowToneClass(record);
 
-            <Separator />
-
-            <div className="grid gap-4">
-              <label
-                className="flex flex-col gap-2 text-sm font-medium text-foreground"
-                htmlFor="admin-attendance-history-from"
-              >
-                시작일
-                <Input
-                  autoComplete="off"
-                  id="admin-attendance-history-from"
-                  name="from"
-                  onChange={(event) => onFromChange(event.target.value)}
-                  type="date"
-                  value={from}
-                />
-              </label>
-
-              <label
-                className="flex flex-col gap-2 text-sm font-medium text-foreground"
-                htmlFor="admin-attendance-history-to"
-              >
-                종료일
-                <Input
-                  autoComplete="off"
-                  id="admin-attendance-history-to"
-                  name="to"
-                  onChange={(event) => onToChange(event.target.value)}
-                  type="date"
-                  value={to}
-                />
-              </label>
-            </div>
-
-            <div className="rounded-[14px] border border-border bg-surface-subtle/60 p-4">
-              <p className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
-                현재 조건
-              </p>
-              <p className="mt-2 text-sm font-medium text-foreground">
-                {from} ~ {to}
-              </p>
-              <p className="mt-1 text-sm leading-6 text-secondary">
-                {summary.totalCount}건 중 확인이 필요한 근태는{" "}
-                {summary.exceptionalCount}건이에요
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {records.length === 0 ? (
-          <Empty className="border border-border bg-card">
-            <EmptyHeader>
-              <EmptyTitle>
-                조건에 맞는 근태 이력이 없어요
-                <span className="sr-only">.</span>
-              </EmptyTitle>
-              <EmptyDescription>
-                이름이나 날짜 범위를 바꾸면 다른 기록을 바로 확인할 수 있어요
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <Card>
-            <CardHeader>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex flex-col gap-1">
-                  <CardTitle>근태 이력</CardTitle>
-                  <CardDescription>
-                    최신 기록부터 보고 필요한 날짜만 다시 살펴봐요
-                  </CardDescription>
-                </div>
-                <Badge
-                  className="border-border bg-white text-secondary"
-                  variant="outline"
-                >
-                  {summary.totalCount}건
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>날짜</TableHead>
-                      <TableHead>이름</TableHead>
-                      <TableHead>기준 시간</TableHead>
-                      <TableHead>출근</TableHead>
-                      <TableHead>퇴근</TableHead>
-                      <TableHead>근무 시간</TableHead>
-                      <TableHead>상태</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {records.map((record) => {
-                      const status = getHistoryStatusChips(record);
-                      const rowToneClass = getRowToneClass(record);
-
-                      return (
-                        <TableRow
-                          key={`${record.date}-${record.employee.id}`}
-                          className={cn(rowToneClass)}
-                        >
-                          <TableCell className="font-medium text-foreground tabular-nums">
-                            {record.date}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="font-medium text-foreground">
-                                {record.employee.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {record.employee.department}
-                              </span>
+                    return (
+                      <TableRow
+                        key={`${record.date}-${record.employee.id}`}
+                        className={cn(rowToneClass)}
+                      >
+                        <TableCell className="font-medium text-foreground tabular-nums">
+                          {record.date}
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">
+                          {record.employee.name}
+                        </TableCell>
+                        <TableCell className="text-foreground">
+                          {getExpectedWindowLabel(record)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                          {formatLedgerTimeLabel(
+                            record.record?.clockInAt ?? null,
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                          {formatLedgerTimeLabel(
+                            record.record?.clockOutAt ?? null,
+                          )}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-foreground tabular-nums">
+                          {formatLedgerMinutesLabel(
+                            record.record?.workMinutes ?? null,
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-2">
+                            <div className="flex flex-wrap gap-2">
+                              {status.chips.map((chip) => (
+                                <StatusChip
+                                  key={`${record.date}-${record.employee.id}-${chip.label}`}
+                                  className={chip.className}
+                                  label={chip.label}
+                                />
+                              ))}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-foreground">
-                            {getExpectedWindowLabel(record)}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                            {formatLedgerTimeLabel(
-                              record.record?.clockInAt ?? null,
-                            )}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                            {formatLedgerTimeLabel(
-                              record.record?.clockOutAt ?? null,
-                            )}
-                          </TableCell>
-                          <TableCell className="whitespace-nowrap text-foreground tabular-nums">
-                            {formatLedgerMinutesLabel(
-                              record.record?.workMinutes ?? null,
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-2">
-                              <div className="flex flex-wrap gap-2">
-                                {status.chips.map((chip) => (
-                                  <StatusChip
-                                    key={`${record.date}-${record.employee.id}-${chip.label}`}
-                                    className={chip.className}
-                                    label={chip.label}
-                                  />
-                                ))}
-                              </div>
-                              <span className="text-xs leading-5 text-secondary">
-                                {getHistorySummaryLabel(record)}
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col items-start gap-1 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <span>최근 {summary.totalCount}건을 표시하고 있어요</span>
-              <span>
-                {response.from} ~ {response.to}
-              </span>
-            </CardFooter>
-          </Card>
-        )}
-      </section>
+                            <span className="text-xs leading-5 text-secondary">
+                              {getHistorySummaryLabel(record)}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+        <CardFooter className="flex flex-col items-start gap-1 text-[11px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>최근 {visibleRecords.length}건을 표시하고 있어요</span>
+          <span>{getDateRangeLabel(from, to)}</span>
+        </CardFooter>
+      </Card>
     </div>
   );
 }

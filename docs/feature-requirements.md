@@ -111,14 +111,15 @@ Validation and policy topics that must stay aligned with narrower contract docum
 
 Required UI:
 
-- a default today-first operations mode that renders the page in this order: exception table, one-row summary cards, then full team ledger
-- a top exception table that aggregates unresolved employee-surface exceptions for the day instead of using a left rail, while leaving routine historical `지각` and `조퇴` marks in history or ledger context
+- a default today-first operations mode that renders the page in this order: exception table, one-row summary cards, then full team `근무현황`
+- a top exception table that aggregates unresolved employee-surface exceptions for the day instead of using a left rail, while leaving routine historical `지각` and `조퇴` marks in history or `근무현황` context
 - one horizontal row of summary cards labeled `근무중`, `출근 전`, `지각`, `조퇴`, `연차`, `반차`, and `시간차`
-- a full team ledger with selectable `기본`, `근무상태별`, and `근태상태별` views using the same underlying data
+- a full team `근무현황` with selectable `기본`, `근무상태별`, and `근태상태별` views using the same underlying data
 - an exception-table-first team list that still includes employees with no successful attendance record for the day once their current operational state becomes relevant
 - visible carry-over warnings for employees whose previous workday is still open because checkout is missing
 - visibility into failed attendance attempts, leave-work conflicts, and compact current manual attendance request state where applicable
-- a secondary history review mode inside the same route with page-local controls for search and selected date range
+- a secondary history review mode inside the same route with page-local controls for search and selected date range, and the history tab should start directly with the filterable table instead of an extra summary-card row
+- the today exception table, today `근무현황`, and history table should expose per-column header popover filters instead of keeping a separate history-only filter sidebar
 - a default history range of the last 7 days including today when the admin enters history mode without explicit URL state
 
 Implementation concerns that must stay aligned with narrower contract documents:
@@ -127,7 +128,7 @@ Implementation concerns that must stay aligned with narrower contract documents:
 - whether department filtering is required in the first implementation pass
 - history review should remain a secondary mode inside `/admin/attendance` rather than replacing the today-first default entry behavior
 - mode, date range, and search state should remain URL-shareable when they affect admin attendance queries
-- the today exception table, one-row summary cards, and ledger view groupings should all derive from the same date-level facts so counts and group membership never drift
+- the today exception table, one-row summary cards, and `근무현황` view groupings should all derive from the same date-level facts so counts and group membership never drift
 - these are presentation-only projections; the public API contract remains unchanged
 
 Edge cases to keep visible during implementation:
@@ -148,13 +149,15 @@ Required UI:
 - no top summary strip; the page body should render two stacked review rows in fixed order, with the manual-attendance table first and the leave table second
 - each table should keep its own header-triggered column filters and its own right-side detail/review panel; the `이름` column owns name search inside its header popover
 - each table should allocate a wider right-side review workspace that splits detail and actions into separate surfaces, with completed-history panels staying read-only and lower-emphasis
-- manual-attendance rows should use the visible columns `이름 / 부서 / 정정 종류 / 대상일 / 요청 상태 / 반영 상태 / 사유`
-- leave rows should use the visible columns `이름 / 부서 / 휴가 종류 / 시간 / 대상일 / 요청 상태 / 반영 상태 / 운영 경고 / 사유`, with `시간` showing `HH:MM-HH:MM` only for hourly leave and `-` otherwise
+- manual-attendance rows should use the visible columns `이름 / 부서 / 정정 종류 / 대상일 / 요청 상태 / 사유`
+- leave rows should use the visible columns `이름 / 부서 / 휴가 종류 / 시간 / 대상일 / 요청 상태 / 운영 경고 / 사유`, with `시간` showing `HH:MM-HH:MM` only for hourly leave and `-` otherwise
 - do not show a `후속 요청` table column in the admin review workspace; keep follow-up context inside detail only
+- do not show `반영 상태` as a review-table column or right-side detail fact row on this page
 - the `대상일` header filter should support `오늘 / 최근 7일 / 최근 30일` presets plus direct `시작일 / 종료일` range input
 - `needs_review` rows are ordered newest pending request first
 - approve, reject, and request-revision actions anchored in actionable request detail rather than queue rows
 - explicit review-comment input when rejecting a request or requesting revision
+- the right-side detail should use compact two-column factual rows instead of a separate flow-summary block or one-card-per-field layout
 - visible request-chain context that shows the active request, the effective status, and any earlier review comment that still explains the current state
 - `governingReviewComment` remains visible as a row/detail signal when unresolved rationale still governs
 - minimum row context before opening detail includes employee block, request type/subtype, primary target date, current/effective state cue, one-line reason, and at most two compact chips

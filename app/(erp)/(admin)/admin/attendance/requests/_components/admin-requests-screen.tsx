@@ -121,8 +121,7 @@ export function AdminRequestsScreen({
           요청 관리
         </h1>
         <p className="mt-1 text-sm leading-6 text-secondary">
-          정정 신청과 휴가 신청을 분리된 표로 보고, 오른쪽 검토 공간에서 자세히
-          확인한 뒤 바로 처리해요
+          정정 신청과 휴가 신청을 나눠서 보고 바로 검토해요
         </p>
       </header>
 
